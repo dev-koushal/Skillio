@@ -25,6 +25,7 @@ export const signUp = async(req,res)=>{
         password:hashPassword,
         role
     })
+    
 
     let token = await genToken(user._id)
 
@@ -35,7 +36,9 @@ export const signUp = async(req,res)=>{
         maxAge:7*24*60*60*1000 
     })
 
-    return res.status(201).json(user)
+    const safeUser = user.toObject();
+    delete safeUser.password;
+    return res.status(201).json({success:true,message:"User created successfully!",user:safeUser});
 
    } catch (error) {
      return res.status(500).json({message:`SignUp error ${error}`})
