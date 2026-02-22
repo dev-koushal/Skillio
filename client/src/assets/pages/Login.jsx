@@ -13,12 +13,10 @@ import loginPicture from "../../assets/SkillioLogin.png";
 import { Link } from "react-router-dom";
 export default function Login() {
 
-  const [password, setpassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
 
-  const handlePassword = (e) => {
-    setpassword(e.target.value);
-  };
+
+
   return (
     <div className="min-h-screen bg-white flex items-center justify-center p-4 sm:p-8">
       {/* Card */}
@@ -65,7 +63,6 @@ export default function Login() {
               <div className="relative">
                 <Lock className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 w-4 h-4" />
                 <input
-                  onChange={handlePassword}
                   type={showPassword ? "text" : "password"} 
                   placeholder="••••••••"
                   className="w-full bg-gray-800 border border-gray-700 rounded-lg pl-10 pr-10 py-2.5 text-white placeholder-gray-500 text-sm focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-all"

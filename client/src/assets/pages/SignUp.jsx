@@ -5,13 +5,12 @@ import loginPicture from '../../assets/SkillioLogin.png'
 import { Link } from "react-router-dom";
 
 export default function SignUp() {
-
-  const [password, setpassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
 
-  const handlePassword = (e) => {
-    setpassword(e.target.value);
-  };
+  const[name,setName] = useState("");
+  const[email,setEmail] = useState("");
+  const[password,setPassword] = useState("");
+  const[role,setRole] = useState("student");
 
   return (
     <div className="min-h-screen bg-white flex items-center justify-center p-4 sm:p-8">
@@ -42,8 +41,10 @@ export default function SignUp() {
               <div className="relative">
                 <User2 className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 w-4 h-4" />
                 <input
-                  type="email"
-                  placeholder="you@example.com"
+                onChange={(e)=>{setName(e.target.value)}}
+                value={name}
+                  type="name"
+                  placeholder="Enter the name"
                   className="w-full bg-gray-800 border border-gray-700 rounded-lg pl-10 pr-4 py-2.5 text-white placeholder-gray-500 text-sm focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-all"
                 />
               </div>
@@ -56,6 +57,8 @@ export default function SignUp() {
               <div className="relative">
                 <Mail className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 w-4 h-4" />
                 <input
+                  onChange={(e)=>{setEmail(e.target.value)}}
+                  value={email}
                   type="email"
                   placeholder="you@example.com"
                   className="w-full bg-gray-800 border border-gray-700 rounded-lg pl-10 pr-4 py-2.5 text-white placeholder-gray-500 text-sm focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-all"
@@ -71,7 +74,8 @@ export default function SignUp() {
               <div className="relative">
                 <Lock className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 w-4 h-4" />
                 <input
-                  onChange={handlePassword}
+                  onChange={(e)=>{setPassword(e.target.value)}}
+                  value={password}
                   type={showPassword ? "text" : "password"} 
                   placeholder="••••••••"
                   className="w-full bg-gray-800 border border-gray-700 rounded-lg pl-10 pr-10 py-2.5 text-white placeholder-gray-500 text-sm focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-all"
@@ -91,11 +95,11 @@ export default function SignUp() {
             <div className="flex gap-4 items-center justify-between pt-1 text-white">
              <div className="flex gap-4"><label htmlFor="student" >
                 Student{" "}
-                <input name="role" type="radio" id="student"/>
+                <input onClick={()=>setRole("student")} value={role} defaultChecked  name="role" type="radio" id="student"/>
              </label>
              <label htmlFor="educator">
                 Educator{" "}
-                <input name="role" type="radio" id="educator" className=""/>
+                <input onClick={()=>setRole("educator")} value={role}  name="role" type="radio" id="educator" className=""/>
              </label></div>
 
              <div>
