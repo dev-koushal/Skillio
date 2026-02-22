@@ -2,8 +2,11 @@ import { useState } from "react";
 import { Github, Mail, Lock, Eye, EyeOff, Waves, Signature, User2 } from "lucide-react";
 import logo from '/skillio.png'
 import loginPicture from '../../assets/SkillioLogin.png'
-import { Link } from "react-router-dom";
-
+import { Link, Navigate, useNavigate, useSearchParams } from "react-router-dom";
+import { serverURL } from "../../App";
+import {toast} from 'react-toastify'
+import axios from 'axios'
+import {ClipLoader} from 'react-spinners'
 export default function SignUp() {
   const [showPassword, setShowPassword] = useState(false);
 
@@ -11,7 +14,26 @@ export default function SignUp() {
   const[email,setEmail] = useState("");
   const[password,setPassword] = useState("");
   const[role,setRole] = useState("student");
+  const[loading,setLoading] = useState(false);
+  const navigate = useNavigate();
 
+  const handleSignup = async (e) => {
+    e.preventDefault()
+      try {
+        setLoading(true);
+        // http://localhost:3000/api/auth/signup
+        const result =  await axios.post("http://localhost:3000/api/auth/signup",{name,email,password,role},{withCredentials:true})
+        console.log(result.data);
+        setLoading(false);
+        navigate("/")
+        toast.success("User registered successfully!")
+      } catch (error) {
+        console.log(error);
+        setLoading(false);
+        const message = error?.response?.data?.message || error?.message || "An error occurred";
+        toast.error(message)
+      }
+  }
   return (
     <div className="min-h-screen bg-white flex items-center justify-center p-4 sm:p-8">
       {/* Card */}
@@ -32,7 +54,7 @@ export default function SignUp() {
           </div>
 
           {/* Form */}
-          <form className="space-y-4" onSubmit={(e) => e.preventDefault()}>
+          <form className="space-y-4" >
             {/* name*/}
             <div>
               <label className="block text-sm font-medium text-gray-300 mb-1.5">
@@ -110,10 +132,14 @@ export default function SignUp() {
 
             {/* Submit */}
             <button
+              disabled={loading}
+              onClick={handleSignup}
               type="submit"
-              className="w-full bg-indigo-500 hover:bg-indigo-400 active:bg-indigo-600 text-white font-semibold py-2.5 rounded-lg transition-all duration-150 text-sm tracking-wide shadow-lg shadow-indigo-500/20 mt-1"
+              className="w-full bg-indigo-500  hover:bg-indigo-400 active:bg-indigo-600 text-white font-semibold py-2.5 rounded-lg transition-all duration-150 text-sm tracking-wide shadow-lg shadow-indigo-500/20 mt-1 cursor-pointer"
             >
-              Sign in
+              {
+                loading? <ClipLoader size={16} /> : <p>SignUp</p>
+              }
             </button>
           </form>
 
