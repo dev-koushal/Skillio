@@ -1,20 +1,36 @@
 import { useState } from "react";
-import { Github, Mail, Lock, Eye, EyeOff, Waves, Signature } from "lucide-react";
-import logo from '/skillio.png'
-import loginPicture from '../../assets/SkillioLogin.png'
+import {
+  Github,
+  Mail,
+  Lock,
+  Eye,
+  EyeOff,
+  Waves,
+  Signature,
+} from "lucide-react";
+import logo from "/skillio.png";
+import loginPicture from "../../assets/SkillioLogin.png";
 import { Link } from "react-router-dom";
 export default function Login() {
 
+  const [password, setpassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
+
+  const handlePassword = (e) => {
+    setpassword(e.target.value);
+  };
   return (
     <div className="min-h-screen bg-white flex items-center justify-center p-4 sm:p-8">
       {/* Card */}
-      <div className="w-full max-w-4xl rounded-2xl overflow-hidden shadow-2xl flex" style={{ minHeight: "560px" }}>
-
+      <div
+        className="w-full max-w-4xl rounded-2xl overflow-hidden shadow-2xl flex"
+        style={{ minHeight: "560px" }}
+      >
         {/* Left — Form */}
         <div className="flex flex-col justify-center w-full lg:w-1/2 bg-gray-950 px-8 sm:px-12 py-12">
           {/* Logo */}
           <div className="mb-8">
-            <img src={logo} className="w-16 h-12"/>
+            <img src={logo} className="w-16 h-12" />
           </div>
 
           {/* Heading */}
@@ -49,33 +65,39 @@ export default function Login() {
               <div className="relative">
                 <Lock className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 w-4 h-4" />
                 <input
-                  type="password"
+                  onChange={handlePassword}
+                  type={showPassword ? "text" : "password"} 
                   placeholder="••••••••"
                   className="w-full bg-gray-800 border border-gray-700 rounded-lg pl-10 pr-10 py-2.5 text-white placeholder-gray-500 text-sm focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-all"
                 />
                 <button
-                  type="button"
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-300 transition-colors"
-                >
 
+                  onClick={()=>setShowPassword(!showPassword)}
+                  type="button"
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-300 transition-colors cursor-pointer"
+                >
+                  <Eye />
                 </button>
               </div>
             </div>
 
             {/* Remember */}
             <div className="flex gap-4 items-center justify-between pt-1 text-white">
-             <div className="flex gap-4"><label htmlFor="student" >
-                Student{" "}
-                <input name="role" type="radio" id="student"/>
-             </label>
-             <label htmlFor="educator">
-                Educator{" "}
-                <input name="role" type="radio" id="educator" className=""/>
-             </label></div>
+              <div className="flex gap-4">
+                <label htmlFor="student">
+                  Student <input name="role" type="radio" id="student" />
+                </label>
+                <label htmlFor="educator">
+                  Educator{" "}
+                  <input name="role" type="radio" id="educator" className="" />
+                </label>
+              </div>
 
-             <div>
-                <p className="text-sm text-blue-600 cursor-pointer">forget password?</p>
-             </div>
+              <div>
+                <p className="text-sm text-blue-600 cursor-pointer">
+                  forget password?
+                </p>
+              </div>
             </div>
 
             {/* Submit */}
@@ -90,7 +112,9 @@ export default function Login() {
           {/* Divider */}
           <div className="flex items-center gap-3 my-5">
             <div className="flex-1 h-px bg-gray-800" />
-            <span className="text-xs text-gray-500 whitespace-nowrap">Or continue with</span>
+            <span className="text-xs text-gray-500 whitespace-nowrap">
+              Or continue with
+            </span>
             <div className="flex-1 h-px bg-gray-800" />
           </div>
 
@@ -114,7 +138,6 @@ export default function Login() {
             className=" w-full h-full object-cover rounded-xl"
           />
         </div>
-
       </div>
     </div>
   );

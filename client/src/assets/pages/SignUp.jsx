@@ -1,11 +1,17 @@
 import { useState } from "react";
-import { Github, Mail, Lock, Eye, EyeOff, Waves, Signature } from "lucide-react";
+import { Github, Mail, Lock, Eye, EyeOff, Waves, Signature, User2 } from "lucide-react";
 import logo from '/skillio.png'
 import loginPicture from '../../assets/SkillioLogin.png'
 import { Link } from "react-router-dom";
 
 export default function SignUp() {
 
+  const [password, setpassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
+
+  const handlePassword = (e) => {
+    setpassword(e.target.value);
+  };
 
   return (
     <div className="min-h-screen bg-white flex items-center justify-center p-4 sm:p-8">
@@ -34,7 +40,7 @@ export default function SignUp() {
                 Name
               </label>
               <div className="relative">
-                <Mail className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 w-4 h-4" />
+                <User2 className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 w-4 h-4" />
                 <input
                   type="email"
                   placeholder="you@example.com"
@@ -65,15 +71,18 @@ export default function SignUp() {
               <div className="relative">
                 <Lock className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 w-4 h-4" />
                 <input
-                  type="password"
+                  onChange={handlePassword}
+                  type={showPassword ? "text" : "password"} 
                   placeholder="••••••••"
                   className="w-full bg-gray-800 border border-gray-700 rounded-lg pl-10 pr-10 py-2.5 text-white placeholder-gray-500 text-sm focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-all"
                 />
                 <button
-                  type="button"
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-300 transition-colors"
-                >
 
+                  onClick={()=>setShowPassword(!showPassword)}
+                  type="button"
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-300 transition-colors cursor-pointer"
+                >
+                  <Eye />
                 </button>
               </div>
             </div>
