@@ -1,4 +1,7 @@
 import { createBrowserRouter, RouterProvider } from "react-router-dom";
+import { ToastContainer } from "react-toastify";
+import "react-toastify/dist/ReactToastify.css";
+
 import Home from "./assets/pages/Home";
 import Login from "./assets/pages/Login";
 import Signup from "./assets/pages/Signup";
@@ -19,10 +22,12 @@ const router = createBrowserRouter([
     element: <Signup />,
   },
 ]);
+
 function App() {
   return (
     <>
       <RouterProvider router={router} />
+      <ToastContainer position="top-right" autoClose={3000} />
     </>
   );
 }
