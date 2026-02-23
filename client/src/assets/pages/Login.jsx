@@ -10,12 +10,42 @@ import {
 } from "lucide-react";
 import logo from "/skillio.png";
 import loginPicture from "../../assets/SkillioLogin.png";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
+import { toast } from "react-toastify";
+import axios from "axios";
 export default function Login() {
 
   const [showPassword, setShowPassword] = useState(false);
 
+  const [name, setName] = useState("");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [role, setRole] = useState("student");
+  const [loading, setLoading] = useState(false);
+  const navigate = useNavigate();
 
+  const handleLogin = async (e) => {
+    e.preventDefault();
+
+    try {
+      setLoading(true);
+      const { data } = await axios.post(
+        "http://localhost:3000/api/auth/login",
+        { email, password, role },
+        { withCredentials: true },
+      );
+      toast.success("User Logged in successfully!");
+      navigate("/");
+    } catch (error) {
+      console.log(error?.response || error);
+
+      const message =
+        error?.response?.data?.message || error?.message || "An error occurred";
+      toast.error(error?.response?.data?.message);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   return (
     <div className="min-h-screen bg-white flex items-center justify-center p-4 sm:p-8">
@@ -99,6 +129,7 @@ export default function Login() {
 
             {/* Submit */}
             <button
+              onClick={handleLogin}
               type="submit"
               className="w-full bg-indigo-500 hover:bg-indigo-400 active:bg-indigo-600 text-white font-semibold py-2.5 rounded-lg transition-all duration-150 text-sm tracking-wide shadow-lg shadow-indigo-500/20 mt-1"
             >
