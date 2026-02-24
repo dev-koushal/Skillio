@@ -16,6 +16,8 @@ import { serverURL } from "../../App";
 import { toast } from "react-toastify";
 import axios from "axios";
 import { ClipLoader } from "react-spinners";
+import { useDispatch } from "react-redux";
+import { setUserData } from "../../redux/userSlice";
 export default function SignUp() {
   const [showPassword, setShowPassword] = useState(false);
 
@@ -24,6 +26,7 @@ export default function SignUp() {
   const [password, setPassword] = useState("");
   const [role, setRole] = useState("student");
   const [loading, setLoading] = useState(false);
+  const dispatch = useDispatch()
   const navigate = useNavigate();
 
   const handleSignup = async (e) => {
@@ -39,7 +42,7 @@ export default function SignUp() {
       if(!name|| !email|| !password|| !role){
         toast.error("All fields need to be filled!!")
       }
-
+      dispatch(setUserData(data))
       toast.success("User registered successfully!");
       navigate("/");
     } catch (error) {
@@ -74,7 +77,7 @@ export default function SignUp() {
           </div>
 
           {/* Form */}
-          <form className="space-y-4">
+          <form className="space-y-4" onSubmit={(e)=>e.preventDefault()}>
             {/* name*/}
             <div>
               <label className="block text-sm font-medium text-gray-300 mb-1.5">
