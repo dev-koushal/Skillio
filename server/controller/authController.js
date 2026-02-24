@@ -44,13 +44,11 @@ export const signUp = async (req, res) => {
 
     const safeUser = user.toObject();
     delete safeUser.password;
-    return res
-      .status(201)
-      .json({
-        success: true,
-        message: "User created successfully!",
-        user: safeUser,
-      });
+    return res.status(201).json({
+      success: true,
+      message: "User created successfully!",
+      user: safeUser,
+    });
   } catch (error) {
     return res.status(400).json({ message: `SignUp error ${error}` });
   }
@@ -59,8 +57,10 @@ export const signUp = async (req, res) => {
 export const login = async (req, res) => {
   try {
     const { email, password, role } = req.body;
-    let user = await User.findOne({ email }).select("+password");
 
+
+    let user = await User.findOne({ email: email.trim().toLowerCase() }).select("+password");
+    console.log(user);
     if (!user) {
       return res.status(400).json({ message: "User not register!" });
     }
