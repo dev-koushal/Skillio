@@ -13,15 +13,18 @@ import loginPicture from "../../assets/SkillioLogin.png";
 import { Link, useNavigate } from "react-router-dom";
 import { toast } from "react-toastify";
 import axios from "axios";
+import { useDispatch } from "react-redux";
+import { setUserData } from "../../redux/userSlice";
+
 export default function Login() {
-
   const [showPassword, setShowPassword] = useState(false);
-
+  const dispatch = useDispatch();
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [role, setRole] = useState("student");
   const [loading, setLoading] = useState(false);
+
   const navigate = useNavigate();
 
   const handleLogin = async (e) => {
@@ -29,11 +32,15 @@ export default function Login() {
 
     try {
       setLoading(true);
+
       const { data } = await axios.post(
         "http://localhost:3000/api/auth/login",
         { email, password, role },
-        { withCredentials: true },
+        { withCredentials: true }
       );
+
+      dispatch(setUserData(data));
+
       toast.success("User Logged in successfully!");
       navigate("/");
     } catch (error) {
@@ -41,7 +48,8 @@ export default function Login() {
 
       const message =
         error?.response?.data?.message || error?.message || "An error occurred";
-      toast.error(error?.response?.data?.message);
+
+      toast.error(message);
     } finally {
       setLoading(false);
     }
@@ -69,7 +77,7 @@ export default function Login() {
           </div>
 
           {/* Form */}
-          <form className="space-y-4" onSubmit={(e) => e.preventDefault()}>
+          <form className="space-y-4" onSubmit={handleLogin}>
             {/* Email */}
             <div>
               <label className="block text-sm font-medium text-gray-300 mb-1.5">
@@ -79,6 +87,8 @@ export default function Login() {
                 <Mail className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 w-4 h-4" />
                 <input
                   type="email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
                   placeholder="you@example.com"
                   className="w-full bg-gray-800 border border-gray-700 rounded-lg pl-10 pr-4 py-2.5 text-white placeholder-gray-500 text-sm focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-all"
                 />
@@ -93,30 +103,47 @@ export default function Login() {
               <div className="relative">
                 <Lock className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 w-4 h-4" />
                 <input
-                  type={showPassword ? "text" : "password"} 
+                  type={showPassword ? "text" : "password"}
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
                   placeholder="••••••••"
                   className="w-full bg-gray-800 border border-gray-700 rounded-lg pl-10 pr-10 py-2.5 text-white placeholder-gray-500 text-sm focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-all"
                 />
                 <button
-
-                  onClick={()=>setShowPassword(!showPassword)}
+                  onClick={() => setShowPassword(!showPassword)}
                   type="button"
                   className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-300 transition-colors cursor-pointer"
                 >
-                  <Eye />
+                  {showPassword ? <EyeOff /> : <Eye />}
                 </button>
               </div>
             </div>
 
-            {/* Remember */}
+            {/* Role */}
             <div className="flex gap-4 items-center justify-between pt-1 text-white">
               <div className="flex gap-4">
                 <label htmlFor="student">
-                  Student <input name="role" type="radio" id="student" />
+                  Student{" "}
+                  <input
+                    name="role"
+                    type="radio"
+                    id="student"
+                    value="student"
+                    checked={role === "student"}
+                    onChange={(e) => setRole(e.target.value)}
+                  />
                 </label>
+
                 <label htmlFor="educator">
                   Educator{" "}
-                  <input name="role" type="radio" id="educator" className="" />
+                  <input
+                    name="role"
+                    type="radio"
+                    id="educator"
+                    value="educator"
+                    checked={role === "educator"}
+                    onChange={(e) => setRole(e.target.value)}
+                  />
                 </label>
               </div>
 
@@ -129,11 +156,11 @@ export default function Login() {
 
             {/* Submit */}
             <button
-              onClick={handleLogin}
+              disabled={loading}
               type="submit"
               className="w-full bg-indigo-500 hover:bg-indigo-400 active:bg-indigo-600 text-white font-semibold py-2.5 rounded-lg transition-all duration-150 text-sm tracking-wide shadow-lg shadow-indigo-500/20 mt-1"
             >
-              Sign in
+              {loading ? "Signing in..." : "Sign in"}
             </button>
           </form>
 
@@ -158,12 +185,12 @@ export default function Login() {
           </div>
         </div>
 
-        {/* Right — Photo, hidden on small screens */}
+        {/* Right — Photo */}
         <div className="hidden lg:block h-150 border-8 lg:w-1/2 relative bg-black">
           <img
             src={loginPicture}
             alt="Workspace"
-            className=" w-full h-full object-cover rounded-xl"
+            className="w-full h-full object-cover rounded-xl"
           />
         </div>
       </div>
