@@ -5,6 +5,7 @@ import "react-toastify/dist/ReactToastify.css";
 import Home from "./assets/pages/Home";
 import Login from "./assets/pages/Login";
 import Signup from "./assets/pages/Signup";
+import getCurrentUser from "./hooks/getCurrentUser";
 
 export const serverURL = "http://localhost:3000";
 
@@ -24,6 +25,7 @@ const router = createBrowserRouter([
 ]);
 
 function App() {
+  getCurrentUser();
   return (
     <>
       <RouterProvider router={router} />
