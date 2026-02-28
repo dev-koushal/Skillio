@@ -15,6 +15,7 @@ import { toast } from "react-toastify";
 import axios from "axios";
 import { useDispatch } from "react-redux";
 import { setUserData } from "../../redux/userSlice";
+import { serverURL } from "../../App";
 
 export default function Login() {
   const [showPassword, setShowPassword] = useState(false);
@@ -33,13 +34,12 @@ export default function Login() {
     try {
       setLoading(true);
 
-      const { data } = await axios.post(
-        "http://localhost:3000/api/auth/login",
+      const { data } = await axios.post(serverURL+"/api/auth/login",
         { email, password, role },
         { withCredentials: true }
       );
 
-      dispatch(setUserData(data));
+      dispatch(setUserData(data.user));
 
       toast.success("User Logged in successfully!");
       navigate("/");
