@@ -28,6 +28,7 @@ function Navbar() {
     }
   };
 
+  
   return (
     <div className="bg-black text-white w-full flex items-center relative">
       
@@ -54,11 +55,10 @@ function Navbar() {
 
           {userData && (
             <div
-               onClick={() => setOption(!option)}
-              className="flex w-10 h-10 border-2 border-cyan-900 rounded-full items-center justify-center hover:bg-gray-600/90 cursor-pointer"
+              onClick={()=>setOption(!option)}
+              className="flex w-10 h-10 border-2 border-cyan-900 rounded-full items-center justify-center hover:bg-gray-600/90 cursor-pointer z"
             >
-              {userData?.name?.charAt(0)?.toUpperCase() || "?"}
-              
+             {userData?.name?.charAt(0)?.toUpperCase() || "?"}
             </div>
             
           )}
@@ -90,12 +90,18 @@ function Navbar() {
           <div
             className={`${
               !option ? "hidden" : "absolute"
-            } top-16 right-0 w-48 bg-black/90 rounded-xl p-4 flex flex-col gap-2 z-20`}
+            } top-16 right-0 w-48 bg-black/90 rounded-xl p-4 flex flex-col gap-2 `}
           >
-            <span className="hover:bg-gray-600/90 rounded-lg px-2 py-2 w-full bg-cyan-950 flex">
+            <span
+              onClick={() => {
+                navigate("/profile");
+                setOption(false);
+              }}
+              className="hover:bg-gray-600/90 rounded-lg px-2 py-2 w-full bg-cyan-950 flex cursor-pointer z-50"
+            >
               <User2Icon className="mr-2" /> My Profile
             </span>
-            <span className="hover:bg-gray-600/90 rounded-lg px-2 py-2 w-full bg-cyan-950 flex">
+            <span className="hover:bg-gray-600/90 rounded-lg px-2 py-2 w-full bg-cyan-950 flex cursor-pointer">
               <BookCheck className="mr-2" /> My Courses
             </span>
           </div>
@@ -120,7 +126,8 @@ function Navbar() {
         />
         <span
               className="bg-cyan-900 px-6 py-3 rounded-sm w-1/2 text-center hover:bg-gray-600/90"
-              onClick={()=>navigate('profile')}
+              onClick={()=>{navigate('/profile');setShowHam(false);}}
+              
             >
               Profile
         </span>
