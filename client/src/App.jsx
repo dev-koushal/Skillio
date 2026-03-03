@@ -9,6 +9,7 @@ import Login from "./pages/Login";
 import Signup from "./pages/Signup";
 import Profile from "./pages/Profile";
 import useGetCurrentUser from "./hooks/useGetCurrentUser";
+import ForgetPassword from "./pages/ForgetPassword";
 
 export const serverURL = "http://localhost:3000";
 
@@ -23,12 +24,16 @@ function App() {
       <Routes>
         <Route path="/" element={<Home />} />
         <Route path="/login" element={<Login />} />
-        <Route path="/signup" element={<Signup />} />
+        <Route path="/signup" element={!userData? <Signup /> : <Navigate to="/"/>} />
 
         {/* Protected Route */}
         <Route
           path="/profile"
-          element={userData ? <Profile /> : <Navigate to="/signup" />}
+          element={userData? <Profile /> : <Navigate to="/signup" />}
+        />
+        <Route
+          path="/forget"
+          element={userData? <ForgetPassword /> : <Navigate to="/signup" />}
         />
       </Routes>
 

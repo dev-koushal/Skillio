@@ -1,7 +1,8 @@
 import User from '../models/userModel.js'
 export const getCurrentUser = async (req,res) => {
     try {
-        const user = await User.findOne(req.userId).select("-password");
+        // lookup by id rather than passing undefined or incorrect filter
+    const user = await User.findById(req.userId).select("-password");
         if(!user){
             return res.status(404).json({
                 message:"User not found!"

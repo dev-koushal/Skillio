@@ -156,7 +156,7 @@ function Navbar() {
           </>
         )}
          {userData?.role === "educator" && (
-            <button className="border-2 border-cyan-900 hover:bg-gray-600/90 text-sm px-4 py-2 rounded-sm">
+            <button className="bg-cyan-900 px-6 py-3 rounded-sm w-1/2 text-center hover:bg-gray-600/90">
               Dashboard
             </button>
           )}

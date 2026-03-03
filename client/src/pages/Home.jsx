@@ -1,16 +1,18 @@
-import React from "react";
+import React, { useEffect } from "react";
 import Navbar from "../components/Navbar";
 
 function Home() {
+  
   return (
-    <div className="w-full">
-      <div className="w-full h-20 ">
-        <Navbar />
-      </div>
+    
+    <>
       <div>
+        <div className="w-full">
+          <Navbar />
+        </div>
         
       </div>
-    </div>
+     </>
   );
 }
 

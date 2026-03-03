@@ -14,8 +14,8 @@ const isAuth = async (req,res,next) => {
         return res.status(401).json({message:"User doesn't have valid authentication!!"})
     }
 
-    // normalize to `userId` so controllers using `req.userId` work
-    req.userId = verifyToken.userID;
+    // JWT payload uses `userId` (lowercase) so make sure we read that consistently
+    req.userId = verifyToken.userId;
     next(); 
     } catch (error) {
         return res.status(401).json({message:`Authentication failed ${error}`})

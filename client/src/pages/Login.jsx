@@ -147,7 +147,7 @@ export default function Login() {
                 </label>
               </div>
 
-              <div>
+              <div onClick={()=>navigate('/forget')}>
                 <p className="text-sm text-blue-600 cursor-pointer">
                   forget password?
                 </p>
