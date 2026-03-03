@@ -31,9 +31,10 @@ function App() {
           path="/profile"
           element={userData? <Profile /> : <Navigate to="/signup" />}
         />
+        {/* forgot-password should be accessible when NOT logged in */}
         <Route
           path="/forget"
-          element={userData? <ForgetPassword /> : <Navigate to="/signup" />}
+          element={!userData ? <ForgetPassword /> : <Navigate to="/" />}
         />
       </Routes>
 
