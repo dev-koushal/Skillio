@@ -6,7 +6,9 @@ import sendMail from "../config/sendMail.js";
 
 export const signUp = async (req, res) => {
   try {
-    const { name, email, password, role } = req.body;
+    let { name, email, password, role } = req.body;
+    // normalize email for consistency (store/search in lowercase)
+    if (email) email = email.trim().toLowerCase();
 
     if (!name || !email || !password || !role) {
       return res.status(400).json({
@@ -36,10 +38,14 @@ export const signUp = async (req, res) => {
 
     let token = await genToken(user._id);
 
+    // Cookie must be sent to frontend on a different origin (different port).
+    // During local development we disable secure but use sameSite:none so the
+    // browser includes it with `fetch`/axios requests.  In production we use
+    // secure cookies and restrict sameSite to strict.
     res.cookie("token", token, {
       httpOnly: true,
-      secure: false,
-      sameSite: "strict",
+      secure: process.env.NODE_ENV === "production",
+      sameSite: process.env.NODE_ENV === "production" ? "strict" : "none",
       maxAge: 7 * 24 * 60 * 60 * 1000,
     });
 
@@ -57,10 +63,10 @@ export const signUp = async (req, res) => {
 
 export const login = async (req, res) => {
   try {
-    const { email, password, role } = req.body;
+    let { email, password, role } = req.body;
+    if (email) email = email.trim().toLowerCase();
 
-
-    let user = await User.findOne({ email: email.trim().toLowerCase() }).select("+password");
+    let user = await User.findOne({ email }).select("+password");
     console.log(user);
     if (!user) {
       return res.status(400).json({ message: "User not register!" });
@@ -78,10 +84,11 @@ export const login = async (req, res) => {
 
     let token = await genToken(user._id);
 
+    // mirror the same cookie logic used during signup
     res.cookie("token", token, {
       httpOnly: true,
-      secure: false,
-      sameSite: "strict",
+      secure: process.env.NODE_ENV === "production",
+      sameSite: process.env.NODE_ENV === "production" ? "strict" : "none",
       maxAge: 7 * 24 * 60 * 60 * 1000,
     });
     user.password = undefined;
@@ -104,8 +111,10 @@ export const logout = async (req, res) => {
 
 export const sendOtp = async (req,res) => {
   try {
-    const {email} = req.body;
-    let user = await User.findOne({email});
+    let { email } = req.body;
+    if (email) email = email.trim().toLowerCase();
+    let user = await User.findOne({ email });
+    console.log(user);
     if(!user){
       return res.status(400).json({message:"User not Found!!"})
     }
@@ -128,8 +137,9 @@ export const sendOtp = async (req,res) => {
 
 export const verifyOtp = async (req,res) => {
   try {
-    const {email, otp} = req.body;
-    let user = await User.findOne({email});
+    let { email, otp } = req.body;
+    if (email) email = email.trim().toLowerCase();
+    let user = await User.findOne({ email });
     if(!user || user.resetOtp !=otp || Date.now() >= user.otpExpires ){
       return res.status(400).json({message:"Invalid Otp"})
     }
@@ -145,18 +155,19 @@ export const verifyOtp = async (req,res) => {
 }
 
 export const resetPassword = async (req,res) => {
-  try {   
-  const {email,password} = req.body;
-  let user = await User.findOne({ email }).select("+password");
-    if(!user|| !user.isOtpVerified == false){
-      return res.status(400).json({message:"otp need to verify!"})
+  try {
+    let { email, password } = req.body;
+    if (email) email = email.trim().toLowerCase();
+    let user = await User.findOne({ email }).select("+password");
+    if (!user || !user.isOtpVerified) {
+      return res.status(400).json({message:"otp need to verify!"});
     }
-  const hashPassword = await bcrypt.hash(user.password,10);
-  user.password = hashPassword,
-  user.isOtpVerified= false;
-  await user.save();
-  return res.status(200).json({message:"password reset successfull"})
+    const hashPassword = await bcrypt.hash(password,10);
+    user.password = hashPassword;
+    user.isOtpVerified = false;
+    await user.save();
+    return res.status(200).json({message:"password reset successful"});
   } catch (error) {
-    return res.status(400).json({message:`error in reset password ${error}`,})
+    return res.status(400).json({message:`error in reset password ${error}`});
   }
 }
