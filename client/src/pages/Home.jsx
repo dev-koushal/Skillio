@@ -3,7 +3,7 @@ import Navbar from "../components/Navbar";
 
 function Home() {
   return (
-    <div className="w-full overflow-hidden">
+    <div className="w-full">
       <div className="w-full h-20 ">
         <Navbar />
       </div>
