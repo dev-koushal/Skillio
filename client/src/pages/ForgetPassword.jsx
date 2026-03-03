@@ -21,7 +21,12 @@ export default function ForgotPassword() {
     setLoading(true);
     try 
     {
-        const {data} = await axios.post(serverURL+"/api/auth/sendotp",{withCredentials:true},{email})
+            // note: axios.post(url, data, config)
+        const { data } = await axios.post(
+          serverURL + "/api/auth/sendotp",
+          { email },
+          { withCredentials: true }
+        );
         console.log(data);
         setStep(2);
         toast(data.message);
@@ -36,7 +41,11 @@ export default function ForgotPassword() {
   const verifyOtp = async (params) => {
     setLoading(true);
     try {
-        const {data} = await axios.post(serverURL+"api/auth/verifyotp",{email,otp},{withCredentials:true})
+        const { data } = await axios.post(
+          serverURL + "/api/auth/verifyotp",
+          { email, otp },
+          { withCredentials: true }
+        );
         console.log(data);
         setStep(3);
         toast(data.message);
@@ -53,7 +62,11 @@ export default function ForgotPassword() {
         if(password != confirmPassword ){
             toast.error("password not match")
         }
-        const {data} = await axios.post(serverURL+"api/auth/resetpassword",{email,password:password},{withCredentials:true})
+        const { data } = await axios.post(
+          serverURL + "/api/auth/resetpassword",
+          { email, password: password },
+          { withCredentials: true }
+        );
         console.log(data);
         toast.success(data.message);
         navigate("/login")
