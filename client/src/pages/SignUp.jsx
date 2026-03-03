@@ -10,14 +10,14 @@ import {
   User2,
 } from "lucide-react";
 import logo from "/skillio.png";
-import loginPicture from "../../assets/SkillioLogin.png";
+import loginPicture from "../assets/SkillioLogin.png";
 import { Link, Navigate, useNavigate, useSearchParams } from "react-router-dom";
-import { serverURL } from "../../App";
+import { serverURL } from "../App";
 import { toast } from "react-toastify";
 import axios from "axios";
 import { ClipLoader } from "react-spinners";
 import { useDispatch } from "react-redux";
-import { setUserData } from "../../redux/userSlice";
+import { setUserData } from "../redux/userSlice";
 export default function SignUp() {
   const [showPassword, setShowPassword] = useState(false);
 
@@ -198,12 +198,12 @@ export default function SignUp() {
 
           {/* Social Buttons */}
           <div className="grid grid-cols-2 gap-3">
-            <button className="flex items-center justify-center gap-2 bg-gray-800 hover:bg-gray-700 border border-gray-700 hover:border-gray-600 text-white text-sm font-medium py-2.5 rounded-lg transition-all">
+            <button className="flex items-center justify-center gap-2 bg-gray-800 hover:bg-gray-700 border border-gray-700 hover:border-gray-600 text-white text-sm font-medium py-2.5 rounded-lg transition-all cursor-pointer">
               <Signature />
               Google
             </button>
-            <button className="flex items-center justify-center gap-2 bg-gray-800 hover:bg-gray-700 border border-gray-700 hover:border-gray-600 text-white text-sm font-medium py-2.5 rounded-lg transition-all">
-              <Link to="/login">Login?</Link>
+            <button onClick={()=>navigate('/login')} className="flex items-center justify-center gap-2 bg-gray-800 hover:bg-gray-700 border border-gray-700 hover:border-gray-600 text-white text-sm font-medium py-2.5 rounded-lg transition-all cursor-pointer">
+              Login?
             </button>
           </div>
         </div>

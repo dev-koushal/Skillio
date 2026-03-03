@@ -1,37 +1,39 @@
-import { createBrowserRouter, RouterProvider } from "react-router-dom";
+import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { ToastContainer } from "react-toastify";
+import { useSelector } from "react-redux";
+import { useEffect } from "react";
 import "react-toastify/dist/ReactToastify.css";
 
-import Home from "./assets/pages/Home";
-import Login from "./assets/pages/Login";
-import Signup from "./assets/pages/Signup";
-import getCurrentUser from "./hooks/getCurrentUser";
+import Home from "./pages/Home";
+import Login from "./pages/Login";
+import Signup from "./pages/Signup";
+import Profile from "./pages/Profile";
+import useGetCurrentUser from "./hooks/useGetCurrentUser";
 
 export const serverURL = "http://localhost:3000";
 
-const router = createBrowserRouter([
-  {
-    path: "/",
-    element: <Home />,
-  },
-  {
-    path: "/login",
-    element: <Login />,
-  },
-  {
-    path: "/signup",
-    element: <Signup />,
-  },
-]);
-
-
 function App() {
-  getCurrentUser();
+  const { userData } = useSelector((store) => store.user);
+
+  // Fetch user on app start
+  useGetCurrentUser();
+
   return (
-    <>
-      <RouterProvider router={router} />
-      <ToastContainer position="bottom-right" autoClose={3000} />
-    </>
+    <BrowserRouter>
+      <Routes>
+        <Route path="/" element={<Home />} />
+        <Route path="/login" element={<Login />} />
+        <Route path="/signup" element={<Signup />} />
+
+        {/* Protected Route */}
+        <Route
+          path="/profile"
+          element={userData ? <Profile /> : <Navigate to="/signup" />}
+        />
+      </Routes>
+
+      <ToastContainer position="top-right" autoClose={1500} />
+    </BrowserRouter>
   );
 }
 
