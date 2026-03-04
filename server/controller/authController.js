@@ -43,11 +43,11 @@ export const signUp = async (req, res) => {
     // browser includes it with `fetch`/axios requests.  In production we use
     // secure cookies and restrict sameSite to strict.
     res.cookie("token", token, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === "production",
-      sameSite: process.env.NODE_ENV === "production" ? "strict" : "none",
-      maxAge: 7 * 24 * 60 * 60 * 1000,
-    });
+  httpOnly: true,
+  secure: false,
+  sameSite: "lax",
+  maxAge: 7 * 24 * 60 * 60 * 1000,
+});
 
     const safeUser = user.toObject();
     delete safeUser.password;
@@ -85,12 +85,12 @@ export const login = async (req, res) => {
     let token = await genToken(user._id);
 
     // mirror the same cookie logic used during signup
-    res.cookie("token", token, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === "production",
-      sameSite: process.env.NODE_ENV === "production" ? "strict" : "none",
-      maxAge: 7 * 24 * 60 * 60 * 1000,
-    });
+   res.cookie("token", token, {
+  httpOnly: true,
+  secure: false,
+  sameSite: "lax",
+  maxAge: 7 * 24 * 60 * 60 * 1000,
+});
     user.password = undefined;
     return res
       .status(200)
