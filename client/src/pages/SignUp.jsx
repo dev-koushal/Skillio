@@ -18,6 +18,8 @@ import axios from "axios";
 import { ClipLoader } from "react-spinners";
 import { useDispatch } from "react-redux";
 import { setUserData } from "../redux/userSlice";
+import { signInWithPopup } from "firebase/auth";
+import { auth, provider } from "../../utils/firebase";
 export default function SignUp() {
   const [showPassword, setShowPassword] = useState(false);
 
@@ -55,6 +57,19 @@ export default function SignUp() {
       setLoading(false);
     }
   };
+
+  const googleSignup = async () => {
+    try {
+      const response = await signInWithPopup(auth,provider);
+     
+      let user = response.user;
+      let name  =response.user?.name;
+      let email =response.user?.email;
+    
+    } catch (error) {
+      console.log(error);
+    }
+  }
   return (
     <div className="min-h-screen bg-white flex items-center justify-center p-4 sm:p-8">
       {/* Card */}
@@ -198,7 +213,7 @@ export default function SignUp() {
 
           {/* Social Buttons */}
           <div className="grid grid-cols-2 gap-3">
-            <button className="flex items-center justify-center gap-2 bg-gray-800 hover:bg-gray-700 border border-gray-700 hover:border-gray-600 text-white text-sm font-medium py-2.5 rounded-lg transition-all cursor-pointer">
+            <button className="flex items-center justify-center gap-2 bg-gray-800 hover:bg-gray-700 border border-gray-700 hover:border-gray-600 text-white text-sm font-medium py-2.5 rounded-lg transition-all cursor-pointer" onClick={googleSignup}>
               <Signature />
               Google
             </button>
