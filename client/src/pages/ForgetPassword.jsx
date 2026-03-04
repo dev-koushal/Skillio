@@ -21,18 +21,17 @@ export default function ForgotPassword() {
     setLoading(true);
     try 
     {
-            // note: axios.post(url, data, config)
+        // note: axios.post(url, data, config)
         const { data } = await axios.post(
           serverURL + "/api/auth/sendotp",
           { email },
           { withCredentials: true }
         );
-        console.log(data);
         setStep(2);
         toast(data.message);
     } catch (error) {
-        console.log(error);
-        toast(error.response.data.message);
+    console.log(error);
+    toast(error?.response?.data?.message || "Something went wrong");
     }finally{
         setLoading(false);
     }
@@ -51,7 +50,7 @@ export default function ForgotPassword() {
         toast(data.message);
     } catch (error) {
          console.log(error);
-        toast(error.response.data.message);
+        toast(error.response.data.message||"Something went wrong");
     }finally{
         setLoading(false);
     }
@@ -129,7 +128,7 @@ export default function ForgotPassword() {
 
             <input
               type="text"
-              maxLength={6}
+              maxLength={4}
               placeholder="Enter 6 digit OTP"
               className="w-full border rounded-lg px-4 py-3 text-center text-lg mb-6 outline-none"
               value={otp}
@@ -156,7 +155,7 @@ export default function ForgotPassword() {
               <ArrowLeft size={14} /> Back to Login
             </button>
 
-            <h2 className="text-xl font-bold mb-6 cursor-pointer" disabled={loading} onClick={resetPassword}> {loading? <ClipLoader size={20} color="white"/> :<span>Reset Password</span>}</h2>
+            <h2 className="text-xl font-bold mb-6 ">Reset Password </h2>
 
             <div className="flex items-center border rounded-lg px-3 mb-4">
               <Lock size={16} className="text-gray-400" />
@@ -186,8 +185,8 @@ export default function ForgotPassword() {
               </button>
             </div>
 
-            <button className="w-full py-3 bg-black text-white rounded-lg text-sm font-semibold cursor-pointer">
-              Reset Password
+            <button className="w-full py-3 bg-black text-white rounded-lg text-sm font-semibold cursor-pointer "  disabled={loading} onClick={resetPassword}>
+              {loading? <ClipLoader size={20} color="white"/> :<span>Reset Password</span>}
             </button>
           </div>
         )}

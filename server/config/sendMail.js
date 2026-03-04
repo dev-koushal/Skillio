@@ -1,9 +1,10 @@
-import {createTransport} from 'nodemailer';
-import nodemailer from 'nodemailer'
 
+import nodemailer from 'nodemailer'
+import dotenv from 'dotenv'
+
+dotenv.config();
 const transporter = nodemailer.createTransport({
-  host: "gmail",
-  port: 465,
+  service: "gmail",
   secure: true, // Use true for port 465, false for port 587
   auth: {
     user: process.env.EMAIL_ID,
@@ -50,7 +51,7 @@ const sendMail = async (to, otp) => {
             </div>
 
             <p style="color:#6b7280;font-size:14px;">
-              This OTP is valid for 10 minutes. Do not share it with anyone.
+              This OTP is valid for 5 minutes. Do not share it with anyone.
             </p>
 
             <p style="color:#6b7280;font-size:14px;margin-top:30px;">
