@@ -14,73 +14,71 @@ export default function ForgotPassword() {
   const [confirmPassword, setConfirmPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
-  const [loading,setLoading] = useState(false);
+  const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
 
   const sendOtp = async (params) => {
     setLoading(true);
-    try 
-    {
-        // note: axios.post(url, data, config)
-        const { data } = await axios.post(
-          serverURL + "/api/auth/sendotp",
-          { email },
-          { withCredentials: true }
-        );
-        setStep(2);
-        toast(data.message);
+    try {
+      // note: axios.post(url, data, config)
+      const { data } = await axios.post(
+        serverURL + "/api/auth/sendotp",
+        { email },
+        { withCredentials: true },
+      );
+      setStep(2);
+      toast(data.message);
     } catch (error) {
-    console.log(error);
-    toast(error?.response?.data?.message || "Something went wrong");
-    }finally{
-        setLoading(false);
+      console.log(error);
+      toast(error?.response?.data?.message || "Something went wrong");
+    } finally {
+      setLoading(false);
     }
-  }
+  };
 
   const verifyOtp = async (params) => {
     setLoading(true);
     try {
-        const { data } = await axios.post(
-          serverURL + "/api/auth/verifyotp",
-          { email, otp },
-          { withCredentials: true }
-        );
-        console.log(data);
-        setStep(3);
-        toast(data.message);
+      const { data } = await axios.post(
+        serverURL + "/api/auth/verifyotp",
+        { email, otp },
+        { withCredentials: true },
+      );
+      console.log(data);
+      setStep(3);
+      toast(data.message);
     } catch (error) {
-         console.log(error);
-        toast(error.response.data.message||"Something went wrong");
-    }finally{
-        setLoading(false);
+      console.log(error);
+      toast(error.response.data.message || "Something went wrong");
+    } finally {
+      setLoading(false);
     }
-  }
+  };
   const resetPassword = async (params) => {
     setLoading(true);
     try {
-        if(password != confirmPassword ){
-            toast.error("password not match")
-        }
-        const { data } = await axios.post(
-          serverURL + "/api/auth/resetpassword",
-          { email, password: password },
-          { withCredentials: true }
-        );
-        console.log(data);
-        toast.success(data.message);
-        navigate("/login")
+      if (password != confirmPassword) {
+        toast.error("password not match");
+      }
+      const { data } = await axios.post(
+        serverURL + "/api/auth/resetpassword",
+        { email, password: password },
+        { withCredentials: true },
+      );
+      console.log(data);
+      toast.success(data.message);
+      navigate("/login");
     } catch (error) {
-         console.log(error);
-        toast(error.response.data.message);
-    }finally{
-        setLoading(false);
+      console.log(error);
+      toast(error.response.data.message);
+    } finally {
+      setLoading(false);
     }
-  }
+  };
 
   return (
     <div className="min-h-screen bg-white flex items-center justify-center px-4">
       <div className="w-full max-w-sm border border-black rounded-2xl p-8">
-
         {/* STEP 1 */}
         {step === 1 && (
           <div>
@@ -109,7 +107,11 @@ export default function ForgotPassword() {
               className="w-full py-3 bg-black text-white rounded-lg text-sm font-semibold cursor-pointer"
               disabled={loading}
             >
-             {loading? <ClipLoader size={20} color="white"/> :<span>Send OTP</span>}
+              {loading ? (
+                <ClipLoader size={20} color="white" />
+              ) : (
+                <span>Send OTP</span>
+              )}
             </button>
           </div>
         )}
@@ -140,7 +142,11 @@ export default function ForgotPassword() {
               disabled={loading}
               className="w-full py-3 bg-black text-white rounded-lg text-sm font-semibold cursor-pointer"
             >
-             {loading? <ClipLoader size={20} color="white"/> :<span>Verify OTP</span>}
+              {loading ? (
+                <ClipLoader size={20} color="white" />
+              ) : (
+                <span>Verify OTP</span>
+              )}
             </button>
           </div>
         )}
@@ -185,12 +191,19 @@ export default function ForgotPassword() {
               </button>
             </div>
 
-            <button className="w-full py-3 bg-black text-white rounded-lg text-sm font-semibold cursor-pointer "  disabled={loading} onClick={resetPassword}>
-              {loading? <ClipLoader size={20} color="white"/> :<span>Reset Password</span>}
+            <button
+              className="w-full py-3 bg-black text-white rounded-lg text-sm font-semibold cursor-pointer "
+              disabled={loading}
+              onClick={resetPassword}
+            >
+              {loading ? (
+                <ClipLoader size={20} color="white" />
+              ) : (
+                <span>Reset Password</span>
+              )}
             </button>
           </div>
         )}
-
       </div>
     </div>
   );
