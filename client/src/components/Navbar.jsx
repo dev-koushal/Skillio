@@ -30,10 +30,10 @@ function Navbar() {
 
   
   return (
-    <div className="bg-black text-white w-full flex items-center relative">
+    <div  className="bg-black text-white w-full flex items-center relative  ">
       
       {/* Main Container */}
-      <div className="flex justify-between items-center w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div className="flex justify-between items-center w-full  mx-auto px-4 sm:px-6 lg:px-8">
 
         {/* Logo */}
         <div className="h-20 sm:h-24 w-20 sm:w-24 flex items-center justify-center">
@@ -45,7 +45,7 @@ function Navbar() {
         </div>
 
         {/* Desktop Menu */}
-        <div className="hidden md:flex gap-4 items-center relative">
+        <div  className="hidden md:flex mr-5 gap-4 items-center relative">
 
           {!userData && (
             <div className="border-2 border-cyan-900 rounded-full p-1.5 hover:bg-gray-600/90 cursor-pointer ">
@@ -90,7 +90,7 @@ function Navbar() {
           <div
             className={`${
               !option ? "hidden" : "absolute"
-            } top-16 right-0 w-48 bg-black/90 rounded-xl p-4 flex flex-col gap-2 `}
+            } top-16 right-10 w-48 bg-gray-800/60 rounded-xl p-4 flex flex-col gap-2 z-50 `}
           >
             <span
               onClick={() => {
