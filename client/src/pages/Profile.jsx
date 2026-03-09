@@ -17,7 +17,7 @@ function Profile() {
   const navigate = useNavigate();
   return (
     <div className="min-h-screen bg-black/90 flex justify-center md:p-6">
-      <div className="w-full md:max-w-4xl bg-white rounded-2xl shadow-md p-8">
+      <div className="w-full md:max-w-4xl bg-white/90 rounded-2xl shadow-md p-8">
         {/* Header */}
         <button
           onClick={() => navigate("/")}

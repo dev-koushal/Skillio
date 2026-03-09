@@ -2,6 +2,7 @@ import React from "react";
 import Navbar from "../components/Navbar";
 import { ArrowRight, PlayCircle, Users, BookOpen, GraduationCap } from "lucide-react";
 import HeroImage from '../assets/D.gif'
+import ExploreCourses from "../components/ExploreCourses";
 function Home() {
   return (
     <>
@@ -109,6 +110,7 @@ function Home() {
           </div>
         </div>
       </div>
+        <ExploreCourses/>
     </>
   );
 }

@@ -27,6 +27,7 @@ const EditProfile = () => {
       setForm({ ...form, [e.target.name]: e.target.value });
     }
   };
+  
 
   const submitHandler = async (e) => {
     e.preventDefault();
@@ -63,7 +64,7 @@ const EditProfile = () => {
 
   return (
     <div className="min-h-screen bg-black/90 flex justify-center p-4 md:p-6">
-      <div className="w-full max-w-3xl bg-white shadow-md rounded-2xl p-6 md:p-8">
+      <div className="w-full max-w-3xl bg-white/90 shadow-md rounded-2xl p-6 md:p-8">
         {/* back */}
         <button
           onClick={() => navigate("/profile")}
@@ -78,7 +79,7 @@ const EditProfile = () => {
 
         <form onSubmit={submitHandler} className="space-y-4">
           {/* profile */}
-          <div className="flex flex-col items-center gap-4">
+          <div className="flex flex-col items-center gap-4 ">
             <img
               src={previewImage}
               alt="profile"
@@ -123,10 +124,11 @@ const EditProfile = () => {
             </label>
 
             <input
+            
               type="email"
               value={userData?.email}
               readOnly
-              className="w-full border rounded-lg px-3 py-2 bg-gray-100"
+              className="w-full border rounded-lg px-3 py-2 bg-gray-100 "
             />
           </div>
 
