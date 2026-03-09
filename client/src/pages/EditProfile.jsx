@@ -59,31 +59,24 @@ const EditProfile = () => {
 
   const previewImage = form.profilePicture ? (
     URL.createObjectURL(form.profilePicture)
-  ) : (
-    <div
-      onClick={() => setOption(!option)}
-      className="flex w-10 h-10 border-2 border-cyan-900 rounded-full items-center justify-center hover:bg-gray-600/90 cursor-pointer z"
-    >
-      {userData?.name?.charAt(0)?.toUpperCase() || "?"}
-    </div>
-  );
+  ) : blank_profile;
 
   return (
-    <div className="min-h-screen bg-gray-50 flex justify-center p-4 md:p-6">
+    <div className="min-h-screen bg-black/90 flex justify-center p-4 md:p-6">
       <div className="w-full max-w-3xl bg-white shadow-md rounded-2xl p-6 md:p-8">
         {/* back */}
         <button
           onClick={() => navigate("/profile")}
-          className="flex items-center gap-2 px-3 py-1 border rounded-lg hover:bg-gray-100 mb-5"
+          className="flex items-center gap-2 px-3 py-1 border rounded-lg hover:bg-gray-100 mb-3"
         >
           <ArrowLeft size={16} /> Back
         </button>
 
-        <h2 className="text-xl md:text-2xl font-semibold mb-6 flex items-center gap-2">
+        <h2 className="text-xl md:text-2xl font-semibold mb-2 flex items-center gap-2">
           <User size={20} /> Edit Profile
         </h2>
 
-        <form onSubmit={submitHandler} className="space-y-6">
+        <form onSubmit={submitHandler} className="space-y-4">
           {/* profile */}
           <div className="flex flex-col items-center gap-4">
             <img
