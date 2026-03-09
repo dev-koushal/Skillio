@@ -10,6 +10,7 @@ import Signup from "./pages/Signup";
 import Profile from "./pages/Profile";
 import useGetCurrentUser from "./hooks/useGetCurrentUser";
 import ForgetPassword from "./pages/ForgetPassword";
+import EditProfile from "./pages/EditProfile";
 
 export const serverURL = "http://localhost:3000";
 
@@ -35,6 +36,10 @@ function App() {
         <Route
           path="/forget"
           element={<ForgetPassword />}
+        />
+        <Route
+          path="/editprofile"
+          element={userData? <EditProfile /> : <Navigate to="/signup" />}
         />
       </Routes>
 
