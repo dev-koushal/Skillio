@@ -16,21 +16,25 @@ function Profile() {
   const { userData } = useSelector((store) => store.user);
   const navigate = useNavigate();
   return (
-    <div className="min-h-screen bg-gray-50 flex justify-center md:p-6">
+    <div className="min-h-screen bg-black/90 flex justify-center md:p-6">
       <div className="w-full md:max-w-4xl bg-white rounded-2xl shadow-md p-8">
         {/* Header */}
         <button
           onClick={() => navigate("/")}
-          className="flex items-center gap-1.5 px-2  border rounded-lg hover:bg-gray-100"
+          className="flex items-center gap-1.5 px-2  border rounded-lg hover:bg-gray-100 mb-4 cursor-pointer"
         >
           <ArrowLeft size={16} /> Back
         </button>
         <div className="flex items-center gap-6 border-b pb-6">
-          <img
-            src={userData?.profilePicture || blank_photo}
-            alt="profile"
-            className="w-24 h-24 rounded-full object-cover"
-          />
+         {
+                userData.photoUrl?<img src={userData.photoUrl} className="flex w-20 h-20 border-40 border-cyan-900 rounded-full items-center justify-center" />:
+                 <div
+              onClick={()=>setOption(!option)}
+              className="flex w-20 h-20 border-2 border-cyan-900 rounded-full items-center justify-center text-4xl"
+            >
+             {userData?.name?.charAt(0)?.toUpperCase() || "?"}
+            </div>
+            }
 
           <div className="flex-1">
             <h2 className="text-2xl font-semibold flex items-center gap-2">
@@ -45,7 +49,7 @@ function Profile() {
             </div>
           </div>
 
-          <button className="flex items-center gap-2 px-4 py-2 border rounded-lg hover:bg-gray-100">
+          <button onClick={()=>navigate('/editprofile')} className="flex items-center gap-2 px-4 py-2 border rounded-lg hover:bg-gray-100 cursor-pointer">
             <Edit size={16} />
             Edit
           </button>
