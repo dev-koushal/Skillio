@@ -64,7 +64,7 @@ function Navbar() {
           )}
 
           {userData?.role === "educator" && (
-            <button className="border-2 border-cyan-900 hover:bg-gray-600/90 text-sm px-4 py-2 rounded-sm">
+            <button onClick={()=>navigate('/dashboard')} className="border-2 border-cyan-900 hover:bg-gray-600/90 text-sm px-4 py-2 rounded-sm">
               Dashboard
             </button>
             
@@ -132,6 +132,7 @@ function Navbar() {
               Profile
         </span>
         <span
+        onClick={()=>navigate('/courses')} 
               className="bg-cyan-900 px-6 py-3 rounded-sm w-1/2 text-center hover:bg-gray-600/90"
             >
               My courses
@@ -156,7 +157,7 @@ function Navbar() {
           </>
         )}
          {userData?.role === "educator" && (
-            <button className="bg-cyan-900 px-6 py-3 rounded-sm w-1/2 text-center hover:bg-gray-600/90">
+            <button onClick={()=>navigate('/dashboard')}  className="bg-cyan-900 px-6 py-3 rounded-sm w-1/2 text-center hover:bg-gray-600/90">
               Dashboard
             </button>
           )}
