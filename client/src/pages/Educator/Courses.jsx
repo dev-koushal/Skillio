@@ -49,16 +49,16 @@ function Courses() {
                   <td className="py-3 px-4 flex items-center gap-4">
                     <img
                       src={
-                        course.thumbnail ||
+                        course?.thumbnail ||
                         "https://thumbs.dreamstime.com/b/no-thumbnail-image-placeholder-forums-blogs-websites-148010362.jpg"
                       }
                       alt="thumbnail"
                       className="w-25 h-14 object-cover rounded-md"
                     />
-                    <span>{course.title}</span>
+                    <span>{course?.title}</span>
                   </td>
 
-                  <td className="px-4 py-3">${course.price || "NA"}</td>
+                  <td className="px-4 py-3">${course?.price || "NA"}</td>
 
                   <td className="px-4 py-3">
                     <span
