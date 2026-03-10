@@ -1,5 +1,5 @@
 import express, { Router } from 'express'
-import {createCourse, editCourse, getCreatorCourses, getPublishedCourses, removeCourse} from '../controller/courseController'
+import {createCourse, editCourse, getCourseById, getCreatorCourses, getPublishedCourses, removeCourse} from '../controller/courseController.js'
 import isAuth from '../middleware/isAuth.js'
 import upload from '../middleware/multer.js'
 const courseRouter = Router();
