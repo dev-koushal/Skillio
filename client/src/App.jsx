@@ -13,7 +13,8 @@ import ForgetPassword from "./pages/ForgetPassword";
 import EditProfile from "./pages/EditProfile";
 import Dashboard from "./pages/Educator/Dashboard";
 import Courses from "./pages/Educator/Courses";
-
+import CreateCourses from "./pages/Educator/CreateCourses";
+import useGetCreatorCourse from './hooks/getCreatorCourse'
 export const serverURL = "http://localhost:3000";
 
 function App() {
@@ -21,7 +22,8 @@ function App() {
 
   // Fetch user on app start
   useGetCurrentUser();
-
+  useGetCreatorCourse();
+ 
   return (
     <BrowserRouter>
       <Routes>
@@ -51,6 +53,10 @@ function App() {
           path="/courses"
           element={userData?.role==="educator"? <Courses/> : <Navigate to="/signup" />}
         />
+        <Route
+          path="/createcourses"
+          element={userData?.role==="educator"? <CreateCourses/> : <Navigate to="/signup" />}
+        />
       </Routes>
 
       <ToastContainer position="top-right" autoClose={1500} />
@@ -59,3 +65,4 @@ function App() {
 }
 
 export default App;
+
