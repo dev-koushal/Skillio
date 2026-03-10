@@ -64,7 +64,7 @@ function Navbar() {
           )}
 
           {userData?.role === "educator" && (
-            <button onClick={()=>navigate('/dashboard')} className="border-2 border-cyan-900 hover:bg-gray-600/90 text-sm px-4 py-2 rounded-sm">
+            <button onClick={()=>navigate('/dashboard')} className="border-2 border-cyan-900 hover:bg-gray-600/90 text-sm px-4 py-2 rounded-sm cursor-pointer">
               Dashboard
             </button>
             
@@ -73,14 +73,14 @@ function Navbar() {
           {!userData ? (
             <button
               onClick={() => navigate("/login")}
-              className="bg-cyan-900 hover:bg-gray-600/90 text-sm px-4 py-2 rounded-sm"
+              className="bg-cyan-900 hover:bg-gray-600/90 text-sm px-4 py-2 rounded-sm cursor-pointer"
             >
               Login
             </button>
           ) : (
             <button
               onClick={handleLogout}
-              className="bg-cyan-900 hover:bg-gray-600/90 text-sm px-4 py-2 rounded-sm"
+              className="bg-cyan-900 hover:bg-gray-600/90 text-sm px-4 py-2 rounded-sm cursor-pointer"
             >
               Logout
             </button>
