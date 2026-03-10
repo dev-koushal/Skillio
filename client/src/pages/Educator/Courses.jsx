@@ -1,11 +1,32 @@
-import React from "react";
+import React, { useEffect } from "react";
 import { ArrowLeft, SquarePen } from "lucide-react";
 import { useNavigate } from "react-router-dom";
-import { useSelector } from "react-redux";
+import { useDispatch, useSelector } from "react-redux";
+import axios from "axios";
+import { setCreatorCourseData } from "../../redux/courseSlice";
 function Courses() {
   const navigate = useNavigate();
   const { creatorCourseData } = useSelector((state) => state.course);
+  const dispatch = useDispatch();
   // console.log(creatorCourseData);
+  const {userData} = useSelector(state=>state.user)
+  useEffect(() => {
+    const creatorCourses = async () => {
+      try {
+        const { data } = await axios.get(
+          serverURL + "/api/course/getcreator",
+          { withCredentials: true }
+        );
+  
+        dispatch(setCreatorCourseData(data));
+        
+      } catch (error) {
+        console.log(error);
+      }
+    };
+  
+    creatorCourses();
+  }, [userData]);
   return (
     <div className="bg-white/90 min-h-screen flex">
       <div className="w-screen min-h-screen p-4 sm:p-6 bg-gray-100 ">
@@ -16,7 +37,7 @@ function Courses() {
               className="cursor-pointer"
               onClick={() => navigate("/dashboard")}
             />
-            <h1 className="text-2xl font-semibold">All Created Courses</h1>
+            <h1 className="text-2xl font-semibold">All Created Courses </h1>
           </div>
           <button
             className="bg-black text-white px-4 py-2 rounded hover:bg-gray-500"
@@ -33,7 +54,7 @@ function Courses() {
           <table className="min-w-full text-sm">
             <thead className="border-b bg-gray-50">
               <tr>
-                <th className="text-left py-3 px-4">Courses</th>
+                <th className="text-left py-3 px-4">Courses <span className="text-xs text-gray-600">(Total {creatorCourseData.courses.length})</span></th>
                 <th className="text-left py-3 px-4">Price</th>
                 <th className="text-left py-3 px-4">Status</th>
                 <th className="text-left py-3 px-4">Action</th>
@@ -74,7 +95,7 @@ function Courses() {
 
                   <td className="px-4 py-3">
                     <SquarePen
-                    size={20} className="text-gray-600 hover:text-blue-600 cursor-pointer" />
+                    size={20} className="text-gray-600 hover:text-blue-600 cursor-pointer" onClick={()=>navigate(`/editcourse/${course?._id}`)} />
                   </td>
                 </tr>
               ))}
@@ -107,7 +128,7 @@ function Courses() {
                     ${course.price || "NA"}
                   </p>
                 </div>
-                <SquarePen className="text-gray-600 hover:text-blue-600 cursor-pointer" />
+                <SquarePen className="text-gray-600 hover:text-blue-600 cursor-pointer" onClick={()=>navigate(`/editcourse/${course?._id}`)} />
               </div>
               <span
                 className={`w-fit px-3 py-1 rounded-full text-xs ${
