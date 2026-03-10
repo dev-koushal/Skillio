@@ -15,6 +15,7 @@ import Dashboard from "./pages/Educator/Dashboard";
 import Courses from "./pages/Educator/Courses";
 import CreateCourses from "./pages/Educator/CreateCourses";
 import useGetCreatorCourse from './hooks/getCreatorCourse'
+import EditCourse from "./pages/Educator/EditCourse";
 export const serverURL = "http://localhost:3000";
 
 function App() {
@@ -56,6 +57,10 @@ function App() {
         <Route
           path="/createcourses"
           element={userData?.role==="educator"? <CreateCourses/> : <Navigate to="/signup" />}
+        />
+        <Route
+          path="/editcourse/:courseId"
+          element={userData?.role==="educator"? <EditCourse/> : <Navigate to="/signup" />}
         />
       </Routes>
 
