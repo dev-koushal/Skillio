@@ -18,6 +18,7 @@ function CreateCourses() {
        const {data} = await axios.post(serverURL+"/api/course/create",{title,category},{withCredentials:true})
        console.log(data);
        toast.success("Course Created!!")
+       window.location.href="/courses"
        navigate("/courses")
     } catch (error) {
       console.log(error);
@@ -63,6 +64,9 @@ function CreateCourses() {
             <option value={"Development"}>Development</option>
             <option value={"Cyber"}>Cyber</option>
             <option value={"Business"}>Business</option>
+            <option value={"AIML"}>AI/ML</option>
+            <option value={"Cyber Security"}>Cyber Security</option>
+            <option value={"Data Science"}>Data Science</option>
           </select>
         </div>
 
