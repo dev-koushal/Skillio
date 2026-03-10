@@ -73,7 +73,8 @@ function Courses() {
                   </td>
 
                   <td className="px-4 py-3">
-                    <SquarePen className="text-gray-600 hover:text-blue-600 cursor-pointer" />
+                    <SquarePen
+                    size={20} className="text-gray-600 hover:text-blue-600 cursor-pointer" />
                   </td>
                 </tr>
               ))}
