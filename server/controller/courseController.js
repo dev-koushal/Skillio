@@ -1,4 +1,4 @@
-import Course from "../models/coursesModel";
+import Course from "../models/coursesModel.js";
 import uploadCloudinary from "../config/cloudinary.js";
 
 export const createCourse = async (req, res) => {
@@ -8,11 +8,12 @@ export const createCourse = async (req, res) => {
       return res.status(400).json({ message: "All detail needed" });
     }
 
-    const course = Course.create({
+    const course = await Course.create({
       title,
       category,
       creator: req.userId,
     });
+   
     return res.status(200).json(course);
   } catch (error) {
     console.log(error);
@@ -41,7 +42,7 @@ export const getCreatorCourses = async (req, res) => {
     if (!courses) {
       return res.status(400).json({ message: "Courses not found" });
     }
-    return res.status(200).json(courses);
+    return res.status(200).json({courses});
   } catch (error) {
     console.log(error);
     return res
