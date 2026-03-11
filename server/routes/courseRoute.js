@@ -8,7 +8,7 @@ courseRouter.post("/create",isAuth, createCourse)
 courseRouter.get("/getpublished",isAuth, getPublishedCourses)
 courseRouter.get("/getcreator",isAuth, getCreatorCourses)
 courseRouter.post("/editcourse/:courseId",isAuth, upload.single("thumbnail"),editCourse)
-courseRouter.get("/getcoursebyid/:courseId",isAuth, getCourseById)
+courseRouter.get("/getcourse/:courseId",isAuth, getCourseById)
 courseRouter.delete("/remove/:courseId",isAuth, removeCourse)
 
 
