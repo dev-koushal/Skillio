@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState } from "react";
 import {
   User,
   Mail,
@@ -9,11 +9,11 @@ import {
   ArrowLeft,
 } from "lucide-react";
 import { useSelector } from "react-redux";
-import blank_photo from "/blank_Profile.avif";
 import { useNavigate } from "react-router-dom";
 
 function Profile() {
   const { userData } = useSelector((store) => store.user);
+  const [option, setOption] = useState(false);
   const navigate = useNavigate();
   return (
     <div className="min-h-screen bg-black/90 flex justify-center md:p-6">
@@ -26,15 +26,31 @@ function Profile() {
           <ArrowLeft size={16} /> Back
         </button>
         <div className="flex items-center gap-6 border-b pb-6">
-         {
-                userData.photoUrl?<img src={userData.photoUrl} className="flex w-20 h-20 border-40 border-cyan-900 rounded-full items-center justify-center" />:
-                 <div
-              onClick={()=>setOption(!option)}
+          {userData.photoUrl ? (
+            <img
+              src={userData.photoUrl}
+              className="flex w-20 h-20 border-40 border-cyan-900 rounded-full items-center justify-center"
+            />
+          ) : (
+            <div
+              onClick={() => setOption(!option)}
               className="flex w-20 h-20 border-2 border-cyan-900 rounded-full items-center justify-center text-4xl"
             >
-             {userData?.name?.charAt(0)?.toUpperCase() || "?"}
+              {userData?.profilePicture ? (
+                <img
+                  src={userData.profilePicture}
+                  className="w-20 h-20 border-2 border-cyan-900 rounded-full object-cover"
+                />
+              ) : (
+                <div
+                  onClick={() => setOption(!option)}
+                  className="flex w-20 h-20 border-2 border-cyan-900 rounded-full items-center justify-center text-4xl"
+                >
+                  {userData?.name?.charAt(0)?.toUpperCase() || "?"}
+                </div>
+              )}
             </div>
-            }
+          )}
 
           <div className="flex-1">
             <h2 className="text-2xl font-semibold flex items-center gap-2">
@@ -49,7 +65,10 @@ function Profile() {
             </div>
           </div>
 
-          <button onClick={()=>navigate('/editprofile')} className="flex items-center gap-2 px-4 py-2 border rounded-lg hover:bg-gray-100 cursor-pointer">
+          <button
+            onClick={() => navigate("/editprofile")}
+            className="flex items-center gap-2 px-4 py-2 border rounded-lg hover:bg-gray-100 cursor-pointer"
+          >
             <Edit size={16} />
             Edit
           </button>
