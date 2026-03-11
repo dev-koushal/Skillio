@@ -16,6 +16,7 @@ import Courses from "./pages/Educator/Courses";
 import CreateCourses from "./pages/Educator/CreateCourses";
 import useGetCreatorCourse from './hooks/getCreatorCourse'
 import EditCourse from "./pages/Educator/EditCourse";
+import getPublishedCourse from "./hooks/getPublishedCourse";
 export const serverURL = "http://localhost:3000";
 
 function App() {
@@ -24,6 +25,7 @@ function App() {
   // Fetch user on app start
   useGetCurrentUser();
   useGetCreatorCourse();
+  getPublishedCourse();
  
   return (
     <BrowserRouter>
