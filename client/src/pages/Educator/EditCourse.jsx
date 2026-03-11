@@ -1,12 +1,87 @@
-import React, { useRef, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { ArrowLeft, ImagePlus } from "lucide-react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useParams } from "react-router-dom";
+import axios from 'axios'
+import { serverURL } from '../../App'
+import { toast } from 'react-toastify'
+
+import { ClipLoader } from 'react-spinners'
+
 
 function EditCourse() {
   const navigate = useNavigate();
+  const {courseId} = useParams();
   const thumb = useRef
   const [isPublished, setIsPublised] = useState()
+  const [selectCourse,setSelectCourse] = useState(null)
+  const [title,setTitle] = useState("")
+  const [subTitle,setSubTitle] = useState("")
+  const [description,setDescription] = useState("")
+  const [category,setCategory] = useState("")
+  const [level,setlevel] = useState("")
+  const [price,setPrice] = useState("")
+  const [frontendImage,setFrontendImage] = useState("")
+  const [backendImage,setBackendImage] = useState("")
+  const[loading,setLoading] = useState(false)
+  const handleThumbnail = (e) =>{
+    const file = e.target.files[0]
+    setBackendImage(file)
+    setFrontendImage(URL.createObjectURL(file))
+  }
 
+
+ const getCourseById = async () => {
+  try {
+    
+      const result = await axios.get(serverURL+`/api/course/getcourse/${courseId}`,{withCredentials:true})
+
+     setSelectCourse(result.data);
+     console.log(result.data);
+  } catch (error) {
+    
+    console.log(error);
+  }
+ }
+
+ useEffect(()=>{
+    if(selectCourse){
+        setTitle(selectCourse.title||"") 
+        setSubTitle(selectCourse.subTitle || "")
+        setDescription(selectCourse.description || "")
+        setCategory(selectCourse.category||"")
+        setlevel(selectCourse.level || "")
+        setPrice(selectCourse.price || "")
+        setFrontendImage(selectCourse.thumbnail || "")
+        setIsPublised(selectCourse?.isPublished)
+    }
+ },[selectCourse])
+useEffect(()=>{
+  getCourseById();
+},[])
+
+const handleEditCourse = async () => {
+ setLoading(true);
+   const formData = new FormData
+   formData.append("title",title)
+   formData.append("subTitle",subTitle)
+   formData.append("description",description)
+   formData.append("category",category)
+   formData.append("level",level)
+   formData.append("price",price)
+   formData.append("thumbnail",backendImage)
+   formData.append("isPublished",isPublished)
+  try {
+      const result = await axios.post(serverURL+`/api/course/editcourse/${courseId}`, formData ,{withCredentials:true})
+      // console.log(result.data);
+      toast.success("Course edited successfully")
+  } catch (error) {
+    console.log(error);
+    toast.error(error.response.data.message);
+  }finally{
+    setLoading(false);
+    navigate("/courses")
+  }
+}
   return (
     <div className="min-h-screen bg-gray-50 flex justify-center py-10">
       <div className="w-[850px] bg-white p-8 rounded-md shadow-sm border">
@@ -43,13 +118,15 @@ function EditCourse() {
         <h3 className="font-medium mb-4">Basic Course Information</h3>
 
         {/* Title */}
-        <form action="">
+        <form onSubmit={(e)=>e.preventDefault()} action="">
         <div className="mb-4">
           <label className="text-sm font-medium">Title</label>
           <input
             name="title"
             placeholder="Course Title"
             className="w-full border rounded px-3 py-2 mt-1"
+            onChange={(e)=>setTitle(e.target.value)}
+            value={title}
           />
         </div>
 
@@ -60,6 +137,8 @@ function EditCourse() {
             name="subtitle"
             placeholder="Subtitle"
             className="w-full border rounded px-3 py-2 mt-1"
+            onChange={(e)=>setSubTitle(e.target.value)}
+            value={subTitle}
           />
         </div>
 
@@ -68,10 +147,11 @@ function EditCourse() {
           <label className="text-sm font-medium">Description</label>
           <textarea
             name="description"
-            
             placeholder="Course description"
             rows="4"
             className="w-full border rounded px-3 py-2 mt-1"
+            onChange={(e)=>setDescription(e.target.value)}
+            value={description}
           />
         </div>
 
@@ -82,6 +162,8 @@ function EditCourse() {
             <select
               name="category"
               className="w-full border rounded px-3 py-2 mt-1"
+              onChange={(e)=>setCategory(e.target.value)}
+            value={category}
             >
               <option value="">Select Category</option>
               <option value="Development">Development</option>
@@ -95,6 +177,8 @@ function EditCourse() {
             <select
               name="level"
               className="w-full border rounded px-3 py-2 mt-1"
+              onChange={(e)=>setlevel(e.target.value)}
+            value={level}
             >
               <option value="">Select Level</option>
               <option value="Beginner">Beginner</option>
@@ -109,6 +193,8 @@ function EditCourse() {
               name="price"
               placeholder="₹"
               className="w-full border rounded px-3 py-2 mt-1"
+              onChange={(e)=>setPrice(e.target.value)}
+            value={price}
             />
           </div>
         </div>
@@ -120,8 +206,10 @@ function EditCourse() {
           </label>
 
           <label className="w-[200px] h-[120px] border flex items-center justify-center rounded cursor-pointer">
-            <input type="file" hidden  />
-            <ImagePlus size={40} />
+            <input onChange={ handleThumbnail} type="file" hidden  />
+            {
+              frontendImage?<img src={frontendImage} alt="" />:
+            <ImagePlus size={40} />}
           </label>
         </div>
 
@@ -129,16 +217,17 @@ function EditCourse() {
         <div className="flex gap-3">
           <button
             onClick={() => navigate("/courses")}
-            className="border px-4 py-2 rounded"
+            className="border px-4 py-2 rounded cursor-pointer"
+
           >
             Cancel
           </button>
 
           <button
             
-            className="bg-black text-white px-5 py-2 rounded"
-          >
-            Save
+            className="bg-black text-white px-5 py-2 rounded cursor-pointer"
+          onClick={handleEditCourse}>
+            {loading? <ClipLoader size={20} color="white" />:"Save"}
           </button>
         </div>
         </form>
