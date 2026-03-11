@@ -18,8 +18,8 @@ function Dashboard() {
         {/* main section */}
         <div className="max-w-5xl mx-auto bg-white/60 rounded-xl shadow-md p-6 flex flex-col md:flex-row items-center gap-6">
           {
-            userData?.photoUrl? <img src={userData?.photoUrl}className="w-28 h-28 rounded-full object-cover border-4 border-black shadow-md text-center" alt="Educator" />: <span className="w-28 h-28 rounded-full border-4 border-black shadow-md text-center text-6xl items-center p-4">
-             { userData.name.charAt(0).toUpperCase()}
+            userData?.photoUrl? <img src={userData?.photoUrl}className="w-28 h-28 rounded-full object-cover border-4 border-black shadow-md text-center" alt="Educator" />: <span className="w-28 h-28 rounded-full border-4 border-black shadow-md text-center text-6xl items-center overflow-hidden">
+             {userData.profilePicture? <img src={userData.profilePicture} alt="Pfp" className="  w-full h-full object-cover" /> :userData.name.charAt(0).toUpperCase()}
             </span> 
           }
 
