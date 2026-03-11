@@ -28,13 +28,10 @@ function Navbar() {
     }
   };
 
-  
   return (
-    <div  className="bg-black text-white w-full flex items-center relative  ">
-      
+    <div className="bg-black text-white w-full flex items-center relative  ">
       {/* Main Container */}
       <div className="flex justify-between items-center w-full  mx-auto px-4 sm:px-6 lg:px-8">
-
         {/* Logo */}
         <div className="h-20 sm:h-24 w-20 sm:w-24 flex items-center justify-center">
           <img
@@ -45,8 +42,7 @@ function Navbar() {
         </div>
 
         {/* Desktop Menu */}
-        <div  className="hidden md:flex mr-5 gap-4 items-center relative">
-
+        <div className="hidden md:flex mr-5 gap-4 items-center relative">
           {!userData && (
             <div className="border-2 border-cyan-900 rounded-full p-1.5 hover:bg-gray-600/90 cursor-pointer ">
               <User2Icon size={28} />
@@ -55,19 +51,27 @@ function Navbar() {
 
           {userData && (
             <div
-              onClick={()=>setOption(!option)}
-              className="flex w-10 h-10 border-2 border-cyan-900 rounded-full items-center justify-center hover:bg-gray-600/90 cursor-pointer z"
+              onClick={() => setOption(!option)}
+              className="flex w-10 h-10 border-2 border-cyan-900 rounded-full items-center justify-center overflow-hidden cursor-pointer"
             >
-             {userData?.name?.charAt(0)?.toUpperCase() || "?"}
+              {userData?.profilePicture ? (
+                <img
+                  src={userData.profilePicture}
+                  className="w-full h-full object-cover"
+                />
+              ) : (
+                userData?.name?.charAt(0)?.toUpperCase() || "?"
+              )}
             </div>
-            
           )}
 
           {userData?.role === "educator" && (
-            <button onClick={()=>navigate('/dashboard')} className="border-2 border-cyan-900 hover:bg-gray-600/90 text-sm px-4 py-2 rounded-sm cursor-pointer">
+            <button
+              onClick={() => navigate("/dashboard")}
+              className="border-2 border-cyan-900 hover:bg-gray-600/90 text-sm px-4 py-2 rounded-sm cursor-pointer"
+            >
               Dashboard
             </button>
-            
           )}
 
           {!userData ? (
@@ -101,7 +105,10 @@ function Navbar() {
             >
               <User2Icon className="mr-2" /> My Profile
             </span>
-            <span className="hover:bg-gray-600/90 rounded-lg px-2 py-2 w-full bg-cyan-950 flex cursor-pointer">
+            <span
+              onClick={() => navigate("/courses")}
+              className="hover:bg-gray-600/90 rounded-lg px-2 py-2 w-full bg-cyan-950 flex cursor-pointer"
+            >
               <BookCheck className="mr-2" /> My Courses
             </span>
           </div>
@@ -125,19 +132,20 @@ function Navbar() {
           onClick={() => setShowHam(false)}
         />
         <span
-              className="bg-cyan-900 px-6 py-3 rounded-sm w-1/2 text-center hover:bg-gray-600/90"
-              onClick={()=>{navigate('/profile');setShowHam(false);}}
-              
-            >
-              Profile
+          className="bg-cyan-900 px-6 py-3 rounded-sm w-1/2 text-center hover:bg-gray-600/90"
+          onClick={() => {
+            navigate("/profile");
+            setShowHam(false);
+          }}
+        >
+          Profile
         </span>
         <span
-        onClick={()=>navigate('/courses')} 
-              className="bg-cyan-900 px-6 py-3 rounded-sm w-1/2 text-center hover:bg-gray-600/90"
-            >
-              My courses
+          onClick={() => navigate("/courses")}
+          className="bg-cyan-900 px-6 py-3 rounded-sm w-1/2 text-center hover:bg-gray-600/90"
+        >
+          My courses
         </span>
-
 
         {!userData ? (
           <button
@@ -156,12 +164,14 @@ function Navbar() {
             </button>
           </>
         )}
-         {userData?.role === "educator" && (
-            <button onClick={()=>navigate('/dashboard')}  className="bg-cyan-900 px-6 py-3 rounded-sm w-1/2 text-center hover:bg-gray-600/90">
-              Dashboard
-            </button>
-          )}
-          
+        {userData?.role === "educator" && (
+          <button
+            onClick={() => navigate("/dashboard")}
+            className="bg-cyan-900 px-6 py-3 rounded-sm w-1/2 text-center hover:bg-gray-600/90"
+          >
+            Dashboard
+          </button>
+        )}
       </div>
     </div>
   );
