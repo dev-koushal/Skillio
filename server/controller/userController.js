@@ -16,24 +16,31 @@ export const getCurrentUser = async (req,res) => {
 }
 
 export const updateProfile = async (req,res) => {
-    try {
-       const userId = req.userId
-       let {description,name} = req.body;
-       let photoUrl
-       if(req.file){
-        photoUrl = await uploadCloudinary(req.file.path)
-       }
-       const user = await User.findByIdAndUpdate(userId,{name,description,photoUrl})
-       if(!user){
-            return res.status(404).json({
-                message:"User not found!"
-            })
-        }
-        await user.save()
-        return res.status(200).json(user)
+  try {
+    const userId = req.userId
+    const { name, description } = req.body
 
-    } catch (error) {
-        console.log(error);
-        return res.status(500).json({message:"Update profile error!"})
+    const updateData = { name, description }
+
+    if (req.file) {
+      const profilePicture = await uploadCloudinary(req.file.path)
+      updateData.profilePicture = profilePicture
     }
+
+    const user = await User.findByIdAndUpdate(
+      userId,
+      updateData,
+      { new: true }
+    )
+
+    if(!user){
+      return res.status(404).json({message:"User not found"})
+    }
+
+    return res.status(200).json(user)
+
+  } catch (error) {
+    console.log(error)
+    return res.status(500).json({message:"Update profile error"})
+  }
 }
