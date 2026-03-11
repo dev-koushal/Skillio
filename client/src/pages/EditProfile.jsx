@@ -58,9 +58,9 @@ const EditProfile = () => {
     }
   };
 
-  const previewImage = form.profilePicture ? (
-    URL.createObjectURL(form.profilePicture)
-  ) : blank_profile;
+  const previewImage = form.profilePicture
+  ? URL.createObjectURL(form.profilePicture)
+  : userData?.profilePicture || blank_profile;
 
   return (
     <div className="min-h-screen bg-black/90 flex justify-center p-4 md:p-6">
@@ -80,11 +80,14 @@ const EditProfile = () => {
         <form onSubmit={submitHandler} className="space-y-4">
           {/* profile */}
           <div className="flex flex-col items-center gap-4 ">
-            <img
+           <label htmlFor="pp">
+             <img
+              
               src={previewImage}
               alt="profile"
-              className="w-24 h-24 rounded-full object-cover border"
+              className="w-24 h-24 rounded-full object-cover border cursor-pointer"
             />
+           </label>
 
             <div className="w-full">
               <label className="flex items-center gap-2 text-sm mb-1">
@@ -92,6 +95,7 @@ const EditProfile = () => {
               </label>
 
               <input
+              id="pp"
                 type="file"
                 name="profilePicture"
                 accept="image/*"
