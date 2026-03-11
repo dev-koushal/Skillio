@@ -3,6 +3,7 @@ import { ArrowLeft, SquarePen } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useDispatch, useSelector } from "react-redux";
 import axios from "axios";
+import { serverURL } from '../../App'
 import { setCreatorCourseData } from "../../redux/courseSlice";
 function Courses() {
   const navigate = useNavigate();
@@ -79,7 +80,7 @@ function Courses() {
                     <span>{course?.title}</span>
                   </td>
 
-                  <td className="px-4 py-3">${course?.price || "NA"}</td>
+                  <td className="px-4 py-3">₹{course?.price || "NA"}</td>
 
                   <td className="px-4 py-3">
                     <span
@@ -125,7 +126,7 @@ function Courses() {
                 <div className="flex-1">
                   <h2 className="font-medium text-sm">{course.title}</h2>
                   <p className="text-gray-600 text-xs mt-1">
-                    ${course.price || "NA"}
+                    ₹{course.price || "NA"}
                   </p>
                 </div>
                 <SquarePen className="text-gray-600 hover:text-blue-600 cursor-pointer" onClick={()=>navigate(`/editcourse/${course?._id}`)} />
