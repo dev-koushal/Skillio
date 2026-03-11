@@ -64,7 +64,7 @@ export const login = async (req, res) => {
     if (email) email = email.trim().toLowerCase();
 
     let user = await User.findOne({ email }).select("+password");
-    console.log(user);
+    // console.log(user);
     if (!user) {
       return res.status(400).json({ message: "User not register!" });
     }
