@@ -204,10 +204,13 @@ const handleRemoveCourse = async () => {
               onChange={(e)=>setCategory(e.target.value)}
             value={category}
             >
-              <option value="">Select Category</option>
-              <option value="Development">Development</option>
-              <option value="Cyber">Cyber</option>
-              <option value="Business">Business</option>
+              <option value={""}>Select Category</option>
+            <option value={"Development"}>Development</option>
+            <option value={"Cyber"}>Cyber</option>
+            <option value={"Business"}>Business</option>
+            <option value={"AIML"}>AI/ML</option>
+            <option value={"Cyber Security"}>Cyber Security</option>
+            <option value={"Data Science"}>Data Science</option>
             </select>
           </div>
 

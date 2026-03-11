@@ -4,7 +4,9 @@ import { ArrowRight, PlayCircle, Users, BookOpen, GraduationCap } from "lucide-r
 import HeroImage from '../assets/D.gif'
 import ExploreCourses from "../components/ExploreCourses";
 import CardPage from "../components/CardPage";
+import { useNavigate } from "react-router-dom";
 function Home() {
+  const navigate = useNavigate();
   return (
     <>
       <div className="w-full ">
@@ -43,7 +45,7 @@ function Home() {
               </p>
 
               <div className="mt-8 flex gap-4">
-                <button className="flex items-center gap-2 bg-cyan-900 text-black px-7 py-3 rounded-lg font-semibold hover:bg-gray-200 transition">
+                <button className="flex items-center gap-2 bg-cyan-900 text-black px-7 md:py-3 rounded-lg font-semibold hover:bg-gray-200 transition cursor-pointer" onClick={()=>navigate("/allcourses")}>
                   Explore Courses <ArrowRight size={18} />
                 </button>
 

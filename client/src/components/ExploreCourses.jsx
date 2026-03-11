@@ -10,8 +10,11 @@ import {
   Boxes,
   ArrowRight,
 } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 
 function ExploreCourses() {
+
+  const navigate = useNavigate();
   const courses = [
     { name: "Web Development", icon: Monitor, color: "bg-purple-100" },
     { name: "UI UX Designing", icon: PenTool, color: "bg-green-100" },
@@ -39,7 +42,7 @@ function ExploreCourses() {
             magnam.
           </p>
 
-          <button className="flex items-center gap-2 bg-black text-white px-6 py-3 border border-white rounded-lg hover:opacity-90">
+          <button className="flex items-center gap-2 bg-black text-white px-6 py-3 border border-white rounded-lg hover:opacity-90 cursor-pointer" onClick={()=>navigate("/allcourses")}>
             Explore Courses <ArrowRight size={18} />
           </button>
         </div>

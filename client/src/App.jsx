@@ -17,6 +17,7 @@ import CreateCourses from "./pages/Educator/CreateCourses";
 import useGetCreatorCourse from './hooks/getCreatorCourse'
 import EditCourse from "./pages/Educator/EditCourse";
 import getPublishedCourse from "./hooks/getPublishedCourse";
+import AllCourses from "./pages/AllCourses";
 export const serverURL = "http://localhost:3000";
 
 function App() {
@@ -47,6 +48,10 @@ function App() {
         <Route
           path="/editprofile"
           element={userData? <EditProfile /> : <Navigate to="/signup" />}
+        />
+        <Route
+          path="/allcourses"
+          element={userData? <AllCourses /> : <Navigate to="/signup" />}
         />
         <Route
           path="/dashboard"
