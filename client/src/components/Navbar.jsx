@@ -33,7 +33,7 @@ function Navbar() {
       {/* Main Container */}
       <div className="flex justify-between items-center w-full  mx-auto px-4 sm:px-6 lg:px-8">
         {/* Logo */}
-        <div className="h-20 sm:h-24 w-20 sm:w-24 flex items-center justify-center">
+        <div className="h-20 sm:h-24 w-20 sm:w-24 flex items-center justify-center " onClick={()=>navigate("/")}>
           <img
             src={logo}
             alt="Skillio"

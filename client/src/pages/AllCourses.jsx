@@ -1,8 +1,9 @@
 import React, { useEffect, useState } from "react";
-import { ArrowLeft, Search } from "lucide-react";
+import { ArrowLeft, Funnel, Menu, Search } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import CourseCard from "../components/CourseCard";
 import { useSelector } from "react-redux";
+import Navbar from "../components/Navbar";
 
 function AllCourses() {
   const navigate = useNavigate();
@@ -10,6 +11,7 @@ function AllCourses() {
 
   const [category, setCategory] = useState([]);
   const [filterCourses, setFilterCourses] = useState([]);
+  const [filterCoursesSmall, setFilterCoursesSmall] = useState(false);
 
   const toggleCategory = (e) => {
     const value = e.target.value;
@@ -40,10 +42,11 @@ function AllCourses() {
   }, [category]);
 
   return (
+
     <div className="flex flex-col min-h-screen bg-black/90 overflow-hidden">
       {/* Sidebar */}
-
-      <aside className="md:block hidden w-[260px] h-screen overflow-y-auto bg-black fixed top-0 left-0 p-6 py-32 border-r border-gray-700 shadow-md">
+      <Navbar/>
+      <aside className={`${filterCoursesSmall? 'block':'hidden'} md:block transition duration-300  md:w-[260px] h-screen overflow-y-auto bg-black fixed top-0 left-0 p-6 py-32 border-r border-gray-700 shadow-md`}>
         <h2 className="text-xl font-bold flex items-center justify-center gap-2 text-gray-50 mb-6 cursor-pointer">
           <ArrowLeft size={30} onClick={() => navigate("/")} />
           Filter by Category
@@ -104,15 +107,7 @@ function AllCourses() {
       {/* Cards */}
       <div className="w-full min-h-screen">
         {/* Mobile Top Bar */}
-        <div className="fixed top-0 left-0 w-full h-14 bg-black flex items-center px-4 md:hidden z-50">
-          <ArrowLeft
-            size={20}
-            color="white"
-            className="cursor-pointer"
-            onClick={() => navigate("/")}
-          />
-        </div>
-
+        <button onClick={()=>setFilterCoursesSmall(!filterCoursesSmall)} className=" md:hidden p-2 rounded-lg shadow-lg text-white px-4 absolute mt-2 right-4"><Funnel/></button>
         <main className="md:ml-[260px] pt-20 md:pt-20 px-6 flex flex-wrap gap-6">
           {filterCourses?.map((course, ind) => (
             <div key={ind} style={{ width: "320px", flex: "0 0 320px" }}>

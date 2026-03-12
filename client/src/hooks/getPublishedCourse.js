@@ -12,7 +12,7 @@ const dispatch = useDispatch();
             try {
                 const result = await axios.get(serverURL+"/api/course/getpublished",{withCredentials:true})
                 dispatch(setCourseData(result.data))
-                console.log(result.data);
+                // console.log(result.data);
             } catch (error) {
                 console.log(error);
             }

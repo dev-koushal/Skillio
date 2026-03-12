@@ -27,6 +27,7 @@ function ExploreCourses() {
   ];
 
   return (
+    
     <div className="w-full   py-16 px-4 md:px-12 lg:px-20 bg-black">
       <div className="max-w-7xl mx-auto grid md:grid-cols-2 gap-12 items-center">
         
