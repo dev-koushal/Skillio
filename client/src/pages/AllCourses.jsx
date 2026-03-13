@@ -43,7 +43,7 @@ function AllCourses() {
 
   return (
 
-    <div className="flex flex-col min-h-screen bg-black/90 overflow-hidden">
+    <div className="flex flex-col min-h-screen bg-gray-300 overflow-hidden">
       {/* Sidebar */}
       <Navbar/>
       <aside className={`${filterCoursesSmall? 'block':'hidden'} md:block transition duration-300  md:w-[260px] h-screen overflow-y-auto bg-black fixed top-0 left-0 p-6 py-32 border-r border-gray-700 shadow-md`}>
