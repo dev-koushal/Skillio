@@ -1,4 +1,5 @@
 import Course from "../models/coursesModel.js";
+import Lecture from "../models/lectureModel.js";
 import uploadCloudinary from "../config/cloudinary.js";
 
 export const createCourse = async (req, res) => {
@@ -131,3 +132,90 @@ export const removeCourse = async (req, res) => {
     });
   }
 };
+
+
+//Lecture controllers
+
+
+
+export const createLecture = async (req,res) => {
+  try {
+    const {lectureTitle} = req.body
+    const {courseId}  = req.params
+    if(lectureTitle || courseId){
+      return res.status(400).json({message:"lectureTitle is required"})
+    }
+    const lecture = await Lecture.create({lectureTitle})
+ 
+    const course = await Course.findById(courseId)
+    if(course){
+        course.lectures.push(lecture._id)
+    }
+     
+   await course.populate("lectures")
+   await course.save()
+    return res.status(201).json({lecture,course})
+  } catch (error) {
+    return res.status(500).json({message:`failed to create Lecture ${error}`});
+  }
+}
+
+export const getCourseLecture = async (req,res) => {
+  try {
+      const {courseId} = req.params
+
+      const course = await Course.findById(courseId)
+
+      if(!course){
+        return res.status(404).json({message:"Course is not found!"})
+      }
+      await course.populate("lectures")
+      await course.save();
+      return res.status(200).json(course)
+
+  } catch (error) {
+    return res.status(500).json({message:`failed to get Lecture ${error}`});
+  }
+}
+
+export const editLecture = async (req,res) => {
+  try {
+    const{lectureId} = req.params
+    const{isPreviewFree,lectureTitle} = req.body
+    const lecture = await Lecture.findById(lectureId);
+    if(!lecture){
+        return res.status(404).json({message:"Lecture is not found!"})
+      }
+    
+      let videoUrl 
+      if(req.file){
+        videoUrl = await uploadCloudinary(req.file.path)
+        lecture.videoUrl = videoUrl
+      }
+      if(lectureTitle){
+        lecture.lectureTitle = lectureTitle
+      }
+      lecture.isPreviewFree = isPreviewFree
+  } catch (error) {
+     return res.status(500).json({message:`failed to edit Lecture ${error}`});
+  }
+}
+
+export const removeLecture = async (req,res) => {
+  try {
+    const {lectureId} = req.params
+
+    let lecture = await Lecture.findByIdAndDelete(lectureId);
+
+    if(lecture){
+      return res.status(400).json({message:"There is error in getting lecture!!"})
+    }
+    await Course.updateOne(
+      {lectures:lectureId},
+      {$pull:{lectures:lectureId}}
+    )
+    return res.status(200).json({message:"Lecture removed successfully!!"})
+  } catch (error) {
+    return res.status(500).json({message:`failed to remove Lecture ${error}`});
+  }
+}
