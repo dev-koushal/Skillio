@@ -122,7 +122,7 @@ const handleRemoveCourse = async () => {
   }
 }
   return (
-    <div className="min-h-screen bg-gray-50 flex justify-center py-10">
+    <div className="min-h-screen bg-gray-100 flex justify-center py-10">
       <div className="w-[850px] bg-white p-8 rounded-md shadow-sm border">
 
         {/* Header */}
@@ -137,7 +137,7 @@ const handleRemoveCourse = async () => {
             </h2>
           </div>
 
-          <button className="bg-black text-white px-4 py-2 rounded">
+          <button className="bg-black text-white px-4 py-2 rounded cursor-pointer" onClick={()=>navigate(`/createlecture/${selectCourse?._id}`)}>
             Go to lectures page
           </button>
         </div>
@@ -149,7 +149,7 @@ const handleRemoveCourse = async () => {
           </button>:<button onClick={()=>setIsPublised(!isPublished)} className="bg-red-200 text-red-700 px-4 py-2 rounded cursor-pointer">
             Click to UnPublish
           </button>}
-          <button onClick={handleRemoveCourse} className="bg-red-500 text-white px-4 py-2 rounded cursor-pointer">
+          <button onClick={handleRemoveCourse} className="bg-red-500 text-white px-4 py-2 rounded cursor-pointer" disabled={loading1}>
             Remove Course
           </button>
         </div>
