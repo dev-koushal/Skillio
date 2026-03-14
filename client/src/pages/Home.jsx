@@ -1,7 +1,6 @@
 import React, { lazy } from "react";
 import Navbar from "../components/Navbar";
 import { ArrowRight, PlayCircle, Users, BookOpen, GraduationCap } from "lucide-react";
-import HeroImage from "../assets/D.gif";
 import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
 const ExploreCourses = lazy(() => import('../components/ExploreCourses'));
