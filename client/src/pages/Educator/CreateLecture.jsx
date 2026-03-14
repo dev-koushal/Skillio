@@ -45,7 +45,7 @@ function CreateLecture() {
         const getCourseLecture = async () => {
             try {
                 const result = await axios.get(serverURL+`/api/course/courselecture/${courseId}`,{withCredentials:true});
-                console.log(result.data);
+                // console.log(result.data);
                 dispatch(setLectureData(result.data.lectures))
             } catch (error) {
                 console.log(error);
@@ -74,7 +74,14 @@ function CreateLecture() {
                    <Plus size={20}/><p className='text-xs md:text-[16px]'> Create Lecture</p></button>
             </div>
                 {/* Lectres */}
-            
+            <div className='space-y-2'>
+             {lectureData?.map((lecture,index)=>(
+                <div className=' bg-gray-100 rounded-md flex justify-between items-center p-3 text-sm font-medium text-gray-700'key={index}>
+                    <span>{index+1}. {lecture.lectureTitle}</span>
+                    <span><Edit size={20} className='hover:text-gray-700 text-gray-500 cursor-pointer' onClick={()=>naviagte(`/editlecture/${courseId}/${lecture._id}`)}/></span>
+                </div>
+               ))}
+            </div>
            
         </div>
 

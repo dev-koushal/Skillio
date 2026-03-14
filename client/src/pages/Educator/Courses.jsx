@@ -18,7 +18,7 @@ function Courses() {
           serverURL + "/api/course/getcreator",
           { withCredentials: true }
         );
-  
+        
         dispatch(setCreatorCourseData(data));
         
       } catch (error) {
