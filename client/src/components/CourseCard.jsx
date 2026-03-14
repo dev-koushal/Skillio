@@ -1,10 +1,10 @@
 import React from "react";
 import { Star } from "lucide-react";
-
+import { useNavigate } from "react-router-dom";
 function CourseCard({thumbnail,title,category,price,id}) {
-    
+    const navigate = useNavigate();
   return (
-    <div className="w-full rounded-xl overflow-hidden shadow-md bg-white hover:shadow-lg transition text-black">
+    <div className="w-full rounded-xl overflow-hidden shadow-lg hover:shadow-white/40  hover:scale-101 transition duration-300 bg-white hover:shadow-md hover:cursor-pointer text-black" onClick={()=>navigate(`/viewcourse/${id}`)}>
       
       {/* Image */}
       <div className="w-full h-40 md:h-48 overflow-hidden">
