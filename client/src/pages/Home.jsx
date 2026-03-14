@@ -49,7 +49,7 @@ function Home() {
       <div className="relative w-full min-h-[90vh] text-white overflow-hidden">
         {/* Background */}
         <motion.img
-          src={HeroImage}
+          src="https://images.freecreatives.com/wp-content/uploads/2016/04/Minimalistic-Website-Background.jpg"
           alt="hero"
           className="absolute inset-0 w-full h-full object-cover grayscale"
           initial={{ scale: 1.08, opacity: 0 }}
