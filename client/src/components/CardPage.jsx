@@ -17,7 +17,7 @@ function CardPage() {
           Explore top-rated courses designed to boost your skills,enhance careers, and unlock <br />opportunities in tech, AI, Business and beyond.</p></h1>
 
         {/* Cards */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-10">
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
           {popularCourses?.map((course, i) => (
             <CourseCard
               key={i}
