@@ -24,7 +24,7 @@ export const createCourse = async (req, res) => {
 
 export const getPublishedCourses = async (req, res) => {
   try {
-    const courses = await Course.find({ isPublished: true });
+    const courses = await Course.find({ isPublished: true }).populate("lectures");
     if (!courses) {
       return res.status(400).json({ message: "Courses not found" });
     }
@@ -39,7 +39,7 @@ export const getPublishedCourses = async (req, res) => {
 export const getCreatorCourses = async (req, res) => {
   try {
     const userId = req.userId;
-    const courses = await Course.find({ creator: userId });
+    const courses = await Course.find({ creator: userId }).populate("lectures");
     if (!courses) {
       return res.status(400).json({ message: "Courses not found" });
     }
@@ -100,7 +100,7 @@ export const editCourse = async (req, res) => {
 export const getCourseById = async (req, res) => {
   try {
     let { courseId } = req.params;
-    const course = await Course.findById(courseId);
+    const course = await Course.findById(courseId).populate("lectures");
     if (!course) {
       return res.status(400).json({ message: "Courses not found" });
     }
@@ -178,28 +178,39 @@ export const getCourseLecture = async (req,res) => {
   }
 }
 
-export const editLecture = async (req,res) => {
+export const editLecture = async (req, res) => {
   try {
-    const{lectureId} = req.params
-    const{isPreviewFree,lectureTitle} = req.body
+    const { lectureId } = req.params;
+    const { isPreviewFree, lectureTitle } = req.body;
+
     const lecture = await Lecture.findById(lectureId);
-    if(!lecture){
-        return res.status(404).json({message:"Lecture is not found!"})
-      }
-    
-      let videoUrl 
-      if(req.file){
-        videoUrl = await uploadCloudinary(req.file.path)
-        lecture.videoUrl = videoUrl
-      }
-      if(lectureTitle){
-        lecture.lectureTitle = lectureTitle
-      }
-      lecture.isPreviewFree = isPreviewFree
+
+    if (!lecture) {
+      return res.status(404).json({ message: "Lecture is not found!" });
+    }
+
+    if (req.file) {
+      const videoUrl = await uploadCloudinary(req.file.path);
+      lecture.videoUrl = videoUrl;
+    }
+
+    if (lectureTitle) {
+      lecture.lectureTitle = lectureTitle;
+    }
+
+    if (typeof isPreviewFree !== "undefined") {
+      lecture.isPreviewFree = isPreviewFree;
+    }
+
+    await lecture.save();
+
+    return res.status(200).json(lecture);
   } catch (error) {
-     return res.status(500).json({message:`failed to edit Lecture ${error}`});
+    return res.status(500).json({
+      message: `failed to edit Lecture ${error.message}`,
+    });
   }
-}
+};
 
 export const removeLecture = async (req,res) => {
   try {
@@ -207,7 +218,7 @@ export const removeLecture = async (req,res) => {
 
     let lecture = await Lecture.findByIdAndDelete(lectureId);
 
-    if(lecture){
+    if(!lecture){
       return res.status(400).json({message:"There is error in getting lecture!!"})
     }
     await Course.updateOne(
