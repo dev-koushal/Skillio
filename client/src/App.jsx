@@ -23,6 +23,7 @@ export const serverURL = "http://localhost:3000";
 
 function App() {
   const { userData } = useSelector((store) => store.user);
+  
 
   // Fetch user on app start
   useGetCurrentUser();
