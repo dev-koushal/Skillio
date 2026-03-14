@@ -7,7 +7,7 @@ import { toast } from 'react-toastify'
 import { serverURL } from "../../App"
 import {setLectureData} from '../../redux/lectureSlice'
 import {} from 'react-spinners'
-import { getCourseLecture } from '../../../../server/controller/courseController';
+
 
 
 
