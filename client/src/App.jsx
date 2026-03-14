@@ -8,6 +8,8 @@ import Home from "./pages/Home";
 import useGetCurrentUser from "./hooks/useGetCurrentUser";
 import useGetCreatorCourse from "./hooks/getCreatorCourse";
 import getPublishedCourse from "./hooks/getPublishedCourse";
+import EditLecture from "./pages/Educator/EditLecture";
+import ViewCourses from "./pages/ViewCourses";
 
 const Login = lazy(() => import("./pages/Login"));
 const Signup = lazy(() => import("./pages/Signup"));
@@ -73,6 +75,14 @@ function App() {
         <Route
           path="/createlecture/:courseId"
           element={userData?.role === "educator" ? <CreateLecture /> : <Navigate to="/signup" />}
+        />
+        <Route
+          path="/editlecture/:courseId/:lectureId"
+          element={userData?.role === "educator" ? <EditLecture /> : <Navigate to="/signup" />}
+        />
+        <Route
+          path="/viewcourse/:courseId"
+          element={userData?.role === "educator" ? <ViewCourses /> : <Navigate to="/signup" />}
         />
       </Routes>
     </Suspense>
