@@ -1,26 +1,27 @@
+import React, { lazy, Suspense } from "react";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { ToastContainer } from "react-toastify";
 import { useSelector } from "react-redux";
-import { useEffect } from "react";
 import "react-toastify/dist/ReactToastify.css";
 
 import Home from "./pages/Home";
-import Login from "./pages/Login";
-import Signup from "./pages/Signup";
-import Profile from "./pages/Profile";
 import useGetCurrentUser from "./hooks/useGetCurrentUser";
-import ForgetPassword from "./pages/ForgetPassword";
-import EditProfile from "./pages/EditProfile";
-import Dashboard from "./pages/Educator/Dashboard";
-import Courses from "./pages/Educator/Courses";
-import CreateCourses from "./pages/Educator/CreateCourses";
-import useGetCreatorCourse from './hooks/getCreatorCourse'
-import EditCourse from "./pages/Educator/EditCourse";
+import useGetCreatorCourse from "./hooks/getCreatorCourse";
 import getPublishedCourse from "./hooks/getPublishedCourse";
-import AllCourses from "./pages/AllCourses";
-import CreateLecture from "./pages/Educator/CreateLecture";
-export const serverURL = "http://localhost:3000";
 
+const Login = lazy(() => import("./pages/Login"));
+const Signup = lazy(() => import("./pages/Signup"));
+const Profile = lazy(() => import("./pages/Profile"));
+const ForgetPassword = lazy(() => import("./pages/ForgetPassword"));
+const EditProfile = lazy(() => import("./pages/EditProfile"));
+const Dashboard = lazy(() => import("./pages/Educator/Dashboard"));
+const Courses = lazy(() => import("./pages/Educator/Courses"));
+const CreateCourses = lazy(() => import("./pages/Educator/CreateCourses"));
+const EditCourse = lazy(() => import("./pages/Educator/EditCourse"));
+const AllCourses = lazy(() => import("./pages/AllCourses"));
+const CreateLecture = lazy(() => import("./pages/Educator/CreateLecture"));
+
+export const serverURL = "http://localhost:3000";
 function App() {
   const { userData } = useSelector((store) => store.user);
   
@@ -29,58 +30,56 @@ function App() {
   useGetCurrentUser();
   useGetCreatorCourse();
   getPublishedCourse();
- 
-  return (
-    <BrowserRouter>
+ return (
+  <BrowserRouter>
+    <Suspense fallback={<div className="w-full h-screen bg-black flex">Loading...</div>}>
       <Routes>
         <Route path="/" element={<Home />} />
         <Route path="/login" element={<Login />} />
-        <Route path="/signup" element={!userData? <Signup /> : <Navigate to="/"/>} />
+        <Route path="/signup" element={!userData ? <Signup /> : <Navigate to="/" />} />
 
-        {/* Protected Route */}
         <Route
           path="/profile"
-          element={userData? <Profile /> : <Navigate to="/signup" />}
+          element={userData ? <Profile /> : <Navigate to="/signup" />}
         />
-        {/* forgot-password should be accessible when NOT logged in */}
         <Route
           path="/forget"
           element={<ForgetPassword />}
         />
         <Route
           path="/editprofile"
-          element={userData? <EditProfile /> : <Navigate to="/signup" />}
+          element={userData ? <EditProfile /> : <Navigate to="/signup" />}
         />
         <Route
           path="/allcourses"
-          element={userData? <AllCourses /> : <Navigate to="/signup" />}
+          element={userData ? <AllCourses /> : <Navigate to="/signup" />}
         />
         <Route
           path="/dashboard"
-          element={userData?.role==="educator"? <Dashboard/> : <Navigate to="/signup" />}
+          element={userData?.role === "educator" ? <Dashboard /> : <Navigate to="/signup" />}
         />
         <Route
           path="/courses"
-          element={userData?.role==="educator"? <Courses/> : <Navigate to="/signup" />}
+          element={userData?.role === "educator" ? <Courses /> : <Navigate to="/signup" />}
         />
         <Route
           path="/createcourses"
-          element={userData?.role==="educator"? <CreateCourses/> : <Navigate to="/signup" />}
+          element={userData?.role === "educator" ? <CreateCourses /> : <Navigate to="/signup" />}
         />
         <Route
           path="/editcourse/:courseId"
-          element={userData?.role==="educator"? <EditCourse/> : <Navigate to="/signup" />}
+          element={userData?.role === "educator" ? <EditCourse /> : <Navigate to="/signup" />}
         />
         <Route
           path="/createlecture/:courseId"
-          element={userData?.role==="educator"? <CreateLecture/> : <Navigate to="/signup" />}
+          element={userData?.role === "educator" ? <CreateLecture /> : <Navigate to="/signup" />}
         />
       </Routes>
+    </Suspense>
 
-      <ToastContainer position="top-right" autoClose={1500} />
-    </BrowserRouter>
-  );
+    <ToastContainer position="top-right" autoClose={1500} />
+  </BrowserRouter>
+);
 }
-
 export default App;
 
