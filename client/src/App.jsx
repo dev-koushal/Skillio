@@ -3,7 +3,7 @@ import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { ToastContainer } from "react-toastify";
 import { useSelector } from "react-redux";
 import "react-toastify/dist/ReactToastify.css";
-
+import ScrollToTop from './components/ScrollToTop'
 import Home from "./pages/Home";
 import useGetCurrentUser from "./hooks/useGetCurrentUser";
 import useGetCreatorCourse from "./hooks/getCreatorCourse";
@@ -34,6 +34,7 @@ function App() {
   getPublishedCourse();
  return (
   <BrowserRouter>
+  <ScrollToTop/>
     <Suspense fallback={<div className="w-full h-screen bg-black flex">Loading...</div>}>
       <Routes>
         <Route path="/" element={<Home />} />
