@@ -1,26 +1,63 @@
-import React, { useEffect } from "react";
+import React, { useEffect, useState } from "react";
 import { useParams,useNavigate } from "react-router-dom";
-import { ArrowLeft, GalleryThumbnails } from "lucide-react";
+import { ArrowLeft, GalleryThumbnails, Lock, PauseCircle, PlayCircle } from "lucide-react";
 import { useDispatch, useSelector } from "react-redux";
 import { setSelectedCourse } from "../redux/courseSlice";
+import axios from 'axios'
 import { Star } from "lucide-react";
+import {serverURL} from '../App'
+import blank_profile from '/blank_Profile.avif'
+import CourseCard from "../components/CourseCard";
 function ViewCourses() {
   const navigate = useNavigate();
   const {courseId}= useParams();
   const { courseData, selectedCourse } = useSelector((state) => state.course);
-  
+ 
   const dispatch = useDispatch();
+  const [selectedLecture,setSelectedLecture] = useState(null);
+  const[creatorData,setCreatorData] =useState(null);
+  const[creatorCourses,setCreatorCourses] =useState(null);
+
+
+
 
   const fetchCourseData = async () => {
     courseData.map((course) => {
       if (course._id === courseId) {
-        console.log(course);
+        // console.log(course);
         dispatch(setSelectedCourse(course));
-        console.log(selectedCourse);
+        // console.log(selectedCourse);
         return null
       }
     });
   };
+
+  
+
+  useEffect(()=>{
+    const handleCreator = async () => {
+      if(selectedCourse?.creator){
+      try {
+         const result = await axios.post(serverURL+"/api/course/creator",{userId:selectedCourse?.creator} ,{withCredentials:true})
+        //  console.log(result.data);
+         setCreatorData(result.data)
+      } catch (error) {
+        console.log(error);
+      } 
+    }
+    }
+    handleCreator()
+  },[selectedCourse])
+
+
+  useEffect(()=>{
+    if(creatorData?._id && courseData.length > 0){
+      const creatorCourse = courseData.filter((course)=>
+        course.creator === creatorData?._id && course._id !== courseId
+      )
+      setCreatorCourses(creatorCourse)
+    }
+  },[creatorData,courseData])
 
   useEffect(()=>{
     fetchCourseData()
@@ -47,10 +84,10 @@ function ViewCourses() {
             <div className="flex items-start flex-col justify-between">
                 <div className="text-yellow-500 font-medium flex gap-1 items-center justify-start">
                     <span className="flex items-center justify-start gap-1 text-sm"><Star size={14}/>5</span>
-                    <span className="text-gray-400 text-sm">(1,200 Reviews)</span>
+                    <span className="text-gray-400 text-sm ">(1,200 Reviews)</span>
                 </div>
-                <div >
-                    <span className="text-lg font-semibold text-black">₹{selectedCourse?.price}</span>{" "}
+                <div className="mt-1.5">
+                    <span className="text-lg font-semibold text-black ">₹{selectedCourse?.price}</span>{" "}
                     <span className="line-through text-sm text-gray-400">₹{(selectedCourse?.price)*1.5}</span>
                 </div>
 
@@ -81,13 +118,70 @@ function ViewCourses() {
             <p className="text-sm text-gray-500 mb-4">{selectedCourse?.lectures?.length} Lectures</p>
             <div className="flex flex-col gap-3">
                 {selectedCourse?.lectures?.map((lecture,index)=>(
-                    <button key={index} className="flex items-center gap-3 px-4 py-3 rounded-lg border transition-all duration-200 text-left">{
-                        lecture?.lectureTitle
-                    }</button>
+                    <button  disabled={!lecture.isPreviewFree} onClick={()=>{
+                      if(lecture.isPreviewFree){
+                        setSelectedLecture(lecture);
+                      }}
+                    } key={index} className={`flex items-center gap-3 px-4 py-3 rounded-lg border transition-all duration-200 text-left${lecture.isPreviewFree?"hover:bg-gray-100 cursor-pointer border-gray-300":"cursor-not-allowed opacity-60 border-gray-200"} relative`}>
+                      <span className="text-lg text-gray-700">
+                        {lecture.isPreviewFree ? <PlayCircle size={20}/> : <Lock size={20}/> }
+                      </span>
+                        <span className="text-sm font-medium text-gray-800">{lecture?.lectureTitle}</span>
+                    
+                    </button>
                 ))}
             </div>
             </div>
+
+            {/* Right */}
+            <div className="bg-white w-full md:w-3/5 p-2 md:p-6 rounded-2xl shadow-lg border border-gray-200">
+            <div className="aspect-video w-full rounded-lg overflow-hidden mb-4 bg-black flex items-center justify-center">
+              {selectedLecture?.videoUrl ? <video
+               className="w-full h-full object-cover" src={selectedLecture?.videoUrl} controls/> :
+              <span className="text-white  text-xs md:text-sm">Buy Course to continue your Learning.</span>}
+            </div>
+            </div>
         </div>
+
+        <div className="mt-8 border-t p-6">
+          <h2 className="text-xl font-semibold mb-2">
+            Write a Reviews
+          </h2>
+          <div className="mb-4 ">
+            <div className="flex gap-1 mb-2">
+              {
+                [1,2,3,4,5].map((star)=>(
+                  <Star key={star} className="text-yellow-500 fill-gray-50" />
+                ))
+              }
+            </div>
+            <textarea name="" id="" className="w-full border border-gray-300 rounded-lg p-2 " placeholder="Write your Reviews here...." rows={3}/>
+            <button className="bg-black text-white mt-3 px-4 py-2  rounded hover:bg-gray-800">Submit Review</button>
+          </div>
+        </div>
+      </div>
+      {/* For crator Infoooo */}
+      <div className="ml-0 md:ml-10">
+              <div className=" flex items-center gap-4 pt-4 border-t">
+                {creatorData?.profilePicture?<img src={creatorData.profilePicture} alt="Pfp" className="w-16 h-16 rounded-full object-cover border border-gray-500" />:<img src={blank_profile} alt="Pfp" className="w-16 h-16 rounded-full object-cover border border-gray-500"/>}
+                <div>
+                  <h2 className="text-lg font-semibold">{creatorData?.name}</h2>
+                  <p className="md:text-sm text-gray-600 text-2">{creatorData?.description}</p>
+                  <p className="md:text-sm text-gray-600 text-2">{creatorData?.email}</p>
+                </div>
+              </div>
+
+            <div>
+              <p className="text-xl font-semibold mb-2 mt-4">Other Courses From {creatorData?.name}-</p>
+            </div>
+            <div className="w-full transition-all duration-300 py-6 flex items-center justify-center  flex-wrap gap-6 lg:px-20">
+              {
+                creatorCourses?.map((course,ind)=>
+                  (
+                  <CourseCard key={ind} thumbnail={course.thumbnail} id={course._id} price={course.price} title={course.title} category={course.category} />
+                ))
+              }
+            </div>
       </div>
     </div>
   );
