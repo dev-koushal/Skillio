@@ -37,7 +37,7 @@ function ViewLectures() {
   console.log(selectedLecture);
   return (
     <div className="min-h-screen bg-gray-100 p-6">
-      <div className="max-w-7xl mx-auto grid grid-cols-3 gap-6">
+      <div className="max-w-7xl mx-auto grid  grid-cols-1 md:grid-cols-3 gap-6">
         {/* LEFT */}
         <div className="col-span-2 bg-white rounded-2xl shadow p-4">
           {/* Header */}
