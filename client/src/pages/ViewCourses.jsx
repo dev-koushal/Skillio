@@ -109,7 +109,7 @@ function ViewCourses() {
   const handleReview = async () => {
     setLoading(true);
     try {
-      const result = await axios.post(serverURL+`/api/review/createreview`, {rating,comment,courseId},{withCredentials:true})
+      const result = await axios.post(serverURL+`/api/review/create-review`, {rating,comment,courseId},{withCredentials:true})
 
       toast.success("Review Added")
       
