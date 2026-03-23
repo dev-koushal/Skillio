@@ -7,6 +7,7 @@ import userRouter from './routes/userRoute.js';
 import cors from 'cors'
 import courseRouter from './routes/courseRoute.js';
 import paymentRouter from './routes/paymentRoute.js';
+import reviewRouter from './routes/reviewRoute.js';
 
 const app = express();
 dotenv.config();
@@ -24,6 +25,8 @@ app.use("/api/user",userRouter);
 app.use("/api/course",courseRouter);
 
 app.use("/api/order",paymentRouter);
+
+app.use("/api/review",reviewRouter);
 
 app.listen(PORT,()=>{
     console.log(`Listening at ${PORT}`);
