@@ -41,7 +41,7 @@ export const verifyPayment = async (req, res) => {
   try {
     const { courseId, userId, razorpay_order_id } = req.body;
 
-    console.log("verify hit");
+    // console.log("verify hit");
 
     const orderInfo = await RazorPayInstance.orders.fetch(
       razorpay_order_id
