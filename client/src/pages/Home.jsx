@@ -3,6 +3,8 @@ import Navbar from "../components/Navbar";
 import { ArrowRight, PlayCircle, Users, BookOpen, GraduationCap } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
+const About = lazy(() => import('../components/About'));
+const Footer = lazy(() => import('../components/Footer'));
 const ExploreCourses = lazy(() => import('../components/ExploreCourses'));
 const CardPage = lazy(() => import('../components/CardPage'));
 
@@ -250,7 +252,8 @@ function Home() {
       </div>
         <ExploreCourses />
         <CardPage />
-     
+        <About/>
+        <Footer/>
     </>
   );
 }

@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { ArrowLeft, Play } from "lucide-react";
+import { ArrowLeft, Pause, PauseCircle, Play } from "lucide-react";
 import { useSelector } from "react-redux";
 import { useNavigate, useParams } from "react-router-dom";
 import axios from "axios";
@@ -64,7 +64,7 @@ function ViewLectures() {
             />
           </div>
 
-          <p className="mt-2 text-sm">
+          <p className="mt-2 text-md">
             {selectedCourse?.lectures?.[0]?.lectureTitle}
           </p>
         </div>
@@ -78,17 +78,17 @@ function ViewLectures() {
             selectedCourse?.lectures?.map((lec, index) => (
               <div
                 key={index}
-                className="flex items-center justify-between p-2 rounded-lg border hover:bg-gray-50 cursor-pointer"
+                className={`flex items-center justify-between p-2 rounded-lg border hover:bg-gray-50 cursor-pointer ${selectedLecture?._id === lec._id ?'bg-gray-200 border-gray-500':'hover:bg-gray-50 border-gray-300'}`}
                onClick={()=>setSelectedLecture(lec)}
               >
                 <span className="text-sm">{lec.lectureTitle}</span>
-                <Play size={16} />
+                {selectedLecture._id == lec._id ?<Pause size={16}/>:<Play size={16} />}
               </div>
             )):<p className="text-gray-600 items-center text-md">Lectures coming soon....</p>}
           </div>
 
           {/* Instructor */}
-          <div className="mt-6 border-t pt-4 flex items-center gap-3">
+          <div className="mt-6 border-t pt-4 flex items-center gap-3 mb-2">
             <img
               src={creatorData?.profilePicture}
               alt=""
@@ -98,6 +98,9 @@ function ViewLectures() {
               <p className="text-sm font-medium">{creatorData?.name}</p>
               <p className="text-xs text-gray-500">{creatorData?.role}</p>
             </div>
+          </div>
+          <div className="text-md"><p className="text-sm text-gray-700 font-medium w-fit mx-auto items-center  mb-2">{creatorData?.description}</p>
+          <p className="text-sm text-gray-700 font-medium">Email: {creatorData?.email}</p>
           </div>
         </div>
       </div>

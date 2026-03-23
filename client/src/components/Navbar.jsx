@@ -106,7 +106,7 @@ function Navbar() {
               <User2Icon className="mr-2" /> My Profile
             </span>
             <span
-              onClick={() => navigate("/courses")}
+              onClick={() => navigate("/mycourses")}
               className="hover:bg-gray-600/90 rounded-lg px-2 py-2 w-full bg-cyan-950 flex cursor-pointer"
             >
               <BookCheck className="mr-2" /> My Courses
@@ -141,7 +141,7 @@ function Navbar() {
           Profile
         </span>
         <span
-          onClick={() => navigate("/courses")}
+          onClick={() => navigate("/mycourses")}
           className="bg-cyan-900 px-6 py-3 rounded-sm w-1/2 text-center hover:bg-gray-600/90"
         >
           My courses

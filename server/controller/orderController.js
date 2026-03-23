@@ -67,7 +67,7 @@ export const verifyPayment = async (req, res) => {
     if (!course) {
       return res.status(404).json({ message: "Course not found" });
     }
-
+    console.log(course.enrolledStudents);
     if (!course.enrolledStudents.some(id => id.toString() === userId)) {
       course.enrolledStudents.push(userId);
       await course.save();
