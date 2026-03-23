@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { ArrowLeft, Pause, PauseCircle, Play } from "lucide-react";
+import { ArrowLeft, ArrowUpRight, Pause, PauseCircle, Play } from "lucide-react";
 import { useSelector } from "react-redux";
 import { useNavigate, useParams } from "react-router-dom";
 import axios from "axios";
@@ -14,6 +14,7 @@ function ViewLectures() {
   const [selectedLecture, setSelectedLecture] = useState(
     selectedCourse?.lectures[0] || null,
   );
+  const[hover,setHover] = useState(false);
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -25,7 +26,7 @@ function ViewLectures() {
             { userId: selectedCourse?.creator },
             { withCredentials: true },
           );
-          console.log(result.data);
+          // console.log(result.data);
           setCreatorData(result.data);
         } catch (error) {
           console.log(error);
@@ -34,7 +35,7 @@ function ViewLectures() {
     };
     handleCreator();
   }, [selectedCourse]);
-  console.log(selectedLecture);
+  // console.log(selectedLecture);
   return (
     <div className="min-h-screen bg-gray-100 p-6">
       <div className="max-w-7xl mx-auto grid  grid-cols-1 md:grid-cols-3 gap-6">
@@ -99,8 +100,9 @@ function ViewLectures() {
               <p className="text-xs text-gray-500">{creatorData?.role}</p>
             </div>
           </div>
-          <div className="text-md"><p className="text-sm text-gray-700 font-medium w-fit mx-auto items-center  mb-2">{creatorData?.description}</p>
+          <div className="text-md"><p className="text-sm text-gray-700 font-medium mb-2">{creatorData?.description}</p>
           <p className="text-sm text-gray-700 font-medium">Email: {creatorData?.email}</p>
+          <button onMouseEnter={()=>setHover(true)} onMouseLeave={()=>setHover(false)} className="px-2 p-2 bg-gray-300 hover:bg-gray-400 cursor-pointer items-center flex  hover:gap-1 transition duration-300 mt-2 rounded-md shadow-lg">Contact <ArrowUpRight size={20} className={hover?"animate-bounce":null}  /> </button>
           </div>
         </div>
       </div>
