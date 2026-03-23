@@ -9,6 +9,7 @@ import {serverURL} from '../App'
 import blank_profile from '/blank_Profile.avif'
 import CourseCard from "../components/CourseCard";
 import { toast } from "react-toastify";
+import { ClipLoader } from "react-spinners";
 function ViewCourses() {
   const navigate = useNavigate();
   const {courseId}= useParams();
@@ -20,9 +21,10 @@ function ViewCourses() {
   const[creatorData,setCreatorData] =useState(null);
   const[creatorCourses,setCreatorCourses] =useState(null); 
   const [isEnrolled,setIsEnrolled] = useState(false)
+  const[rating,setRating] = useState(0);
+  const[comment,setComment] = useState("")
 
-
-
+  const[loading,setLoading]  = useState(false)
   const fetchCourseData = async () => {
     courseData.map((course) => {
       if (course._id === courseId) {
@@ -102,6 +104,23 @@ function ViewCourses() {
       console.log({error});
       toast.error("Something went wrong while enrolling!!")   
     } 
+  }
+
+  const handleReview = async () => {
+    setLoading(true);
+    try {
+      const result = await axios.post(serverURL+`/api/review/createreview`, {rating,comment,courseId},{withCredentials:true})
+
+      toast.success("Review Added")
+      
+    } catch (error) {
+      console.log(error);
+      toast.error(error.response.data.message)
+    }finally{
+      setLoading(false);
+      setRating(0);
+      setComment("");
+    }
   }
   return (
     <div className="min-h-screen bg-gray-100 p-6">
@@ -191,12 +210,16 @@ function ViewCourses() {
             <div className="flex gap-1 mb-2">
               {
                 [1,2,3,4,5].map((star)=>(
-                  <Star key={star} className="text-yellow-500 fill-gray-50" />
+                  <Star key={star} 
+                  onClick={()=>setRating(star)} className={star<=rating?
+                    "fill-amber-300":
+                    "fill-gray-400"
+                  } />
                 ))
               }
             </div>
-            <textarea name="" id="" className="w-full border border-gray-300 rounded-lg p-2 " placeholder="Write your Reviews here...." rows={3}/>
-            <button className="bg-black text-white mt-3 px-4 py-2  rounded hover:bg-gray-800">Submit Review</button>
+            <textarea onChange={(e)=>setComment(e.target.value)} value={comment} name="" id="" className="w-full border border-gray-300 rounded-lg p-2 " placeholder="Write your Reviews here...." rows={3}/>
+            <button className="bg-black text-white mt-3 px-4 py-2  rounded hover:bg-gray-800" disabled={loading} onClick={handleReview}>{loading? <ClipLoader size={20} color="white"/> : "Submit Review"}</button>
           </div>
         </div>
       </div>
