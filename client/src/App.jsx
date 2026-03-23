@@ -11,6 +11,7 @@ import getPublishedCourse from "./hooks/getPublishedCourse";
 import EditLecture from "./pages/Educator/EditLecture";
 import ViewCourses from "./pages/ViewCourses";
 import ViewLectures from "./pages/ViewLectures";
+import MyEnrolledCourses from "./pages/MyEnrolledCourses";
 
 const Login = lazy(() => import("./pages/Login"));
 const Signup = lazy(() => import("./pages/Signup"));
@@ -89,6 +90,10 @@ function App() {
         <Route
           path="/viewlecture/:courseId"
           element={userData? <ViewLectures /> : <Navigate to="/signup" />}
+        />
+        <Route
+          path="/mycourses"
+          element={userData? <MyEnrolledCourses /> : <Navigate to="/signup" />}
         />
       </Routes>
     </Suspense>
