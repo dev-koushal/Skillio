@@ -26,7 +26,7 @@ const EditCourse = lazy(() => import("./pages/Educator/EditCourse"));
 const AllCourses = lazy(() => import("./pages/AllCourses"));
 const CreateLecture = lazy(() => import("./pages/Educator/CreateLecture"));
 
-export const serverURL = "http://localhost:3000";
+export const serverURL = "https://skillio-qjbm.onrender.com";
 function App() {
   const { userData } = useSelector((store) => store.user);
   
