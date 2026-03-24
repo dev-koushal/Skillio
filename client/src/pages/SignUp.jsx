@@ -37,7 +37,7 @@ export default function SignUp() {
     try {
       setLoading(true);
       const { data } = await axios.post(
-        "http://localhost:3000/api/auth/signup",
+        serverURL+ "/api/auth/signup",
         { name, email, password, role },
         { withCredentials: true },
       );
