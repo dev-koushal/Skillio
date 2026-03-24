@@ -15,7 +15,7 @@ import MyEnrolledCourses from "./pages/MyEnrolledCourses";
 import useGetAllReviews from "./hooks/useGetAllReviews";
 
 const Login = lazy(() => import("./pages/Login"));
-const Signup = lazy(() => import("./pages/Signup"));
+const Signup = lazy(() => import("./pages/SignUp"));
 const Profile = lazy(() => import("./pages/Profile"));
 const ForgetPassword = lazy(() => import("./pages/ForgetPassword"));
 const EditProfile = lazy(() => import("./pages/EditProfile"));
@@ -26,7 +26,7 @@ const EditCourse = lazy(() => import("./pages/Educator/EditCourse"));
 const AllCourses = lazy(() => import("./pages/AllCourses"));
 const CreateLecture = lazy(() => import("./pages/Educator/CreateLecture"));
 
-export const serverURL = "http://localhost:3000";
+export const serverURL = "https://skillio-qjbm.onrender.com";
 function App() {
   const { userData } = useSelector((store) => store.user);
   
