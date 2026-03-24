@@ -38,9 +38,7 @@ function ExploreCourses() {
           </h2>
 
           <p className="text-gray-500 mb-6 max-w-md">
-            Lorem ipsum dolor sit amet consectetur adipisicing elit. Rem vel
-            iure explicabo laboriosam accusantium expedita laudantium facere
-            magnam.
+            Access industry-vetted courses designed to bridge the gap between where you are and where you want to be. Start learning, anytime, anywhere.
           </p>
 
           <button
