@@ -1,8 +1,22 @@
 import React from "react";
 import { Star } from "lucide-react";
 import { useNavigate } from "react-router-dom";
-function CourseCard({thumbnail,title,category,price,id}) {
+
+
+function CourseCard({thumbnail,title,category,price,id,reviews}) {
     const navigate = useNavigate();
+
+    const calculateAvgReview = (reviews)=>{
+    if(!reviews || reviews.length === 0){
+      return 0;
+    }
+
+    const total = reviews.reduce((sum,review)=>sum+review.rating,0)
+    return(total/reviews.length).toFixed(1)
+  }
+
+  const avgRating = calculateAvgReview(reviews)
+  
   return (
     <div className="min-w-64 min-h-90 rounded-xl overflow-hidden shadow-lg hover:shadow-white/40  hover:scale-101 transition duration-300 bg-white hover:shadow-md hover:cursor-pointer text-black" onClick={()=>navigate(`/viewcourse/${id}`)}>
       
@@ -31,8 +45,8 @@ function CourseCard({thumbnail,title,category,price,id}) {
           </span>
 
           <div className="flex items-center gap-1 text-yellow-500">
-            <Star size={18} />
-            <span className="text-sm text-gray-700">5</span>
+            <Star size={18} className="fill-yellow-500" />
+            <span className="text-sm text-gray-700">{avgRating}</span>
           </div>
         </div>
       </div>

@@ -4,7 +4,7 @@ import { serverURL } from '../App'
 import { useDispatch } from 'react-redux'
 import { setCourseData } from '../redux/courseSlice';
 
-function getPublishedCourse() {
+function useGetPublishedCourse() {
 const dispatch = useDispatch();
   
     useEffect(()=>{
@@ -21,4 +21,4 @@ const dispatch = useDispatch();
     },[])
 }
 
-export default getPublishedCourse
+export default useGetPublishedCourse

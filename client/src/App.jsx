@@ -7,11 +7,12 @@ import ScrollToTop from './components/ScrollToTop'
 import Home from "./pages/Home";
 import useGetCurrentUser from "./hooks/useGetCurrentUser";
 import useGetCreatorCourse from "./hooks/getCreatorCourse";
-import getPublishedCourse from "./hooks/getPublishedCourse";
+import useGetPublishedCourse from "./hooks/useGetPublishedCourse";
 import EditLecture from "./pages/Educator/EditLecture";
 import ViewCourses from "./pages/ViewCourses";
 import ViewLectures from "./pages/ViewLectures";
 import MyEnrolledCourses from "./pages/MyEnrolledCourses";
+import useGetAllReviews from "./hooks/useGetAllReviews";
 
 const Login = lazy(() => import("./pages/Login"));
 const Signup = lazy(() => import("./pages/Signup"));
@@ -33,7 +34,8 @@ function App() {
   // Fetch user on app start
   useGetCurrentUser();
   useGetCreatorCourse();
-  getPublishedCourse();
+  useGetPublishedCourse();
+  useGetAllReviews();
  return (
   <BrowserRouter>
   <ScrollToTop/>

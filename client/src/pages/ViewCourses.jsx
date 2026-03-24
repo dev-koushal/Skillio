@@ -122,6 +122,21 @@ function ViewCourses() {
       setComment("");
     }
   }
+
+  const calculateAvgReview = (reviews)=>{
+    if(!reviews || reviews.length === 0){
+      return 0;
+    }
+
+    const total = reviews.reduce((sum,review)=>sum+review.rating,0)
+    return(total/reviews.length).toFixed(1)
+  }
+
+  const avgRating = calculateAvgReview(selectedCourse?.reviews)
+  const reviewedBy = selectedCourse?.reviews?.length;
+  
+
+  // console.log("avarage rating : ", avgRating);
   return (
     <div className="min-h-screen bg-gray-100 p-6">
       <div className="max-w-6xl mx-auto bg-white shadow-md rounded-xl p-6 space-y-6 relative">
@@ -142,8 +157,8 @@ function ViewCourses() {
 
             <div className="flex items-start flex-col justify-between">
                 <div className="text-yellow-500 font-medium flex gap-1 items-center justify-start">
-                    <span className="flex items-center justify-start gap-1 text-sm"><Star size={14}/>5</span>
-                    <span className="text-gray-400 text-sm ">(1,200 Reviews)</span>
+                    <span className="flex items-center justify-start gap-1 text-sm"><Star className="fill-yellow-500" size={14}/>{avgRating}</span>
+                    <span className="text-gray-400 text-sm ">({reviewedBy})</span>
                 </div>
                 <div className="mt-1.5">
                     <span className="text-lg font-semibold text-black ">₹{selectedCourse?.price}</span>{" "}
