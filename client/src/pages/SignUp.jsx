@@ -36,14 +36,15 @@ export default function SignUp() {
 
     try {
       setLoading(true);
+      if(!name|| !email|| !password|| !role){
+        toast.error("All fields need to be filled!!")
+      }
+      console.log(serverURL);
       const { data } = await axios.post(
         serverURL+ "/api/auth/signup",
         { name, email, password, role },
         { withCredentials: true },
       );
-      if(!name|| !email|| !password|| !role){
-        toast.error("All fields need to be filled!!")
-      }
       dispatch(setUserData(data))
       toast.success("User registered successfully!");
       navigate("/");
@@ -52,7 +53,7 @@ export default function SignUp() {
 
       const message =
         error?.response?.data?.message || error?.message || "An error occurred";
-      toast.error(error?.response?.data?.message);
+      toast.error(message);
     } finally {
       setLoading(false);
     }
@@ -92,7 +93,7 @@ export default function SignUp() {
           </div>
 
           {/* Form */}
-          <form className="space-y-4" onSubmit={(e)=>e.preventDefault()}>
+          <form className="space-y-4" onSubmit={handleSignup}>
             {/* name*/}
             <div>
               <label className="block text-sm font-medium text-gray-300 mb-1.5">
@@ -105,7 +106,7 @@ export default function SignUp() {
                     setName(e.target.value);
                   }}
                   value={name}
-                  type="name"
+                  type="text"
                   placeholder="Enter the name"
                   className="w-full bg-gray-800 border border-gray-700 rounded-lg pl-10 pr-4 py-2.5 text-white placeholder-gray-500 text-sm focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-all"
                 />

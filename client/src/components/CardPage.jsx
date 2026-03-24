@@ -20,7 +20,9 @@ function CardPage() {
 
         {/* Cards */}
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
-          {popularCourses?.map((course, i) => (
+          {courseData === null? <div className="text-2xl md:text-6xl tracking-widest leading-19 text-gray-700 uppercase ">
+            <span className="bg-red-50">Login</span> to <span className="bg-green-50">Explore</span> all the industry ready Courses.
+          </div> : popularCourses?.map((course, i) => (
             <motion.div
                 key={i}
                 initial={{ scale: 0.9, opacity: 0 }}
