@@ -23,7 +23,8 @@ Skillio is a full-stack Learning Management System that enables instructors to c
 - Role-based access (Student / Instructor)  
 - Protected backend and frontend routes
 
-- <img width="646" height="675" alt="Screenshot 2026-03-25 080920" src="https://github.com/user-attachments/assets/315ed75f-dbb1-49e2-b951-fe567713f1ef" />
+## Highly optimised and Seo Friendly
+- <img width="546" height="575" alt="Screenshot 2026-03-25 080920" src="https://github.com/user-attachments/assets/315ed75f-dbb1-49e2-b951-fe567713f1ef" />
 
 
 ---
@@ -156,6 +157,9 @@ Enrollment:
 - Better UI/UX  
 
 ---
+## Some peaks
+<img width="1877" height="964" alt="Screenshot 2026-03-29 194820" src="https://github.com/user-attachments/assets/e24e6aae-97e3-4d7f-969d-0ba32ab95253" />
+
 
 ## 👨‍💻 Author
 
