@@ -21,7 +21,10 @@ Skillio is a full-stack Learning Management System that enables instructors to c
 ### Authentication & Security
 - JWT-based authentication  
 - Role-based access (Student / Instructor)  
-- Protected backend and frontend routes  
+- Protected backend and frontend routes
+
+- <img width="646" height="675" alt="Screenshot 2026-03-25 080920" src="https://github.com/user-attachments/assets/315ed75f-dbb1-49e2-b951-fe567713f1ef" />
+
 
 ---
 
