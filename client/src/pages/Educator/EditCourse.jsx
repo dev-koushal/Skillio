@@ -122,49 +122,72 @@ const handleRemoveCourse = async () => {
   }
 }
   return (
-    <div className="min-h-screen bg-gray-100 flex justify-center py-10">
-      <div className="w-[850px] bg-white p-8 rounded-md shadow-sm border">
+  <div className="min-h-screen bg-gray-100 flex justify-center px-3 py-5 sm:px-5 md:px-8">
+    <div className="w-full max-w-5xl bg-white p-4 sm:p-6 md:p-8 rounded-2xl shadow-sm border">
 
-        {/* Header */}
-        <div className="flex justify-between items-center mb-6">
-          <div className="flex items-center gap-3">
-            <ArrowLeft
-              className="cursor-pointer"
-              onClick={() => navigate("/courses")}
-            />
-            <h2 className="text-lg font-semibold">
-              Add detail information regarding course
-            </h2>
-          </div>
+      {/* Header */}
+      <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4 mb-6">
+        
+        <div className="flex items-start sm:items-center gap-3">
+          <ArrowLeft
+            className="cursor-pointer shrink-0 mt-1 sm:mt-0"
+            onClick={() => navigate("/courses")}
+          />
 
-          <button className="bg-black text-white px-4 py-2 rounded cursor-pointer" onClick={()=>navigate(`/createlecture/${selectCourse?._id}`)}>
-            Go to lectures page
-          </button>
+          <h2 className="text-base sm:text-lg md:text-xl font-semibold leading-snug">
+            Add detail information regarding course
+          </h2>
         </div>
 
-        {/* Course Actions */}
-        <div className="flex gap-3 mb-6">
-          {isPublished? <button onClick={()=>setIsPublised(!isPublished)} className="bg-green-200 text-green-700 px-4 py-2 rounded cursor-pointer">
+        <button
+          className="bg-black text-white px-4 py-2 rounded cursor-pointer w-full sm:w-auto"
+          onClick={() => navigate(`/createlecture/${selectCourse?._id}`)}
+        >
+          Go to lectures page
+        </button>
+      </div>
+
+      {/* Course Actions */}
+      <div className="flex flex-col sm:flex-row gap-3 mb-6">
+        {!isPublished ? (
+          <button
+            onClick={() => setIsPublised(!isPublished)}
+            className="bg-green-200 text-green-700 px-4 py-2 rounded cursor-pointer w-full sm:w-auto"
+          >
             Click to Publish
-          </button>:<button onClick={()=>setIsPublised(!isPublished)} className="bg-red-200 text-red-700 px-4 py-2 rounded cursor-pointer">
-            Click to UnPublish
-          </button>}
-          <button onClick={handleRemoveCourse} className="bg-red-500 text-white px-4 py-2 rounded cursor-pointer" disabled={loading1}>
-            Remove Course
           </button>
-        </div>
+        ) : (
+          <button
+            onClick={() => setIsPublised(!isPublished)}
+            className="bg-red-200 text-red-700 px-4 py-2 rounded cursor-pointer w-full sm:w-auto"
+          >
+            Click to UnPublish
+          </button>
+        )}
 
-        <h3 className="font-medium mb-4">Basic Course Information</h3>
+        <button
+          onClick={handleRemoveCourse}
+          className="bg-red-500 text-white px-4 py-2 rounded cursor-pointer w-full sm:w-auto"
+          disabled={loading1}
+        >
+          Remove Course
+        </button>
+      </div>
+
+      <h3 className="font-medium mb-4 text-sm sm:text-base">
+        Basic Course Information
+      </h3>
+
+      <form onSubmit={(e) => e.preventDefault()}>
 
         {/* Title */}
-        <form onSubmit={(e)=>e.preventDefault()} action="">
         <div className="mb-4">
           <label className="text-sm font-medium">Title</label>
           <input
             name="title"
             placeholder="Course Title"
-            className="w-full border rounded px-3 py-2 mt-1"
-            onChange={(e)=>setTitle(e.target.value)}
+            className="w-full border rounded px-3 py-2 mt-1 text-sm sm:text-base"
+            onChange={(e) => setTitle(e.target.value)}
             value={title}
           />
         </div>
@@ -175,8 +198,8 @@ const handleRemoveCourse = async () => {
           <input
             name="subtitle"
             placeholder="Subtitle"
-            className="w-full border rounded px-3 py-2 mt-1"
-            onChange={(e)=>setSubTitle(e.target.value)}
+            className="w-full border rounded px-3 py-2 mt-1 text-sm sm:text-base"
+            onChange={(e) => setSubTitle(e.target.value)}
             value={subTitle}
           />
         </div>
@@ -188,39 +211,42 @@ const handleRemoveCourse = async () => {
             name="description"
             placeholder="Course description"
             rows="4"
-            className="w-full border rounded px-3 py-2 mt-1"
-            onChange={(e)=>setDescription(e.target.value)}
+            className="w-full border rounded px-3 py-2 mt-1 text-sm sm:text-base"
+            onChange={(e) => setDescription(e.target.value)}
             value={description}
           />
         </div>
 
         {/* Category / Level / Price */}
-        <div className="grid grid-cols-3 gap-4 mb-6">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+
           <div>
             <label className="text-sm font-medium">Category</label>
+
             <select
               name="category"
-              className="w-full border rounded px-3 py-2 mt-1"
-              onChange={(e)=>setCategory(e.target.value)}
-            value={category}
+              className="w-full border rounded px-3 py-2 mt-1 text-sm sm:text-base"
+              onChange={(e) => setCategory(e.target.value)}
+              value={category}
             >
               <option value={""}>Select Category</option>
-            <option value={"Development"}>Development</option>
-            <option value={"Cyber"}>Cyber</option>
-            <option value={"Business"}>Business</option>
-            <option value={"AIML"}>AI/ML</option>
-            <option value={"Cyber Security"}>Cyber Security</option>
-            <option value={"Data Science"}>Data Science</option>
+              <option value={"Development"}>Development</option>
+              <option value={"Cyber"}>Cyber</option>
+              <option value={"Business"}>Business</option>
+              <option value={"AIML"}>AI/ML</option>
+              <option value={"Cyber Security"}>Cyber Security</option>
+              <option value={"Data Science"}>Data Science</option>
             </select>
           </div>
 
           <div>
             <label className="text-sm font-medium">Course Level</label>
+
             <select
               name="level"
-              className="w-full border rounded px-3 py-2 mt-1"
-              onChange={(e)=>setlevel(e.target.value)}
-            value={level}
+              className="w-full border rounded px-3 py-2 mt-1 text-sm sm:text-base"
+              onChange={(e) => setlevel(e.target.value)}
+              value={level}
             >
               <option value="">Select Level</option>
               <option value="Beginner">Beginner</option>
@@ -231,12 +257,13 @@ const handleRemoveCourse = async () => {
 
           <div>
             <label className="text-sm font-medium">Price (INR)</label>
+
             <input
               name="price"
               placeholder="₹"
-              className="w-full border rounded px-3 py-2 mt-1"
-              onChange={(e)=>setPrice(e.target.value)}
-            value={price}
+              className="w-full border rounded px-3 py-2 mt-1 text-sm sm:text-base"
+              onChange={(e) => setPrice(e.target.value)}
+              value={price}
             />
           </div>
         </div>
@@ -247,35 +274,46 @@ const handleRemoveCourse = async () => {
             Course Thumbnail
           </label>
 
-          <label className="w-[200px] h-[120px] border flex items-center justify-center rounded cursor-pointer">
-            <input onChange={ handleThumbnail} type="file" hidden  />
-            {
-              frontendImage?<img src={frontendImage} alt="" />:
-            <ImagePlus size={40} />}
+          <label className="w-full max-w-[240px] h-[140px] border flex items-center justify-center rounded-xl cursor-pointer overflow-hidden">
+            <input onChange={handleThumbnail} type="file" hidden />
+
+            {frontendImage ? (
+              <img
+                src={frontendImage}
+                alt=""
+                className="w-full h-full object-cover"
+              />
+            ) : (
+              <ImagePlus size={40} />
+            )}
           </label>
         </div>
 
         {/* Buttons */}
-        <div className="flex gap-3">
+        <div className="flex flex-col sm:flex-row gap-3">
           <button
             onClick={() => navigate("/courses")}
-            className="border px-4 py-2 rounded cursor-pointer"
-
+            className="border px-4 py-2 rounded cursor-pointer w-full sm:w-auto"
           >
             Cancel
           </button>
 
           <button
-            
-            className="bg-black text-white px-5 py-2 rounded cursor-pointer"
-          onClick={handleEditCourse}>
-            {loading? <ClipLoader size={20} color="white" />:"Save"}
+            className="bg-black text-white px-5 py-2 rounded cursor-pointer w-full sm:w-auto flex justify-center items-center"
+            onClick={handleEditCourse}
+          >
+            {loading ? (
+              <ClipLoader size={20} color="white" />
+            ) : (
+              "Save"
+            )}
           </button>
         </div>
-        </form>
-      </div>
+
+      </form>
     </div>
-  );
+  </div>
+);
 }
 
 export default EditCourse;

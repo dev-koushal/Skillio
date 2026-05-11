@@ -59,7 +59,7 @@ function App() {
         />
         <Route
           path="/allcourses"
-          element={userData ? <AllCourses /> : <Navigate to="/signup" />}
+          element={userData ? <AllCourses /> : <Navigate to="/login" />}
         />
         <Route
           path="/dashboard"

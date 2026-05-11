@@ -112,6 +112,7 @@ function Home() {
                   whileHover={{ y: -2, scale: 1.02 }}
                   whileTap={{ scale: 0.98 }}
                   className="flex items-center gap-2 border border-white px-7 py-3 rounded-lg hover:bg-white hover:text-black transition"
+                  onClick={() => navigate("/allcourses")}
                 >
                   Watch Demo <PlayCircle size={18} />
                 </motion.button>
