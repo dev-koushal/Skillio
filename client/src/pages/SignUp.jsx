@@ -214,7 +214,7 @@ export default function SignUp() {
 
           {/* Social Buttons */}
           <div className="grid grid-cols-2 gap-3">
-            <button className="flex items-center justify-center gap-2 bg-gray-800 hover:bg-gray-700 border border-gray-700 hover:border-gray-600 text-white text-sm font-medium py-2.5 rounded-lg transition-all cursor-pointer" onClick={googleSignup}>
+            <button className="flex items-center cursor-not-allowed justify-center gap-2 bg-gray-800 hover:bg-gray-700 border border-gray-700 hover:border-gray-600 text-white text-sm font-medium py-2.5 rounded-lg transition-all cursor-pointer" onClick={googleSignup}>
               <Signature />
               Google
             </button>
