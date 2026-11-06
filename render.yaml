@@ -1,0 +1,35 @@
+# Render Blueprint for Skillio Multi-Tenant SaaS
+services:
+  - type: web
+    name: skillio-saas-api
+    runtime: node
+    plan: starter
+    buildCommand: npm install && cd client && npm install && npm run build
+    startCommand: node server/index.js
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: 10000
+      - key: MONGO_URI
+        sync: false
+      - key: JWT_SECRET
+        generateValue: true
+      - key: COOKIE_DOMAIN
+        value: .mylms.com
+      - key: ALLOWED_ORIGINS
+        value: https://mylms.com,https://*.mylms.com
+      - key: CLOUDINARY_NAME
+        sync: false
+      - key: CLOUDINARY_API_KEY
+        sync: false
+      - key: CLOUDINARY_API_SECRET
+        sync: false
+      - key: RAZORPAY_KEY_ID
+        sync: false
+      - key: RAZORPAY_KEY_SECRET
+        sync: false
+      - key: EMAIL_ID
+        sync: false
+      - key: EMAIL_PASSWORD
+        sync: false

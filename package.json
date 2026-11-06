@@ -1,0 +1,24 @@
+{
+  "name": "skillio-saas-platform",
+  "version": "2.0.0",
+  "description": "Multi-Tenant White-Label LMS SaaS Platform",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "start": "node server/index.js",
+    "server": "node server/index.js",
+    "client": "cd client && npm run dev",
+    "build:client": "cd client && npx vite build",
+    "test": "node server/tests/multiTenantSecurity.test.js && node server/tests/inProcessRoutes.test.js",
+    "migrate:tenants": "node server/scripts/migrateMultiTenant.js"
+  },
+  "keywords": [
+    "lms",
+    "multi-tenant",
+    "saas",
+    "white-label",
+    "education"
+  ],
+  "author": "Skillio Engineering Team",
+  "license": "ISC"
+}
