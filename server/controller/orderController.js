@@ -34,6 +34,17 @@ export const RazorpayOrder = async (req, res) => {
       return res.status(404).json({ success: false, message: "Course not found in this organization" });
     }
 
+    // Free course handling
+    if (!course.price || Number(course.price) <= 0) {
+      return res.status(200).json({
+        id: `free_${courseId}_${Date.now()}`,
+        amount: 0,
+        currency: "INR",
+        free: true,
+        message: "Free course, no payment required",
+      });
+    }
+
     const instance = getRazorpayInstance();
     if (!instance) {
       // Return simulated mock order for testing/development if keys not provided
@@ -58,7 +69,10 @@ export const RazorpayOrder = async (req, res) => {
     };
 
     const order = await instance.orders.create(options);
-    return res.status(200).json(order);
+    return res.status(200).json({
+      ...order,
+      key: process.env.RAZORPAY_KEY_ID?.trim(),
+    });
   } catch (error) {
     console.error("[Razorpay Order Error]", error);
     return res.status(500).json({
@@ -71,7 +85,7 @@ export const RazorpayOrder = async (req, res) => {
 // VERIFY PAYMENT + ENROLL
 export const verifyPayment = async (req, res) => {
   try {
-    const { courseId, razorpay_order_id, razorpay_payment_id, razorpay_signature } = req.body;
+    const { courseId, razorpay_order_id, razorpay_payment_id, razorpay_signature, freeEnrollment } = req.body;
     const tenantId = req.tenantId;
 
     // Security: Use authenticated userId from session, never trust body
@@ -92,8 +106,16 @@ export const verifyPayment = async (req, res) => {
 
     const instance = getRazorpayInstance();
 
-    // Verify signature if credentials exist
-    if (instance && razorpay_signature && razorpay_order_id && razorpay_payment_id) {
+    // 1. Free enrollment check
+    if (freeEnrollment || (!course.price || Number(course.price) <= 0)) {
+      // Free courses require no payment transaction
+    }
+    // 2. Simulated mock order (dev/test mode)
+    else if (razorpay_order_id && razorpay_order_id.startsWith("order_mock_")) {
+      // Mock order allowed in test/demo mode
+    }
+    // 3. Signature verification with Razorpay credentials
+    else if (instance && razorpay_signature && razorpay_order_id && razorpay_payment_id) {
       const generatedSignature = crypto
         .createHmac("sha256", process.env.RAZORPAY_KEY_SECRET.trim())
         .update(`${razorpay_order_id}|${razorpay_payment_id}`)
@@ -102,11 +124,15 @@ export const verifyPayment = async (req, res) => {
       if (generatedSignature !== razorpay_signature) {
         return res.status(400).json({ success: false, message: "Payment signature verification failed!" });
       }
-    } else if (instance && razorpay_order_id && !razorpay_order_id.startsWith("order_mock_")) {
+    }
+    // 4. Fallback status verification from Razorpay API
+    else if (instance && razorpay_order_id) {
       const orderInfo = await instance.orders.fetch(razorpay_order_id);
       if (orderInfo.status !== "paid") {
         return res.status(400).json({ success: false, message: "Payment status is not paid" });
       }
+    } else {
+      return res.status(400).json({ success: false, message: "Incomplete payment verification parameters" });
     }
 
     // USER UPDATE (Scoped to tenant)
@@ -129,6 +155,13 @@ export const verifyPayment = async (req, res) => {
     return res.status(200).json({
       success: true,
       message: "Payment verified and enrolled successfully!",
+      user: {
+        _id: user._id,
+        name: user.name,
+        email: user.email,
+        role: user.role,
+        enrolledCourses: user.enrolledCourses,
+      },
     });
   } catch (error) {
     console.error("[Verify Payment Error]", error);

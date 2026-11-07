@@ -3,6 +3,7 @@ import { useParams, useNavigate } from "react-router-dom";
 import { ArrowLeft, Lock, PlayCircle, Star, CheckCircle, Video, BookOpen, Clock } from "lucide-react";
 import { useDispatch, useSelector } from "react-redux";
 import { setSelectedCourse } from "../redux/courseSlice";
+import { setUserData } from "../redux/userSlice";
 import api from "../services/api";
 import blank_profile from "/blank_Profile.avif";
 import CourseCard from "../components/CourseCard";
@@ -10,6 +11,28 @@ import { toast } from "react-toastify";
 import { useTenant } from "../context/TenantContext";
 import Button from "../components/common/Button";
 import Navbar from "../components/Navbar";
+
+// Helper to load Razorpay checkout script dynamically if not yet available
+const loadRazorpayScript = () => {
+  return new Promise((resolve) => {
+    if (typeof window !== "undefined" && window.Razorpay) {
+      resolve(true);
+      return;
+    }
+    const existing = document.querySelector('script[src*="checkout.razorpay.com"]');
+    if (existing) {
+      existing.addEventListener("load", () => resolve(true));
+      existing.addEventListener("error", () => resolve(false));
+      return;
+    }
+    const script = document.createElement("script");
+    script.src = "https://checkout.razorpay.com/v1/checkout.js";
+    script.async = true;
+    script.onload = () => resolve(true);
+    script.onerror = () => resolve(false);
+    document.head.appendChild(script);
+  });
+};
 
 function ViewCourses() {
   const navigate = useNavigate();
@@ -100,27 +123,59 @@ function ViewCourses() {
 
     setEnrollLoading(true);
     try {
+      // 1. Free course check
+      if (!course?.price || Number(course.price) === 0) {
+        const verifyRes = await api.post("/api/order/verifypayment", {
+          courseId,
+          freeEnrollment: true,
+        });
+        setIsEnrolled(true);
+        if (verifyRes.data.user) {
+          dispatch(setUserData(verifyRes.data.user));
+        }
+        toast.success(verifyRes.data.message || "Enrolled successfully in free course!");
+        return;
+      }
+
+      // 2. Create order from backend
       const { data: orderData } = await api.post("/api/order/razorpay-order", { courseId });
 
-      // If simulated / mock order or free course
-      if (orderData.mock || !window.Razorpay) {
+      // 3. Handle simulated mock order (dev mode when Razorpay keys are omitted)
+      if (orderData.mock) {
         const verifyRes = await api.post("/api/order/verifypayment", {
           courseId,
           razorpay_order_id: orderData.id,
         });
         setIsEnrolled(true);
+        if (verifyRes.data.user) {
+          dispatch(setUserData(verifyRes.data.user));
+        }
         toast.success(verifyRes.data.message || "Enrolled successfully!");
         return;
       }
 
-      // Razorpay Checkout modal
+      // 4. Ensure Razorpay Checkout SDK is loaded
+      const isLoaded = await loadRazorpayScript();
+      if (!isLoaded || !window.Razorpay) {
+        toast.error("Razorpay SDK could not be loaded. Please check your internet connection.");
+        return;
+      }
+
+      // 5. Open Razorpay Checkout modal
       const options = {
-        key: import.meta.env.VITE_RAZORPAY_KEY_ID || "rzp_test_STpcnn96tSDaDI",
+        key: orderData.key || import.meta.env.VITE_RAZORPAY_KEY_ID || "rzp_test_STpcnn96tSDaDI",
         amount: orderData.amount,
-        currency: "INR",
+        currency: orderData.currency || "INR",
         name: tenant?.name || "Skillio Academy",
         description: `Enrollment in ${course?.title}`,
         order_id: orderData.id,
+        prefill: {
+          name: userData?.name || "",
+          email: userData?.email || "",
+        },
+        theme: {
+          color: tenant?.branding?.primaryColor || "#0891b2",
+        },
         handler: async function (res) {
           try {
             const verifyRes = await api.post("/api/order/verifypayment", {
@@ -128,14 +183,25 @@ function ViewCourses() {
               courseId,
             });
             setIsEnrolled(true);
+            if (verifyRes.data.user) {
+              dispatch(setUserData(verifyRes.data.user));
+            }
             toast.success(verifyRes.data.message || "Payment verified and enrolled!");
           } catch (err) {
             toast.error(err?.response?.data?.message || "Payment verification failed");
           }
         },
+        modal: {
+          ondismiss: function () {
+            toast.info("Payment cancelled");
+          },
+        },
       };
 
       const rzp = new window.Razorpay(options);
+      rzp.on("payment.failed", function (response) {
+        toast.error(response?.error?.description || "Payment failed");
+      });
       rzp.open();
     } catch (error) {
       toast.error(error?.response?.data?.message || "Failed to initialize enrollment");
