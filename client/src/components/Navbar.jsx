@@ -272,7 +272,7 @@ function Navbar({ currentInstitution = null }) {
             className="p-1.5 rounded-lg text-[#57534e] hover:bg-[#f2efe9] border border-[#e8e5dc] flex items-center gap-1 text-[11px] font-semibold"
           >
             <Building2 size={15} className="text-[#1e3a8a]" />
-            <span className="truncate max-w-[90px]">{tenantName}</span>
+            <span className="truncate max-w-[90px]">{brandName}</span>
           </Link>
 
           <button
@@ -300,9 +300,9 @@ function Navbar({ currentInstitution = null }) {
               {/* Header */}
               <div className="flex items-center justify-between pb-4 border-b border-[#f2efe9]">
                 <div className="flex items-center gap-2.5">
-                  <img src={tenantLogo} alt={tenantName} className="h-8 w-auto object-contain" />
+                  <img src={brandLogo} alt={brandName} className="h-8 w-auto object-contain" />
                   <span className="font-bold text-sm text-[#1c1917] truncate max-w-[160px]">
-                    {tenantName}
+                    {brandName}
                   </span>
                 </div>
                 <button
