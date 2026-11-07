@@ -18,6 +18,7 @@ export const handleAIVoice = async (req, res) => {
     const userId = req.userId;
     const userRole = req.userRole;
     const currentCourseId = req.body.currentCourseId || null;
+    const currentRoute = req.body.currentRoute || null;
 
     if (!req.file || !req.file.buffer) {
       return res.status(400).json({
@@ -84,6 +85,7 @@ export const handleAIVoice = async (req, res) => {
       userRole,
       prompt: transcribedPrompt,
       currentCourseId,
+      currentRoute,
       confirmed: false,
     });
 
@@ -105,12 +107,12 @@ export const handleAIVoice = async (req, res) => {
  */
 export const handleAIChat = async (req, res) => {
   try {
-    const { prompt, currentCourseId, confirmed } = req.body;
+    const { prompt, currentCourseId, currentRoute, confirmed, confirmationAction, messagesHistory } = req.body;
     const tenantId = req.tenantId;
     const userId = req.userId;
     const userRole = req.userRole;
 
-    if (!prompt || typeof prompt !== "string") {
+    if (!prompt && !confirmed) {
       return res.status(400).json({
         success: false,
         message: "Prompt string is required",
@@ -123,13 +125,17 @@ export const handleAIChat = async (req, res) => {
       userRole,
       prompt,
       currentCourseId,
+      currentRoute,
       confirmed: Boolean(confirmed),
+      confirmationAction,
+      messagesHistory: Array.isArray(messagesHistory) ? messagesHistory : [],
     });
 
     return res.status(200).json(result);
   } catch (error) {
     console.error("[handleAIChat Error]", error);
-    return res.status(500).json({
+    const statusCode = error.statusCode || 500;
+    return res.status(statusCode).json({
       success: false,
       message: error.message || "Failed to process AI assistant instruction",
     });

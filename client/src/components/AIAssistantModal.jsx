@@ -332,6 +332,7 @@ export default function AIAssistantModal({
           if (currentCourseId) {
             formData.append("currentCourseId", currentCourseId);
           }
+          formData.append("currentRoute", window.location.pathname);
 
           const { data } = await api.post("/api/ai/voice", formData, {
             headers: { "Content-Type": "multipart/form-data" },
@@ -451,6 +452,8 @@ export default function AIAssistantModal({
     const finalPrompt = textToSend || prompt;
     if (!finalPrompt || !finalPrompt.trim()) return;
 
+    const actionToConfirm = pendingConfirmation?.actionData || null;
+
     if (!confirmed) {
       // Add user message
       setMessages((prev) => [...prev, { sender: "user", text: finalPrompt.trim() }]);
@@ -461,10 +464,18 @@ export default function AIAssistantModal({
     setPendingConfirmation(null);
 
     try {
+      const messagesHistory = messages.slice(-6).map((m) => ({
+        role: m.sender === "user" ? "user" : "assistant",
+        content: m.text || "",
+      }));
+
       const { data } = await api.post("/api/ai/chat", {
         prompt: finalPrompt.trim(),
         currentCourseId,
+        currentRoute: window.location.pathname,
         confirmed,
+        confirmationAction: actionToConfirm,
+        messagesHistory,
       });
 
       if (data.requiresConfirmation) {

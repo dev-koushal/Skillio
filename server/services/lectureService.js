@@ -121,6 +121,25 @@ export const lectureService = {
   },
 
   /**
+   * Get single lecture.
+   */
+  async getLecture({ tenantId, lectureId }) {
+    return Lecture.findOne({ _id: lectureId, tenantId });
+  },
+
+  /**
+   * Find lecture by title within a course.
+   */
+  async findLectureByTitle({ tenantId, courseId, title }) {
+    if (!title) return null;
+    return Lecture.findOne({
+      tenantId,
+      courseId,
+      lectureTitle: { $regex: new RegExp(title.trim(), "i") },
+    });
+  },
+
+  /**
    * Delete a lecture and cleanup course reference and resources.
    */
   async deleteLecture({ tenantId, userId, userRole, lectureId }) {

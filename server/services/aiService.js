@@ -1,73 +1,195 @@
 import { courseService } from "./courseService.js";
 import { lectureService } from "./lectureService.js";
+import { resourceService } from "./resourceService.js";
+import { tenantService } from "./tenantService.js";
+import { analyticsService } from "./analyticsService.js";
+import { TOOL_REGISTRY, OPENAI_TOOL_DEFINITIONS } from "./aiTools.js";
 import AIActionLog from "../models/aiActionLogModel.js";
+import Tenant from "../models/tenantModel.js";
 
 /**
- * AI Assistant Service for Educators.
- * Operates purely through authorized tool execution with multi-tenant isolation.
+ * Production-Grade AI Application Agent for LMS SaaS Educators.
+ * Operates purely via structured tool calling against backend business services.
+ * Strictly scopes every action to the authenticated tenant and user.
  */
 export const aiService = {
   /**
-   * Main entry point to process an educator prompt or action.
+   * Main entry point to process an educator instruction or action.
    */
-  async processCommand({ tenantId, userId, userRole, prompt, currentCourseId = null, confirmed = false }) {
-    if (!prompt || !prompt.trim()) {
+  async processCommand({
+    tenantId,
+    userId,
+    userRole,
+    prompt,
+    currentCourseId = null,
+    currentRoute = null,
+    confirmed = false,
+    confirmationAction = null,
+    messagesHistory = [],
+  }) {
+    // 1. RBAC Guardrail: Strictly block non-educators
+    if (userRole !== "educator" && userRole !== "tenant_admin" && userRole !== "platform_admin") {
+      const err = new Error("Access Denied: AI Teaching Assistant is only available for educators and administrators.");
+      err.statusCode = 403;
+      throw err;
+    }
+
+    if (!prompt && !confirmed) {
       return {
         success: false,
         message: "Please speak or type what you would like to create or manage.",
       };
     }
 
-    const cleanPrompt = prompt.trim();
+    const startTime = Date.now();
+    const cleanPrompt = (prompt || "").trim();
 
     try {
-      // 1. Detect Intent and Extract Tool Arguments
-      const plan = await this.parseIntentAndPlan({
-        prompt: cleanPrompt,
-        tenantId,
-        userId,
-        currentCourseId,
-        confirmed,
-      });
+      // 2. Handle Confirmed Action Execution
+      if (confirmed && confirmationAction && confirmationAction.tool) {
+        const toolName = confirmationAction.tool;
+        const tool = TOOL_REGISTRY[toolName];
+        if (!tool) {
+          throw new Error(`Unknown tool "${toolName}" for confirmed execution`);
+        }
 
-      // 2. High-impact action verification (destructive actions need confirmation)
-      if (plan.requiresConfirmation && !confirmed) {
-        // Log confirmation request
+        const result = await tool.execute({
+          tenantId,
+          userId,
+          userRole,
+          args: confirmationAction.args || {},
+          context: { currentCourseId, currentRoute },
+        });
+
+        await AIActionLog.create({
+          tenantId,
+          userId,
+          prompt: cleanPrompt || `Confirmed: ${toolName}`,
+          action: toolName,
+          arguments: confirmationAction.args,
+          result: result.data || null,
+          status: "success",
+        });
+
+        return {
+          success: true,
+          message: result.message,
+          data: result.data,
+          action: toolName,
+        };
+      }
+
+      // 3. Gather Application Context
+      const [existingCourses, tenant] = await Promise.all([
+        courseService.listCreatorCourses({ tenantId, userId }),
+        Tenant.findById(tenantId).select("name title primaryColor secondaryColor"),
+      ]);
+
+      const coursesSummary = (existingCourses || [])
+        .map((c) => `ID: ${c._id}, Title: "${c.title}", Status: ${c.isPublished ? "Published" : "Draft"}, Price: ₹${c.price}, Lectures: ${c.lectures?.length || 0}`)
+        .join("; ");
+
+      const context = {
+        tenantId,
+        institutionName: tenant?.name || "Academy",
+        currentRoute: currentRoute || "/educator",
+        currentCourseId: currentCourseId || (existingCourses?.[0]?._id ? existingCourses[0]._id.toString() : null),
+        coursesSummary,
+      };
+
+      // 4. Attempt Structured Tool Selection via OpenAI API
+      const apiKey = process.env.OPENAI_API_KEY;
+      let toolPlan = null;
+      let assistantReplyText = null;
+
+      if (apiKey && apiKey.startsWith("sk-")) {
+        try {
+          const planFromLLM = await this.callOpenAIAgent({
+            prompt: cleanPrompt,
+            context,
+            messagesHistory,
+          });
+
+          if (planFromLLM.toolCalls && planFromLLM.toolCalls.length > 0) {
+            toolPlan = planFromLLM.toolCalls[0];
+          } else if (planFromLLM.replyText) {
+            assistantReplyText = planFromLLM.replyText;
+          }
+        } catch (llmError) {
+          console.warn("[OpenAI Agent Warning, switching to fallback parser]", llmError.message);
+        }
+      }
+
+      // 5. Fallback Semantic Parser if LLM is unavailable or offline
+      if (!toolPlan && !assistantReplyText) {
+        toolPlan = this.semanticFallbackParser({
+          prompt: cleanPrompt,
+          context,
+          existingCourses,
+        });
+      }
+
+      // If purely informational response without tool call
+      if (!toolPlan) {
+        return {
+          success: true,
+          message: assistantReplyText || "How can I assist you with your courses, lectures, or academy settings?",
+          action: "chat",
+        };
+      }
+
+      const toolName = toolPlan.tool;
+      const tool = TOOL_REGISTRY[toolName];
+
+      if (!tool) {
+        return {
+          success: true,
+          message: assistantReplyText || `I understand your request, but I couldn't match a safe application tool for it.`,
+        };
+      }
+
+      // 6. High-Impact Action Safety Guardrail: Check if confirmation is required
+      if (tool.requiresConfirmation(toolPlan.args, context)) {
+        const confMsg = tool.confirmationMessage
+          ? tool.confirmationMessage(toolPlan.args, context)
+          : `Are you sure you want to proceed with ${toolName}?`;
+
         await AIActionLog.create({
           tenantId,
           userId,
           prompt: cleanPrompt,
-          action: plan.tool,
-          arguments: plan.args,
+          action: toolName,
+          arguments: toolPlan.args,
           status: "requires_confirmation",
         });
 
         return {
           success: true,
           requiresConfirmation: true,
-          confirmationMessage: plan.confirmationMessage || `Are you sure you want to proceed with this action?`,
+          confirmationMessage: confMsg,
           actionData: {
-            tool: plan.tool,
-            args: plan.args,
+            tool: toolName,
+            args: toolPlan.args,
           },
         };
       }
 
-      // 3. Execute Tool Operations
-      const executionResult = await this.executeToolPlan({
-        plan,
+      // 7. Execute Structured Tool Operation
+      const executionResult = await tool.execute({
         tenantId,
         userId,
         userRole,
+        args: toolPlan.args,
+        context,
       });
 
-      // 4. Log Successful Action
+      // 8. Log Successful Action in Audit Log
       await AIActionLog.create({
         tenantId,
         userId,
         prompt: cleanPrompt,
-        action: plan.tool,
-        arguments: plan.args,
+        action: toolName,
+        arguments: toolPlan.args,
         result: executionResult.data || null,
         status: "success",
       });
@@ -76,12 +198,11 @@ export const aiService = {
         success: true,
         message: executionResult.message,
         data: executionResult.data,
-        action: plan.tool,
+        action: toolName,
       };
     } catch (error) {
-      console.error("[AIService Error]", error);
+      console.error("[AIService processCommand Error]", error);
 
-      // Log failure
       try {
         await AIActionLog.create({
           tenantId,
@@ -103,89 +224,294 @@ export const aiService = {
   },
 
   /**
-   * Parse prompt into an executable tool plan.
-   * Understands English, Hindi, and Hinglish.
+   * Parse prompt into an executable tool plan using semantic intent parsing and tool registry.
    */
-  async parseIntentAndPlan({ prompt, tenantId, userId, currentCourseId, confirmed }) {
+  async parseIntentAndPlan({ prompt, tenantId, userId, currentCourseId = null, confirmed = false }) {
+    const plan = this.semanticFallbackParser({
+      prompt: (prompt || "").trim(),
+      context: { currentCourseId, tenantId },
+      existingCourses: [],
+    });
+
+    if (!plan) {
+      return { tool: "clarify", args: { prompt } };
+    }
+
+    const tool = TOOL_REGISTRY[plan.tool];
+    const requiresConfirmation = tool ? tool.requiresConfirmation(plan.args, { currentCourseId }) : false;
+    const confirmationMessage = tool?.confirmationMessage ? tool.confirmationMessage(plan.args, { currentCourseId }) : undefined;
+
+    return {
+      tool: plan.tool,
+      args: plan.args,
+      requiresConfirmation,
+      confirmationMessage,
+    };
+  },
+
+  /**
+   * Calls OpenAI Chat Completions with Tools schema.
+   */
+  async callOpenAIAgent({ prompt, context, messagesHistory = [] }) {
+    const apiKey = process.env.OPENAI_API_KEY;
+
+    const systemPrompt = `You are the Skillio Application Agent for educators in academy "${context.institutionName}".
+Your role is to understand educator instructions (in English, Hindi, or Hinglish) and select the exact structured tool to execute the action safely.
+Current Context:
+- Active Route: ${context.currentRoute}
+- Active Course ID: ${context.currentCourseId || "None"}
+- Educator's Courses: ${context.coursesSummary || "None"}
+
+Rules:
+1. Always select the most appropriate tool from the tool registry.
+2. If the user mentions creating a course and also lists lectures (e.g. "Create course X and add lectures A, B, C"), select compoundCreateCourseAndLectures.
+3. If the user asks about tuition earnings, active students, or top courses, select getAcademyAnalytics.
+4. If the user asks to change theme colors or institution name/description, select updateAcademyBranding.
+5. If the user provides an outline or asks for syllabus/curriculum ideas, select generateCurriculumOutline.
+6. For course deletion or lecture deletion, select deleteCourse or deleteLecture.
+7. Output tool calls using function calling.`;
+
+    const messages = [
+      { role: "system", content: systemPrompt },
+      ...messagesHistory.slice(-4),
+      { role: "user", content: prompt },
+    ];
+
+    const response = await fetch("https://api.openai.com/v1/chat/completions", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${apiKey}`,
+      },
+      body: JSON.stringify({
+        model: "gpt-4o-mini",
+        messages,
+        tools: OPENAI_TOOL_DEFINITIONS,
+        tool_choice: "auto",
+        temperature: 0.1,
+      }),
+    });
+
+    if (!response.ok) {
+      const errText = await response.text();
+      throw new Error(`OpenAI API responded with status ${response.status}: ${errText}`);
+    }
+
+    const data = await response.json();
+    const choice = data.choices?.[0]?.message;
+
+    if (!choice) return { toolCalls: [], replyText: null };
+
+    const toolCalls = [];
+    if (choice.tool_calls && choice.tool_calls.length > 0) {
+      for (const tc of choice.tool_calls) {
+        if (tc.type === "function" && tc.function) {
+          try {
+            const parsedArgs = JSON.parse(tc.function.arguments || "{}");
+            toolCalls.push({
+              tool: tc.function.name,
+              args: parsedArgs,
+            });
+          } catch (e) {
+            console.warn("Failed to parse tool call arguments:", e);
+          }
+        }
+      }
+    }
+
+    return {
+      toolCalls,
+      replyText: choice.content || null,
+    };
+  },
+
+  /**
+   * Resilient Semantic Fallback Parser.
+   * Understands English, Hindi, and Hinglish. Maps user intent to structured tools.
+   */
+  semanticFallbackParser({ prompt, context, existingCourses = [] }) {
     const text = prompt.toLowerCase();
 
-    // 1. SHOW / LIST COURSES
+    // 1. ANALYTICS / EARNINGS / STUDENTS
+    if (
+      text.includes("how many students") ||
+      text.includes("kitne students") ||
+      text.includes("total students") ||
+      text.includes("earnings") ||
+      text.includes("revenue") ||
+      text.includes("kamai") ||
+      text.includes("performing best") ||
+      text.includes("best performing") ||
+      text.includes("analytics") ||
+      text.includes("performance")
+    ) {
+      // Course-specific analytics?
+      const targetCourse = existingCourses.find((c) => text.includes(c.title.toLowerCase()));
+      if (targetCourse) {
+        return {
+          tool: "getCourseAnalytics",
+          args: { courseId: targetCourse._id.toString(), courseTitle: targetCourse.title },
+        };
+      }
+      return {
+        tool: "getAcademyAnalytics",
+        args: {},
+      };
+    }
+
+    // 2. LIST COURSES
     if (
       text.includes("show my courses") ||
       text.includes("mere courses") ||
       text.includes("courses dikhao") ||
       text.includes("list courses") ||
-      text.includes("all courses")
+      text.includes("all courses") ||
+      text.includes("show courses")
     ) {
       return {
         tool: "listCourses",
-        args: {},
+        args: { filter: "all" },
       };
     }
 
-    // 2. DELETE COURSE (Destructive - requires confirmation)
+    // 3. DELETE COURSE (Destructive)
     if (
       (text.includes("delete course") || text.includes("course delete") || text.includes("remove course")) &&
       !text.includes("lecture")
     ) {
-      const titleMatch = prompt.match(/(?:course|naam|called|named)\s+["']?([^"']+)["']?/i);
-      const title = titleMatch ? titleMatch[1].replace(/delete|karo|please/gi, "").trim() : "";
-
+      let title = "";
+      const match = prompt.match(/(?:course|naam|called|named)\s+["']?([^"'\n]+?)["']?(?:\s+(?:delete|karo|ko|please)|$)/i);
+      if (match && match[1]) {
+        title = match[1].replace(/delete|karo|please|ko/gi, "").trim();
+      }
+      const existing = existingCourses.find((c) => text.includes(c.title.toLowerCase()));
       return {
         tool: "deleteCourse",
-        requiresConfirmation: true,
-        confirmationMessage: `Are you sure you want to permanently delete "${title || "this course"}" and all its lectures? This cannot be undone.`,
         args: {
-          title,
-          courseId: currentCourseId,
+          courseId: existing ? existing._id.toString() : context.currentCourseId,
+          courseTitle: existing ? existing.title : title,
         },
       };
     }
 
-    // 3. DELETE LECTURE (Destructive - requires confirmation)
+    // 4. DELETE LECTURE (Destructive)
     if (text.includes("delete lecture") || text.includes("lecture delete") || text.includes("remove lecture")) {
-      const match = prompt.match(/(?:lecture|naam|called|named)\s+["']?([^"']+)["']?/i);
-      const lectureTitle = match ? match[1].replace(/delete|karo|please/gi, "").trim() : "";
-
+      let lectureTitle = "";
+      const match = prompt.match(/(?:lecture|naam|called|named)\s+["']?([^"'\n]+?)["']?(?:\s+(?:delete|karo|ko|please)|$)/i);
+      if (match && match[1]) {
+        lectureTitle = match[1].replace(/delete|karo|please|ko/gi, "").trim();
+      }
       return {
         tool: "deleteLecture",
-        requiresConfirmation: true,
-        confirmationMessage: `Are you sure you want to delete lecture "${lectureTitle || "selected lecture"}"?`,
         args: {
           lectureTitle,
-          courseId: currentCourseId,
+          courseId: context.currentCourseId,
         },
       };
     }
 
-    // 4. PUBLISH / UNPUBLISH COURSE
-    if (text.includes("publish") || text.includes("unpublish") || text.includes("live karo")) {
+    // 5. PUBLISH / UNPUBLISH COURSE
+    if (text.includes("publish") || text.includes("unpublish") || text.includes("live karo") || text.includes("draft")) {
       const isUnpublish = text.includes("unpublish") || text.includes("draft");
+      const existing = existingCourses.find((c) => text.includes(c.title.toLowerCase()));
 
-      let title = "";
-      const match = prompt.match(/(?:course|publish|unpublish|live|naam)\s+["']?([^"'\n]+?)["']?(?:\s+(?:ko|publish|karo|hai)|$)/i);
-      if (match && match[1]) {
-        title = match[1].replace(/publish|unpublish|live|course|ko|kar do|karo/gi, "").trim();
+      let title = existing ? existing.title : "";
+      if (!title) {
+        const match = prompt.match(/(?:course|publish|unpublish|live|naam)\s+["']?([^"'\n]+?)["']?(?:\s+(?:ko|publish|karo|hai)|$)/i);
+        if (match && match[1]) {
+          title = match[1].replace(/publish|unpublish|live|course|ko|kar do|karo/gi, "").trim();
+        }
       }
 
       return {
         tool: "publishCourse",
         args: {
-          courseId: currentCourseId,
-          title,
+          courseId: existing ? existing._id.toString() : context.currentCourseId,
+          courseTitle: title,
           isPublished: !isUnpublish,
         },
       };
     }
 
-    // 5. COMPOUND: CREATE COURSE WITH MULTIPLE LECTURES
-    // Example: "English Full Course banao aur usme Introduction, Grammar Basics aur Speaking Practice ke teen lectures add karo"
+    // 6. UPDATE PRICE
+    if (
+      !text.includes("create") &&
+      !text.includes("banao") &&
+      (text.includes("change price") ||
+        text.includes("set price") ||
+        text.includes("update price") ||
+        text.includes("make this course free") ||
+        text.includes("make it free") ||
+        (text.includes("price") && (text.includes("to") || text.includes("karo") || text.includes("change"))))
+    ) {
+      let price = 0;
+      if (text.includes("free") || text.includes("muft")) {
+        price = 0;
+      } else {
+        const numMatch = prompt.match(/(?:₹|rs\.?|inr|to|price)\s*(\d+)/i);
+        if (numMatch && numMatch[1]) {
+          price = Number(numMatch[1]);
+        }
+      }
+
+      const existing = existingCourses.find((c) => text.includes(c.title.toLowerCase()));
+
+      return {
+        tool: "updateCourse",
+        args: {
+          courseId: existing ? existing._id.toString() : context.currentCourseId,
+          price,
+        },
+      };
+    }
+
+    // 7. BRANDING / THEME / ACADEMY SETTINGS
+    if (
+      text.includes("primary color") ||
+      text.includes("brand color") ||
+      text.includes("academy description") ||
+      text.includes("academy name") ||
+      text.includes("institution description")
+    ) {
+      const hexMatch = prompt.match(/#([0-9a-f]{3,6})/i);
+      const color = hexMatch ? hexMatch[0] : (text.includes("blue") ? "#2563eb" : text.includes("green") ? "#059669" : text.includes("purple") ? "#7c3aed" : null);
+
+      return {
+        tool: "updateAcademyBranding",
+        args: {
+          primaryColor: color || undefined,
+          description: text.includes("description") ? prompt.replace(/update|my|academy|description|to|change/gi, "").trim() : undefined,
+        },
+      };
+    }
+
+    // 8. ADD RESOURCE / PDF / STUDY NOTES
+    if (text.includes("resource") || text.includes("pdf") || text.includes("notes") || text.includes("formula sheet")) {
+      let title = "Course Study Notes";
+      const namedMatch = prompt.match(/(?:called|named|naam)\s+["']?([^"'\n]+?)["']?(?:\s+(?:to|in|mein|for)|$)/i);
+      const generalMatch = prompt.match(/(?:pdf|notes|resource|sheet)\s+["']?([^"'\n]+?)["']?(?:\s+(?:to|in|mein|for)|$)/i);
+      if (namedMatch && namedMatch[1]) {
+        title = namedMatch[1].replace(/called|named/gi, "").trim();
+      } else if (generalMatch && generalMatch[1]) {
+        title = generalMatch[1].replace(/called|named|pdf|notes/gi, "").trim();
+      }
+
+      return {
+        tool: "addResource",
+        args: {
+          title,
+          type: "pdf",
+          fileUrl: "/public/notes-template.pdf",
+        },
+      };
+    }
+
+    // 9. COMPOUND: CREATE COURSE AND MULTIPLE LECTURES
     if (
       (text.includes("banao") || text.includes("create")) &&
       text.includes("course") &&
-      (text.includes("lecture") || text.includes("lectures"))
+      (text.includes("lecture") || text.includes("lectures") || text.includes("1.") || text.includes("modules"))
     ) {
-      // Extract Course Title
       let courseTitle = "New Course";
       const calledMatch = prompt.match(/(?:named|called|jiska naam)\s+["']?([^"'\n]+?)["']?(?:\s+(?:hai|aur|with|having)|$)/i);
       const beforeBanaoMatch = prompt.match(/^(.+?)\s+(?:course\s+)?banao/i);
@@ -203,13 +529,23 @@ export const aiService = {
         courseTitle = courseTitle + " Course";
       }
 
-      // Extract Lecture Titles
+      // Extract numbered or comma-separated lectures
       const lectureTitles = [];
-      const parts = prompt.split(/(?:lectures?|aur|and|,)/i);
-      for (const part of parts) {
-        const cleaned = part.replace(/ke teen|ke|three|banao|add karo|add|course|mein|usme/gi, "").trim();
-        if (cleaned.length > 2 && cleaned.length < 50 && !cleaned.toLowerCase().includes(courseTitle.toLowerCase())) {
-          lectureTitles.push(cleaned);
+      const lines = prompt.split(/\n/);
+      for (const line of lines) {
+        const numMatch = line.match(/^\s*(?:\d+[\.\)]|-|\*)\s*(.+)/);
+        if (numMatch && numMatch[1]) {
+          lectureTitles.push(numMatch[1].trim());
+        }
+      }
+
+      if (lectureTitles.length === 0) {
+        const parts = prompt.split(/(?:lectures?|aur|and|,)/i);
+        for (const part of parts) {
+          const cleaned = part.replace(/ke teen|ke|three|banao|add karo|add|course|mein|usme|these/gi, "").trim();
+          if (cleaned.length > 2 && cleaned.length < 50 && !cleaned.toLowerCase().includes(courseTitle.toLowerCase())) {
+            lectureTitles.push(cleaned);
+          }
         }
       }
 
@@ -217,26 +553,22 @@ export const aiService = {
         tool: "compoundCreateCourseAndLectures",
         args: {
           title: courseTitle,
-          lectureTitles: lectureTitles.length > 0 ? lectureTitles.slice(0, 5) : ["Introduction", "Core Concepts", "Practice & Application"],
+          lectureTitles: lectureTitles.length > 0 ? lectureTitles.slice(0, 6) : ["Introduction", "Core Concepts", "Practice & Application"],
         },
       };
     }
 
-    // 6. ADD LECTURE TO AN EXISTING OR CURRENT COURSE
-    // Example: "English Full Course mein ek lecture banao, naam Introduction to English"
-    // Or: "Add a lecture called Grammar Basics"
+    // 10. ADD LECTURE
     if (text.includes("lecture") && (text.includes("add") || text.includes("banao") || text.includes("create") || text.includes("dalo"))) {
       let lectureTitle = "New Lecture";
       let courseTitle = "";
 
-      // Try extract lecture title
-      const lectureMatch = prompt.match(/(?:lecture|naam|called|named|title)\s+["']?([^"'\n,]+?)["']?(?:\s+(?:rakhna|add|hai)|$)/i);
+      const lectureMatch = prompt.match(/(?:lecture|naam|called|named|title)\s+["']?([^"'\n,]+?)["']?(?:\s+(?:rakhna|add|hai|to)|$)/i);
       if (lectureMatch && lectureMatch[1]) {
-        lectureTitle = lectureMatch[1].replace(/banao|add karo|mein|dalo/gi, "").trim();
+        lectureTitle = lectureMatch[1].replace(/banao|add karo|mein|dalo|to/gi, "").trim();
       }
 
-      // Try extract course target
-      const courseMatch = prompt.match(/([^"'\n]+?)\s+(?:mein|in)\s+(?:ek\s+)?lecture/i);
+      const courseMatch = prompt.match(/([^"'\n]+?)\s+(?:mein|in|to)\s+(?:ek\s+)?lecture/i);
       if (courseMatch && courseMatch[1]) {
         courseTitle = courseMatch[1].trim();
       }
@@ -244,20 +576,20 @@ export const aiService = {
       return {
         tool: "createLecture",
         args: {
-          courseId: currentCourseId,
+          courseId: context.currentCourseId,
           courseTitle,
           lectureTitle,
         },
       };
     }
 
-    // 7. GENERATE COMPLETE COURSE OUTLINE / PLAN
-    if (text.includes("generate") || text.includes("outline") || text.includes("curriculum") || text.includes("syllabus")) {
+    // 11. GENERATE COURSE OUTLINE / PLAN
+    if (text.includes("generate") || text.includes("outline") || text.includes("curriculum") || text.includes("syllabus") || text.includes("plan")) {
       const topicMatch = prompt.match(/(?:for|about|on|ka)\s+["']?([^"']+)["']?/i);
-      const topic = topicMatch ? topicMatch[1].trim() : "General";
+      const topic = topicMatch ? topicMatch[1].trim() : (text.includes("english") ? "English Speaking" : "General");
 
       return {
-        tool: "generateCoursePlan",
+        tool: "generateCurriculumOutline",
         args: {
           topic,
           lectureCount: 5,
@@ -265,362 +597,44 @@ export const aiService = {
       };
     }
 
-    // 8. CREATE STANDALONE COURSE
-    // Example: "Ek course banao jiska naam English Full Course hai"
-    // Example: "Create a course called Physics Mechanics"
+    // 12. CREATE STANDALONE COURSE
     if (text.includes("course") && (text.includes("banao") || text.includes("create") || text.includes("new"))) {
       let title = "New Course";
-      const titleMatch = prompt.match(/(?:jiska naam|named|called|naam)\s+["']?([^"'\n]+?)["']?(?:\s+(?:hai|rakhna)|$)/i);
+      const titleMatch = prompt.match(/(?:jiska naam|named|called|naam)\s+["']?([^"'\n\.]+?)["']?(?:\s*(?:\.|\b(?:hai|rakhna|description|price)\b)|$)/i);
       if (titleMatch && titleMatch[1]) {
         title = titleMatch[1].trim();
       } else {
-        const simpleMatch = prompt.match(/(?:create|banao|new)\s+(?:a\s+)?(?:course\s+)?["']?([^"'\n]+?)["']?(?:\s+(?:course|hai)|$)/i);
+        const simpleMatch = prompt.match(/(?:create|banao|new)\s+(?:a\s+)?(?:course\s+)?["']?([^"'\n\.]+?)["']?(?:\s*(?:\.|\b(?:course|hai|description|price)\b)|$)/i);
         if (simpleMatch && simpleMatch[1]) {
           title = simpleMatch[1].trim();
         }
       }
 
-      title = title.replace(/^course\s+/i, "").replace(/\s+course$/i, "").trim() + " Course";
+      // Check for price in prompt
+      let price = 0;
+      const priceMatch = prompt.match(/(?:price|₹|rs\.?)\s*(\d+)/i);
+      if (priceMatch && priceMatch[1]) {
+        price = Number(priceMatch[1]);
+      }
+
+      // Check for description in prompt
+      let description = `Comprehensive curriculum designed for student mastery.`;
+      const descMatch = prompt.match(/(?:description|details):\s*([^.\n]+)/i);
+      if (descMatch && descMatch[1]) {
+        description = descMatch[1].trim();
+      }
 
       return {
         tool: "createCourse",
         args: {
-          title,
+          title: title.replace(/^course\s+/i, "").replace(/\s+course$/i, "").trim() + (title.toLowerCase().includes("course") ? "" : " Course"),
           category: text.includes("english") ? "English" : text.includes("physics") ? "Physics" : "General",
-          description: `A comprehensive course covering foundational concepts, practical lessons, and study materials.`,
+          description,
+          price,
         },
       };
     }
 
-    // Default Fallback: Ask for clarification
-    return {
-      tool: "clarify",
-      args: { prompt },
-    };
-  },
-
-  /**
-   * Execute the resolved plan against authoritative backend services.
-   */
-  async executeToolPlan({ plan, tenantId, userId, userRole }) {
-    const { tool, args } = plan;
-
-    // 1. LIST COURSES
-    if (tool === "listCourses") {
-      const courses = await courseService.listCreatorCourses({ tenantId, userId });
-      if (courses.length === 0) {
-        return {
-          message: "You haven't created any courses in this academy yet. Would you like me to create one?",
-          data: { courses: [] },
-        };
-      }
-      return {
-        message: `You currently have ${courses.length} courses: ${courses.map((c) => `"${c.title}" (${c.isPublished ? "Published" : "Draft"})`).join(", ")}.`,
-        data: { courses },
-      };
-    }
-
-    // 2. CREATE COURSE
-    if (tool === "createCourse") {
-      // Check for duplicate course to prevent accidental clutter
-      const existing = await courseService.findCourseByTitle({ tenantId, userId, title: args.title });
-      if (existing) {
-        return {
-          message: `You already have a course named "${existing.title}". Would you like to add lectures to it or open its Course Studio?`,
-          data: { course: existing, isDuplicate: true },
-        };
-      }
-
-      const course = await courseService.createCourse({
-        tenantId,
-        userId,
-        title: args.title,
-        category: args.category || "General",
-        description: args.description || `A structured curriculum built for student success.`,
-        isPublished: false, // Default to draft for safety
-      });
-
-      return {
-        message: `"${course.title}" course create kar diya hai (saved as Draft). You can now add lectures, notes, or customize pricing.`,
-        data: { course },
-      };
-    }
-
-    // 3. CREATE LECTURE
-    if (tool === "createLecture") {
-      let targetCourse = null;
-
-      if (args.courseId) {
-        targetCourse = await courseService.getCourse({ tenantId, courseId: args.courseId });
-      } else if (args.courseTitle) {
-        targetCourse = await courseService.findCourseByTitle({ tenantId, userId, title: args.courseTitle });
-      } else {
-        // Fallback to most recently updated course
-        const courses = await courseService.listCreatorCourses({ tenantId, userId });
-        if (courses.length > 0) targetCourse = courses[0];
-      }
-
-      if (!targetCourse) {
-        throw new Error("Could not find the target course. Please specify which course to add this lecture to.");
-      }
-
-      const result = await lectureService.createLecture({
-        tenantId,
-        userId,
-        userRole,
-        courseId: targetCourse._id,
-        lectureTitle: args.lectureTitle || "New Lecture",
-      });
-
-      return {
-        message: `Lecture "${result.lecture.lectureTitle}" add ho gaya hai "${targetCourse.title}" mein.`,
-        data: {
-          courseId: targetCourse._id,
-          lecture: result.lecture,
-        },
-      };
-    }
-
-    // 4. COMPOUND CREATE COURSE + LECTURES
-    if (tool === "compoundCreateCourseAndLectures") {
-      let course = await courseService.findCourseByTitle({ tenantId, userId, title: args.title });
-      let isNew = false;
-
-      if (!course) {
-        course = await courseService.createCourse({
-          tenantId,
-          userId,
-          title: args.title,
-          category: args.title.toLowerCase().includes("english") ? "English" : "General",
-          isPublished: false,
-        });
-        isNew = true;
-      }
-
-      const createdLectures = [];
-      for (const lecTitle of args.lectureTitles || []) {
-        if (lecTitle && lecTitle.trim()) {
-          const lecRes = await lectureService.createLecture({
-            tenantId,
-            userId,
-            userRole,
-            courseId: course._id,
-            lectureTitle: lecTitle.trim(),
-          });
-          createdLectures.push(lecRes.lecture);
-        }
-      }
-
-      return {
-        message: isNew
-          ? `"${course.title}" course create kar diya hai aur usme ${createdLectures.length} lectures (${createdLectures.map((l) => l.lectureTitle).join(", ")}) add kar diye hain.`
-          : `"${course.title}" course mein ${createdLectures.length} lectures add kar diye hain.`,
-        data: {
-          course,
-          lectures: createdLectures,
-        },
-      };
-    }
-
-    // 5. DELETE COURSE
-    if (tool === "deleteCourse") {
-      let targetCourse = null;
-      if (args.courseId) {
-        targetCourse = await courseService.getCourse({ tenantId, courseId: args.courseId });
-      } else if (args.title) {
-        targetCourse = await courseService.findCourseByTitle({ tenantId, userId, title: args.title });
-      }
-
-      if (!targetCourse) {
-        throw new Error(`Course "${args.title || ""}" not found.`);
-      }
-
-      await courseService.deleteCourse({
-        tenantId,
-        userId,
-        userRole,
-        courseId: targetCourse._id,
-      });
-
-      return {
-        message: `Course "${targetCourse.title}" has been permanently removed.`,
-        data: { deletedCourseId: targetCourse._id },
-      };
-    }
-
-    // 6. DELETE LECTURE
-    if (tool === "deleteLecture") {
-      let targetLecture = null;
-      if (args.lectureId) {
-        targetLecture = await lectureService.getLecture({ tenantId, lectureId: args.lectureId });
-      } else if (args.courseId && args.lectureTitle) {
-        const course = await courseService.getCourse({ tenantId, courseId: args.courseId });
-        if (course && course.lectures) {
-          targetLecture = course.lectures.find(
-            (l) => l.lectureTitle?.toLowerCase().includes(args.lectureTitle.toLowerCase())
-          );
-        }
-      }
-
-      if (!targetLecture) {
-        throw new Error(`Lecture "${args.lectureTitle || ""}" could not be located.`);
-      }
-
-      await lectureService.deleteLecture({
-        tenantId,
-        userId,
-        userRole,
-        lectureId: targetLecture._id,
-      });
-
-      return {
-        message: `Lecture "${targetLecture.lectureTitle}" has been deleted.`,
-        data: { deletedLectureId: targetLecture._id },
-      };
-    }
-
-    // 7. PUBLISH / UNPUBLISH COURSE
-    if (tool === "publishCourse") {
-      let targetCourseId = args.courseId;
-
-      if (!targetCourseId && args.title) {
-        const found = await courseService.findCourseByTitle({ tenantId, userId, title: args.title });
-        if (found) targetCourseId = found._id;
-      }
-
-      if (!targetCourseId) {
-        // Fallback: get the educator's most recent course
-        const recent = await courseService.listCreatorCourses({ tenantId, userId });
-        if (recent && recent.length > 0) {
-          targetCourseId = recent[0]._id;
-        }
-      }
-
-      if (!targetCourseId) {
-        throw new Error("Please specify which course you would like to publish or unpublish.");
-      }
-
-      const updated = await courseService.setPublishStatus({
-        tenantId,
-        userId,
-        userRole,
-        courseId: targetCourseId,
-        isPublished: args.isPublished,
-      });
-
-      return {
-        message: args.isPublished
-          ? `"${updated.title}" is now published and live in your academy catalog! Students can now see and enroll in it.`
-          : `"${updated.title}" has been moved to Draft and is hidden from public students.`,
-        data: { course: updated },
-      };
-    }
-
-    // 8. GENERATE COURSE PLAN
-    if (tool === "generateCoursePlan") {
-      const topic = args.topic || "English Speaking";
-      let plan = null;
-
-      // Try external LLM API if key is configured (Gemini or OpenAI)
-      const geminiKey = process.env.GEMINI_API_KEY || (process.env.AI_API_KEY?.startsWith("AIza") ? process.env.AI_API_KEY : null);
-      const openaiKey = process.env.OPENAI_API_KEY || (process.env.AI_API_KEY?.startsWith("sk-") ? process.env.AI_API_KEY : null);
-
-      if (geminiKey) {
-        try {
-          const prompt = `Return a JSON object for a structured online course on "${topic}". Output ONLY JSON: {"title": "...", "description": "...", "lectures": [{"title": "..."}, {"title": "..."}, {"title": "..."}, {"title": "..."}, {"title": "..."}]}`;
-          const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${geminiKey.trim()}`;
-          const res = await fetch(url, {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-              contents: [{ parts: [{ text: prompt }] }],
-              generationConfig: { responseMimeType: "application/json" }
-            })
-          });
-          if (res.ok) {
-            const data = await res.json();
-            const text = data.candidates?.[0]?.content?.parts?.[0]?.text;
-            if (text) {
-              const parsed = JSON.parse(text);
-              if (parsed.title && Array.isArray(parsed.lectures)) {
-                plan = {
-                  title: parsed.title,
-                  description: parsed.description || `Comprehensive course on ${topic}`,
-                  lectures: parsed.lectures.map((l, i) => ({
-                    title: typeof l === "string" ? l : (l.title || `Lesson ${i + 1}`),
-                    preview: i === 0
-                  }))
-                };
-              }
-            }
-          }
-        } catch (e) {
-          console.warn("[Gemini API]", e.message);
-        }
-      } else if (openaiKey) {
-        try {
-          const res = await fetch("https://api.openai.com/v1/chat/completions", {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-              Authorization: `Bearer ${openaiKey.trim()}`,
-            },
-            body: JSON.stringify({
-              model: "gpt-4o-mini",
-              messages: [
-                { role: "system", content: "You are an educator assistant. Output only JSON in the shape: {\"title\": \"...\", \"description\": \"...\", \"lectures\": [{\"title\": \"...\"}]}" },
-                { role: "user", content: `Generate a course plan for: ${topic}` }
-              ],
-              response_format: { type: "json_object" }
-            })
-          });
-          if (res.ok) {
-            const data = await res.json();
-            const content = data.choices?.[0]?.message?.content;
-            if (content) {
-              const parsed = JSON.parse(content);
-              if (parsed.title && Array.isArray(parsed.lectures)) {
-                plan = {
-                  title: parsed.title,
-                  description: parsed.description || `Comprehensive course on ${topic}`,
-                  lectures: parsed.lectures.map((l, i) => ({
-                    title: typeof l === "string" ? l : (l.title || `Lesson ${i + 1}`),
-                    preview: i === 0
-                  }))
-                };
-              }
-            }
-          }
-        } catch (e) {
-          console.warn("[OpenAI API]", e.message);
-        }
-      }
-
-      // Default high-quality structured curriculum fallback
-      if (!plan) {
-        plan = {
-          title: `${topic} Masterclass`,
-          description: `A step-by-step curriculum designed to build practical mastery of ${topic}.`,
-          lectures: [
-            { title: `1. Introduction to ${topic}`, preview: true },
-            { title: `2. Core Principles & Fundamentals`, preview: false },
-            { title: `3. Practical Drills & Common Mistakes`, preview: false },
-            { title: `4. Advanced Techniques & Scenarios`, preview: false },
-            { title: `5. Final Project & Next Steps`, preview: false },
-          ],
-        };
-      }
-
-      return {
-        message: `Here is a structured course outline for "${topic}". Would you like me to create this course with these draft lectures?`,
-        data: { plan },
-      };
-    }
-
-    // Clarification fallback
-    return {
-      message: "I understand. You can tell me to create a course (e.g. 'Ek English course banao'), add lectures (e.g. 'Add lecture Introduction'), or show your courses.",
-      data: null,
-    };
+    return null;
   },
 };

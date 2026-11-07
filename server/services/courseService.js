@@ -159,5 +159,29 @@ export const courseService = {
       updateData: { isPublished },
     });
   },
+
+  /**
+   * Reorder lectures in a course.
+   */
+  async reorderLectures({ tenantId, userId, userRole, courseId, lectureIds = [] }) {
+    const course = await Course.findOne({ _id: courseId, tenantId });
+    if (!course) {
+      throw new Error("Course not found");
+    }
+
+    if (
+      course.creator.toString() !== userId.toString() &&
+      userRole !== "tenant_admin" &&
+      userRole !== "platform_admin"
+    ) {
+      throw new Error("You are not authorized to reorder lectures in this course");
+    }
+
+    course.lectures = lectureIds;
+    await course.save();
+
+    return course.populate("lectures");
+  },
 };
+
 
