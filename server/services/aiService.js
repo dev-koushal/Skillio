@@ -496,17 +496,97 @@ export const aiService = {
     // 8. GENERATE COURSE PLAN
     if (tool === "generateCoursePlan") {
       const topic = args.topic || "English Speaking";
-      const plan = {
-        title: `${topic} Masterclass`,
-        description: `A step-by-step curriculum designed to build practical mastery of ${topic}.`,
-        lectures: [
-          { title: `1. Introduction to ${topic}`, preview: true },
-          { title: `2. Core Principles & Fundamentals`, preview: false },
-          { title: `3. Practical Drills & Common Mistakes`, preview: false },
-          { title: `4. Advanced Techniques & Scenarios`, preview: false },
-          { title: `5. Final Project & Next Steps`, preview: false },
-        ],
-      };
+      let plan = null;
+
+      // Try external LLM API if key is configured (Gemini or OpenAI)
+      const geminiKey = process.env.GEMINI_API_KEY || (process.env.AI_API_KEY?.startsWith("AIza") ? process.env.AI_API_KEY : null);
+      const openaiKey = process.env.OPENAI_API_KEY || (process.env.AI_API_KEY?.startsWith("sk-") ? process.env.AI_API_KEY : null);
+
+      if (geminiKey) {
+        try {
+          const prompt = `Return a JSON object for a structured online course on "${topic}". Output ONLY JSON: {"title": "...", "description": "...", "lectures": [{"title": "..."}, {"title": "..."}, {"title": "..."}, {"title": "..."}, {"title": "..."}]}`;
+          const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${geminiKey.trim()}`;
+          const res = await fetch(url, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              contents: [{ parts: [{ text: prompt }] }],
+              generationConfig: { responseMimeType: "application/json" }
+            })
+          });
+          if (res.ok) {
+            const data = await res.json();
+            const text = data.candidates?.[0]?.content?.parts?.[0]?.text;
+            if (text) {
+              const parsed = JSON.parse(text);
+              if (parsed.title && Array.isArray(parsed.lectures)) {
+                plan = {
+                  title: parsed.title,
+                  description: parsed.description || `Comprehensive course on ${topic}`,
+                  lectures: parsed.lectures.map((l, i) => ({
+                    title: typeof l === "string" ? l : (l.title || `Lesson ${i + 1}`),
+                    preview: i === 0
+                  }))
+                };
+              }
+            }
+          }
+        } catch (e) {
+          console.warn("[Gemini API]", e.message);
+        }
+      } else if (openaiKey) {
+        try {
+          const res = await fetch("https://api.openai.com/v1/chat/completions", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              Authorization: `Bearer ${openaiKey.trim()}`,
+            },
+            body: JSON.stringify({
+              model: "gpt-4o-mini",
+              messages: [
+                { role: "system", content: "You are an educator assistant. Output only JSON in the shape: {\"title\": \"...\", \"description\": \"...\", \"lectures\": [{\"title\": \"...\"}]}" },
+                { role: "user", content: `Generate a course plan for: ${topic}` }
+              ],
+              response_format: { type: "json_object" }
+            })
+          });
+          if (res.ok) {
+            const data = await res.json();
+            const content = data.choices?.[0]?.message?.content;
+            if (content) {
+              const parsed = JSON.parse(content);
+              if (parsed.title && Array.isArray(parsed.lectures)) {
+                plan = {
+                  title: parsed.title,
+                  description: parsed.description || `Comprehensive course on ${topic}`,
+                  lectures: parsed.lectures.map((l, i) => ({
+                    title: typeof l === "string" ? l : (l.title || `Lesson ${i + 1}`),
+                    preview: i === 0
+                  }))
+                };
+              }
+            }
+          }
+        } catch (e) {
+          console.warn("[OpenAI API]", e.message);
+        }
+      }
+
+      // Default high-quality structured curriculum fallback
+      if (!plan) {
+        plan = {
+          title: `${topic} Masterclass`,
+          description: `A step-by-step curriculum designed to build practical mastery of ${topic}.`,
+          lectures: [
+            { title: `1. Introduction to ${topic}`, preview: true },
+            { title: `2. Core Principles & Fundamentals`, preview: false },
+            { title: `3. Practical Drills & Common Mistakes`, preview: false },
+            { title: `4. Advanced Techniques & Scenarios`, preview: false },
+            { title: `5. Final Project & Next Steps`, preview: false },
+          ],
+        };
+      }
 
       return {
         message: `Here is a structured course outline for "${topic}". Would you like me to create this course with these draft lectures?`,
