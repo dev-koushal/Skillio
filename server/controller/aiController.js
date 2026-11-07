@@ -1,5 +1,104 @@
 import { aiService } from "../services/aiService.js";
 import AIActionLog from "../models/aiActionLogModel.js";
+import multer from "multer";
+
+const memoryUpload = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: 25 * 1024 * 1024 }, // 25MB max
+});
+
+export const voiceUploadMiddleware = memoryUpload.single("audio");
+
+/**
+ * AI Voice Command Controller for Educators (Whisper speech-to-text + Tool Execution).
+ */
+export const handleAIVoice = async (req, res) => {
+  try {
+    const tenantId = req.tenantId;
+    const userId = req.userId;
+    const userRole = req.userRole;
+    const currentCourseId = req.body.currentCourseId || null;
+
+    if (!req.file || !req.file.buffer) {
+      return res.status(400).json({
+        success: false,
+        message: "No audio stream or recording received.",
+      });
+    }
+
+    const apiKey = process.env.OPENAI_API_KEY;
+    if (!apiKey) {
+      return res.status(500).json({
+        success: false,
+        message: "OpenAI API key is missing in server environment for Whisper speech transcription.",
+      });
+    }
+
+    const audioBlob = new Blob([req.file.buffer], {
+      type: req.file.mimetype || "audio/webm",
+    });
+
+    const formData = new FormData();
+    formData.append("file", audioBlob, "voice_input.webm");
+    formData.append("model", "whisper-1");
+    formData.append(
+      "prompt",
+      "Educator creating LMS courses, lectures, modules, and notes in Hindi, English, and Hinglish. Commands: Ek course banao, add lecture, publish course."
+    );
+
+    const whisperResponse = await fetch("https://api.openai.com/v1/audio/transcriptions", {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${apiKey}`,
+      },
+      body: formData,
+    });
+
+    const whisperData = await whisperResponse.json();
+
+    if (whisperData.error) {
+      console.error("[Whisper Transcription Error]", whisperData.error);
+      return res.status(500).json({
+        success: false,
+        message: whisperData.error.message || "Failed to transcribe audio",
+      });
+    }
+
+    const transcribedPrompt = whisperData.text?.trim();
+
+    if (!transcribedPrompt) {
+      return res.status(200).json({
+        success: true,
+        transcription: "",
+        response: "I couldn't hear any clear speech. Please speak closely into your microphone and try again.",
+        action: "NONE",
+      });
+    }
+
+    console.log(`[AI Voice Command] Transcribed text: "${transcribedPrompt}"`);
+
+    // Process the transcribed prompt through authorized AI tool service
+    const result = await aiService.processCommand({
+      tenantId,
+      userId,
+      userRole,
+      prompt: transcribedPrompt,
+      currentCourseId,
+      confirmed: false,
+    });
+
+    return res.status(200).json({
+      ...result,
+      transcription: transcribedPrompt,
+    });
+  } catch (error) {
+    console.error("[handleAIVoice Error]", error);
+    return res.status(500).json({
+      success: false,
+      message: error.message || "Failed to process audio recording",
+    });
+  }
+};
 
 /**
  * AI Assistant Controller for Educators.

@@ -39,32 +39,249 @@ export default function AIAssistantModal({
     },
   ]);
 
-  // Voice speech recognition refs and state
+  // Voice speech recognition & audio recorder state
   const [isListening, setIsListening] = useState(false);
-  const recognitionRef = useRef(null);
+  const [recordingSeconds, setRecordingSeconds] = useState(0);
+  const [audioVolume, setAudioVolume] = useState(0);
+  const [audioWave, setAudioWave] = useState([20, 35, 60, 45, 25]);
+  const isUserRecordingRef = useRef(false);
+  const recordingTimerRef = useRef(null);
   const silenceTimerRef = useRef(null);
   const speechTranscriptRef = useRef("");
+  const recognitionRef = useRef(null);
+  const mediaRecorderRef = useRef(null);
+  const audioChunksRef = useRef([]);
+  const audioStreamRef = useRef(null);
+  const audioContextRef = useRef(null);
+  const animationFrameRef = useRef(null);
+  const hasSpokenRef = useRef(false);
+
   const [pendingConfirmation, setPendingConfirmation] = useState(null);
   const messagesEndRef = useRef(null);
 
-  // Clean up speech recognition and timers on unmount
+  // Clean up speech recognition, audio streams, and timers on unmount
   useEffect(() => {
     return () => {
-      if (silenceTimerRef.current) clearTimeout(silenceTimerRef.current);
-      if (recognitionRef.current) {
-        try {
-          recognitionRef.current.abort();
-        } catch (e) {}
-      }
+      cleanupAudioSession();
     };
   }, []);
 
-  const stopListeningAndSubmit = () => {
+  const cleanupAudioSession = () => {
+    isUserRecordingRef.current = false;
+    if (recordingTimerRef.current) clearInterval(recordingTimerRef.current);
+    if (silenceTimerRef.current) clearTimeout(silenceTimerRef.current);
+    if (animationFrameRef.current) cancelAnimationFrame(animationFrameRef.current);
+
+    if (recognitionRef.current) {
+      try {
+        recognitionRef.current.abort();
+      } catch (e) {}
+      recognitionRef.current = null;
+    }
+
+    if (mediaRecorderRef.current && mediaRecorderRef.current.state !== "inactive") {
+      try {
+        mediaRecorderRef.current.stop();
+      } catch (e) {}
+      mediaRecorderRef.current = null;
+    }
+
+    if (audioStreamRef.current) {
+      audioStreamRef.current.getTracks().forEach((track) => track.stop());
+      audioStreamRef.current = null;
+    }
+
+    if (audioContextRef.current && audioContextRef.current.state !== "closed") {
+      try {
+        audioContextRef.current.close();
+      } catch (e) {}
+      audioContextRef.current = null;
+    }
+  };
+
+  const cancelListening = () => {
+    cleanupAudioSession();
+    setIsListening(false);
+    speechTranscriptRef.current = "";
+    audioChunksRef.current = [];
+    setPrompt("");
+    setAudioVolume(0);
+  };
+
+  // Start Voice Recording with universal MediaRecorder + real-time volume analysis
+  const startListening = async () => {
+    cleanupAudioSession();
+
+    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+      setMessages((prev) => [
+        ...prev,
+        {
+          sender: "ai",
+          text: "Audio recording is not supported in this browser environment. Please type below!",
+        },
+      ]);
+      return;
+    }
+
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      audioStreamRef.current = stream;
+      audioChunksRef.current = [];
+      hasSpokenRef.current = false;
+      isUserRecordingRef.current = true;
+      speechTranscriptRef.current = "";
+      setRecordingSeconds(0);
+      setIsListening(true);
+
+      // Start elapsed timer
+      recordingTimerRef.current = setInterval(() => {
+        setRecordingSeconds((prev) => prev + 1);
+      }, 1000);
+
+      // Setup Web Audio API volume visualizer
+      try {
+        const AudioCtx = window.AudioContext || window.webkitAudioContext;
+        if (AudioCtx) {
+          const audioCtx = new AudioCtx();
+          audioContextRef.current = audioCtx;
+          const source = audioCtx.createMediaStreamSource(stream);
+          const analyser = audioCtx.createAnalyser();
+          analyser.fftSize = 32;
+          source.connect(analyser);
+
+          const dataArray = new Uint8Array(analyser.frequencyBinCount);
+
+          const updateVolume = () => {
+            if (!isUserRecordingRef.current) return;
+            analyser.getByteFrequencyData(dataArray);
+            let sum = 0;
+            for (let i = 0; i < dataArray.length; i++) {
+              sum += dataArray[i];
+            }
+            const avg = sum / dataArray.length;
+            setAudioVolume(avg);
+
+            // Generate 5 reactive wave heights between 15% and 100%
+            const w1 = Math.min(100, Math.max(15, (dataArray[1] || avg) * 0.9));
+            const w2 = Math.min(100, Math.max(20, (dataArray[3] || avg) * 1.1));
+            const w3 = Math.min(100, Math.max(25, (dataArray[5] || avg) * 1.3));
+            const w4 = Math.min(100, Math.max(20, (dataArray[7] || avg) * 1.0));
+            const w5 = Math.min(100, Math.max(15, (dataArray[9] || avg) * 0.8));
+            setAudioWave([w1, w2, w3, w4, w5]);
+
+            if (avg > 18) {
+              hasSpokenRef.current = true;
+              if (silenceTimerRef.current) {
+                clearTimeout(silenceTimerRef.current);
+                silenceTimerRef.current = null;
+              }
+            } else if (hasSpokenRef.current) {
+              // Auto-submit after 2.5 seconds of silence if user has already spoken
+              if (!silenceTimerRef.current) {
+                silenceTimerRef.current = setTimeout(() => {
+                  stopListeningAndSubmit();
+                }, 2500);
+              }
+            }
+
+            animationFrameRef.current = requestAnimationFrame(updateVolume);
+          };
+          updateVolume();
+        }
+      } catch (err) {
+        console.warn("AudioContext visualizer notice:", err);
+      }
+
+      // Initialize MediaRecorder (works across Brave, Chrome, Firefox, Safari)
+      let mimeType = "audio/webm";
+      if (typeof MediaRecorder !== "undefined") {
+        if (MediaRecorder.isTypeSupported("audio/webm;codecs=opus")) {
+          mimeType = "audio/webm;codecs=opus";
+        } else if (MediaRecorder.isTypeSupported("audio/webm")) {
+          mimeType = "audio/webm";
+        } else if (MediaRecorder.isTypeSupported("audio/mp4")) {
+          mimeType = "audio/mp4";
+        }
+      }
+
+      const mediaRecorder = new MediaRecorder(stream, mimeType ? { mimeType } : undefined);
+      mediaRecorderRef.current = mediaRecorder;
+
+      mediaRecorder.ondataavailable = (event) => {
+        if (event.data && event.data.size > 0) {
+          audioChunksRef.current.push(event.data);
+        }
+      };
+
+      mediaRecorder.start(200);
+
+      // In parallel: try SpeechRecognition for optimistic interim live display if supported
+      const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+      if (SpeechRecognition) {
+        try {
+          const recognition = new SpeechRecognition();
+          recognition.continuous = true;
+          recognition.interimResults = true;
+          recognition.lang = "en-IN";
+
+          recognition.onresult = (event) => {
+            let interim = "";
+            let final = "";
+            for (let i = 0; i < event.results.length; ++i) {
+              if (event.results[i].isFinal) {
+                final += event.results[i][0].transcript + " ";
+              } else {
+                interim += event.results[i][0].transcript;
+              }
+            }
+            const current = (final + interim).trim();
+            if (current) {
+              speechTranscriptRef.current = current;
+              setPrompt(current);
+            }
+          };
+
+          recognition.onerror = () => {
+            // Silently ignore browser-specific SpeechRecognition errors (like Brave's blocked Google server)
+            // MediaRecorder handles recording regardless!
+          };
+
+          recognition.start();
+          recognitionRef.current = recognition;
+        } catch (e) {
+          // Ignore SpeechRecognition startup errors
+        }
+      }
+    } catch (err) {
+      console.warn("Microphone access denied or failed:", err);
+      setIsListening(false);
+      setMessages((prev) => [
+        ...prev,
+        {
+          sender: "ai",
+          text: "Microphone permission is blocked or unavailable. Click the camera/microphone icon in your browser address bar to allow access, or type your request below.",
+        },
+      ]);
+    }
+  };
+
+  // Stop recording and process voice command
+  const stopListeningAndSubmit = async () => {
+    isUserRecordingRef.current = false;
+    setIsListening(false);
+
+    if (recordingTimerRef.current) {
+      clearInterval(recordingTimerRef.current);
+      recordingTimerRef.current = null;
+    }
     if (silenceTimerRef.current) {
       clearTimeout(silenceTimerRef.current);
       silenceTimerRef.current = null;
     }
-
+    if (animationFrameRef.current) {
+      cancelAnimationFrame(animationFrameRef.current);
+      animationFrameRef.current = null;
+    }
     if (recognitionRef.current) {
       try {
         recognitionRef.current.stop();
@@ -72,89 +289,142 @@ export default function AIAssistantModal({
       recognitionRef.current = null;
     }
 
-    setIsListening(false);
-
-    const spokenText = speechTranscriptRef.current.trim();
-    if (spokenText) {
-      handleSubmit(spokenText);
-      speechTranscriptRef.current = "";
+    const mr = mediaRecorderRef.current;
+    if (!mr) {
+      const fallbackText = speechTranscriptRef.current.trim() || prompt.trim();
+      if (fallbackText) handleSubmit(fallbackText);
+      return;
     }
-  };
 
-  const startListening = () => {
-    const SpeechRecognition =
-      window.SpeechRecognition || window.webkitSpeechRecognition;
+    // Wrap stop in promise to ensure all audio chunks are received
+    await new Promise((resolve) => {
+      if (mr.state !== "inactive") {
+        mr.onstop = () => resolve();
+        try {
+          mr.stop();
+        } catch (e) {
+          resolve();
+        }
+      } else {
+        resolve();
+      }
+    });
 
-    if (!SpeechRecognition) {
+    if (audioStreamRef.current) {
+      audioStreamRef.current.getTracks().forEach((track) => track.stop());
+      audioStreamRef.current = null;
+    }
+
+    const chunks = audioChunksRef.current;
+    const clientTranscript = speechTranscriptRef.current.trim() || prompt.trim();
+
+    // If we have recorded audio chunks, send to Whisper speech-to-text API
+    if (chunks.length > 0) {
+      const audioBlob = new Blob(chunks, { type: chunks[0].type || "audio/webm" });
+
+      if (audioBlob.size > 2000) {
+        setLoading(true);
+        setPendingConfirmation(null);
+
+        try {
+          const formData = new FormData();
+          formData.append("audio", audioBlob, "voice_command.webm");
+          if (currentCourseId) {
+            formData.append("currentCourseId", currentCourseId);
+          }
+
+          const { data } = await api.post("/api/ai/voice", formData, {
+            headers: { "Content-Type": "multipart/form-data" },
+          });
+
+          if (data.transcription) {
+            setMessages((prev) => [
+              ...prev,
+              { sender: "user", text: data.transcription },
+            ]);
+          } else if (clientTranscript) {
+            setMessages((prev) => [
+              ...prev,
+              { sender: "user", text: clientTranscript },
+            ]);
+          }
+
+          if (data.requiresConfirmation) {
+            setPendingConfirmation(data);
+            setMessages((prev) => [
+              ...prev,
+              {
+                sender: "ai",
+                text: data.confirmationMessage,
+                isConfirmation: true,
+                originalPrompt: data.transcription || clientTranscript,
+              },
+            ]);
+            setLoading(false);
+            return;
+          }
+
+          if (data.success) {
+            setMessages((prev) => [
+              ...prev,
+              {
+                sender: "ai",
+                text: data.message || data.response,
+                data: data.data,
+                action: data.action,
+              },
+            ]);
+
+            // Refresh courses live
+            try {
+              const [coursesRes, publishedRes] = await Promise.all([
+                api.get("/api/course/getcreator"),
+                api.get("/api/course/getpublished"),
+              ]);
+              if (coursesRes.data) dispatch(setCreatorCourseData(coursesRes.data));
+              if (publishedRes.data) dispatch(setCourseData(publishedRes.data));
+            } catch (e) {}
+
+            if (onCourseCreated && data.data?.course) {
+              onCourseCreated(data.data.course);
+            }
+          } else {
+            setMessages((prev) => [
+              ...prev,
+              { sender: "ai", text: data.message || "Could not process voice instruction." },
+            ]);
+          }
+        } catch (err) {
+          console.error("[Voice Submit Error]", err);
+          if (clientTranscript) {
+            // Fallback to text chat if audio upload had network hiccup
+            handleSubmit(clientTranscript);
+          } else {
+            const msg = err.response?.data?.message || err.message || "Failed to process audio.";
+            setMessages((prev) => [...prev, { sender: "ai", text: `Voice Error: ${msg}` }]);
+          }
+        } finally {
+          setLoading(false);
+          setPrompt("");
+          speechTranscriptRef.current = "";
+          audioChunksRef.current = [];
+        }
+        return;
+      }
+    }
+
+    // Fallback if audio blob was empty
+    if (clientTranscript) {
+      handleSubmit(clientTranscript);
+      speechTranscriptRef.current = "";
+    } else {
       setMessages((prev) => [
         ...prev,
         {
           sender: "ai",
-          text: "Voice speech recognition isn't enabled in this browser. Feel free to type your request below!",
+          text: "I didn't catch any speech. Click the microphone and speak your instruction, or type it below.",
         },
       ]);
-      return;
-    }
-
-    // Stop existing instance if any
-    if (recognitionRef.current) {
-      try {
-        recognitionRef.current.abort();
-      } catch (e) {}
-    }
-
-    speechTranscriptRef.current = "";
-    const recognition = new SpeechRecognition();
-    recognition.continuous = true;
-    recognition.interimResults = true;
-    recognition.lang = "en-IN"; // Accurately captures Indian English, Hindi, and Hinglish
-
-    recognition.onstart = () => {
-      setIsListening(true);
-    };
-
-    recognition.onresult = (event) => {
-      let interim = "";
-      let final = "";
-
-      for (let i = 0; i < event.results.length; ++i) {
-        if (event.results[i].isFinal) {
-          final += event.results[i][0].transcript + " ";
-        } else {
-          interim += event.results[i][0].transcript;
-        }
-      }
-
-      const currentText = (final + interim).trim();
-      if (currentText) {
-        setPrompt(currentText);
-        speechTranscriptRef.current = currentText;
-
-        // Auto-submit 1.5 seconds after user stops speaking
-        if (silenceTimerRef.current) clearTimeout(silenceTimerRef.current);
-        silenceTimerRef.current = setTimeout(() => {
-          stopListeningAndSubmit();
-        }, 1500);
-      }
-    };
-
-    recognition.onerror = (event) => {
-      console.warn("[SpeechRecognition Error]", event.error);
-      if (event.error === "not-allowed" || event.error === "service-not-allowed") {
-        setIsListening(false);
-      }
-    };
-
-    recognition.onend = () => {
-      setIsListening(false);
-    };
-
-    try {
-      recognition.start();
-      recognitionRef.current = recognition;
-    } catch (e) {
-      console.warn("Speech start error:", e);
-      setIsListening(false);
     }
   };
 
@@ -433,64 +703,98 @@ export default function AIAssistantModal({
 
         {/* Voice & Text Input Box */}
         <div className="p-3 bg-white border-t border-[#e8e5dc]">
-          <form
-            onSubmit={(e) => {
-              e.preventDefault();
-              handleSubmit();
-            }}
-            className="flex items-center gap-2"
-          >
-            {/* Microphone Button */}
-            <button
-              type="button"
-              onClick={toggleListening}
-              className={`p-2.5 rounded-xl transition cursor-pointer shrink-0 ${
-                isListening
-                  ? "bg-rose-600 text-white animate-pulse shadow-md shadow-rose-500/30"
-                  : "bg-[#f8f7f4] text-[#44403c] hover:bg-[#f1ede4] border border-[#d6d3d1]"
-              }`}
-              title={isListening ? "Listening... Click to stop" : "Speak instruction in Hindi/English"}
+          {isListening ? (
+            <div className="p-3 bg-gradient-to-r from-rose-50 via-red-50 to-amber-50 border border-rose-200 rounded-2xl space-y-2.5 animate-in fade-in duration-150">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <span className="w-2.5 h-2.5 rounded-full bg-rose-600 animate-ping shrink-0" />
+                  <span className="text-xs font-bold text-rose-800">
+                    Listening [{Math.floor(recordingSeconds / 60)}:{(recordingSeconds % 60).toString().padStart(2, "0")}]
+                  </span>
+
+                  {/* Real-time Voice Audio Visualizer */}
+                  <div className="flex items-end gap-1 h-4 px-1.5 ml-1">
+                    {audioWave.map((h, i) => (
+                      <span
+                        key={i}
+                        style={{ height: `${Math.max(20, h)}%` }}
+                        className="w-1 bg-rose-500 rounded-full transition-all duration-75"
+                      />
+                    ))}
+                  </div>
+                </div>
+
+                <span className="text-[10px] uppercase font-bold tracking-wider text-rose-600 bg-rose-100/80 px-2 py-0.5 rounded-full">
+                  Speak Now
+                </span>
+              </div>
+
+              {/* Live Transcript / Prompt View */}
+              <div className="p-2.5 bg-white border border-rose-200 rounded-xl min-h-[46px] max-h-[80px] overflow-y-auto text-xs sm:text-sm text-[#1c1917] font-semibold flex items-center">
+                {prompt.trim() ? (
+                  <span>{prompt}</span>
+                ) : (
+                  <span className="text-gray-400 italic font-normal">
+                    Listening to your voice... Speak naturally in English, Hindi, or Hinglish
+                  </span>
+                )}
+              </div>
+
+              {/* Action Buttons */}
+              <div className="flex items-center justify-between gap-2 pt-0.5">
+                <button
+                  type="button"
+                  onClick={cancelListening}
+                  className="px-3 py-1.5 rounded-xl border border-gray-300 text-gray-700 hover:bg-gray-100 text-xs font-semibold cursor-pointer"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  onClick={stopListeningAndSubmit}
+                  className="flex-1 py-2 px-3 rounded-xl bg-gradient-to-r from-rose-600 to-rose-700 hover:from-rose-700 hover:to-rose-800 text-white text-xs font-bold shadow-md cursor-pointer flex items-center justify-center gap-1.5 active:scale-98 transition"
+                >
+                  <Send size={13} />
+                  Done Speaking & Run 🚀
+                </button>
+              </div>
+            </div>
+          ) : (
+            <form
+              onSubmit={(e) => {
+                e.preventDefault();
+                handleSubmit();
+              }}
+              className="flex items-center gap-2"
             >
-              {isListening ? <MicOff size={18} /> : <Mic size={18} />}
-            </button>
-
-            {/* Text Input */}
-            <input
-              type="text"
-              value={prompt}
-              onChange={(e) => setPrompt(e.target.value)}
-              placeholder={
-                isListening
-                  ? "Listening to your voice..."
-                  : "Type or speak (e.g. 'Publish English Full Course')..."
-              }
-              className="flex-1 bg-[#fcfbf9] border border-[#d6d3d1] rounded-xl px-3.5 py-2 text-xs sm:text-sm text-[#1c1917] placeholder-[#a8a29e] focus:outline-none focus:border-[#1e3a8a] focus:ring-1 focus:ring-[#1e3a8a] min-h-[42px]"
-            />
-
-            {/* Send Button */}
-            <button
-              type="submit"
-              disabled={loading || !prompt.trim()}
-              className="bg-[#1e3a8a] hover:bg-[#172554] text-white p-2.5 rounded-xl transition shadow-xs cursor-pointer disabled:opacity-50 shrink-0 min-h-[42px] min-w-[42px] flex items-center justify-center"
-            >
-              <Send size={16} />
-            </button>
-          </form>
-
-          {isListening && (
-            <div className="pt-2 flex items-center justify-between text-[11px] text-rose-600 font-semibold">
-              <span className="flex items-center gap-1.5">
-                <span className="w-2 h-2 rounded-full bg-rose-500 animate-ping" />
-                Listening... Speak naturally (auto-executes when you pause)
-              </span>
+              {/* Microphone Button */}
               <button
                 type="button"
-                onClick={stopListeningAndSubmit}
-                className="text-xs bg-rose-100 hover:bg-rose-200 text-rose-800 px-2 py-0.5 rounded-md transition cursor-pointer font-bold"
+                onClick={toggleListening}
+                className="p-2.5 rounded-xl transition cursor-pointer shrink-0 bg-[#f8f7f4] text-[#1e3a8a] hover:bg-[#eff6ff] hover:text-[#1e3a8a] border border-[#d6d3d1] hover:border-[#bfdbfe]"
+                title="Click to speak instruction in Hindi/English"
               >
-                Send Voice →
+                <Mic size={18} />
               </button>
-            </div>
+
+              {/* Text Input */}
+              <input
+                type="text"
+                value={prompt}
+                onChange={(e) => setPrompt(e.target.value)}
+                placeholder="Type or click 🎤 to speak your instruction..."
+                className="flex-1 bg-[#fcfbf9] border border-[#d6d3d1] rounded-xl px-3.5 py-2 text-xs sm:text-sm text-[#1c1917] placeholder-[#a8a29e] focus:outline-none focus:border-[#1e3a8a] focus:ring-1 focus:ring-[#1e3a8a] min-h-[42px]"
+              />
+
+              {/* Send Button */}
+              <button
+                type="submit"
+                disabled={loading || !prompt.trim()}
+                className="bg-[#1e3a8a] hover:bg-[#172554] text-white p-2.5 rounded-xl transition shadow-xs cursor-pointer disabled:opacity-50 shrink-0 min-h-[42px] min-w-[42px] flex items-center justify-center"
+              >
+                <Send size={16} />
+              </button>
+            </form>
           )}
         </div>
       </div>
