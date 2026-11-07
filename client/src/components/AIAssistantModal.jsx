@@ -71,9 +71,6 @@ export default function AIAssistantModal({
       recognition.onerror = (event) => {
         console.warn("[SpeechRecognition Error]", event.error);
         setIsListening(false);
-        if (event.error !== "no-speech") {
-          toast.info("Microphone recognition error. You can type your request.");
-        }
       };
 
       recognition.onend = () => {
@@ -86,7 +83,13 @@ export default function AIAssistantModal({
 
   const toggleListening = () => {
     if (!recognitionRef.current) {
-      toast.info("Speech recognition is not supported in this browser. Please type below.");
+      setMessages((prev) => [
+        ...prev,
+        {
+          sender: "ai",
+          text: "Microphone speech recognition is not enabled in this browser. You can type your request directly into the input box below!",
+        },
+      ]);
       return;
     }
 

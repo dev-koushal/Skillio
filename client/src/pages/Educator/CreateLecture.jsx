@@ -116,30 +116,6 @@ function CreateLecture() {
           </span>
         </div>
 
-        {/* AI & Course Builder Quick Bar */}
-        <div className="p-4 rounded-2xl bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200/80 flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-xs">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-[#1e3a8a] text-white flex items-center justify-center shrink-0">
-              <Sparkles size={20} className="text-amber-300" />
-            </div>
-            <div>
-              <p className="text-xs sm:text-sm font-bold text-[#1c1917]">
-                Try the New Unified Course Builder & AI Teaching Assistant
-              </p>
-              <p className="text-[11px] text-[#57534e]">
-                Build lessons, notes, videos, and curricula from one workspace, or simply speak to AI.
-              </p>
-            </div>
-          </div>
-          <button
-            type="button"
-            onClick={() => navigate(`/builder/${courseId}`)}
-            className="px-4 py-2 bg-[#1e3a8a] hover:bg-[#172554] text-white text-xs font-bold rounded-xl transition cursor-pointer shrink-0"
-          >
-            Open in Course Builder →
-          </button>
-        </div>
-
         {/* Add Lecture Card */}
         <form onSubmit={handleCreateLecture} className="bg-white border border-[#e8e5dc] rounded-3xl p-6 sm:p-8 space-y-5 shadow-xs">
           <h2 className="text-sm font-bold uppercase tracking-wider text-[#1e3a8a]">

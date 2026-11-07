@@ -28,7 +28,6 @@ import { setCourseData, setCreatorCourseData } from "../../redux/courseSlice";
 import Navbar from "../../components/Navbar";
 import Footer from "../../components/Footer";
 import Button from "../../components/common/Button";
-import AIAssistantButton from "../../components/AIAssistantButton";
 
 const SUGGESTED_TOPICS = [
   "Spoken English",
@@ -1119,14 +1118,6 @@ export default function CourseBuilder() {
           </div>
         </div>
       )}
-
-      {/* Floating AI Assistant Button */}
-      <AIAssistantButton
-        currentCourseId={activeCourseId}
-        onCourseCreated={(newCourse) => {
-          loadCourse(newCourse._id);
-        }}
-      />
 
       <Footer />
     </div>

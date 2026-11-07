@@ -1,9 +1,14 @@
 import React, { useState } from "react";
 import { Sparkles, X } from "lucide-react";
+import { useLocation } from "react-router-dom";
 import AIAssistantModal from "./AIAssistantModal";
 
 export default function AIAssistantButton({ currentCourseId = null, onCourseCreated = null }) {
   const [modalOpen, setModalOpen] = useState(false);
+  const location = useLocation();
+
+  const pathMatch = location.pathname.match(/\/(?:builder|editcourse|viewcourse|createlecture)\/([a-zA-Z0-9]+)/);
+  const activeCourseId = currentCourseId || (pathMatch && pathMatch[1] !== "new" ? pathMatch[1] : null);
 
   return (
     <>
@@ -46,7 +51,7 @@ export default function AIAssistantButton({ currentCourseId = null, onCourseCrea
       <AIAssistantModal
         isOpen={modalOpen}
         onClose={() => setModalOpen(false)}
-        currentCourseId={currentCourseId}
+        currentCourseId={activeCourseId}
         onCourseCreated={onCourseCreated}
       />
     </>
