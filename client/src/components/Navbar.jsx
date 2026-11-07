@@ -19,7 +19,7 @@ import { toast } from "react-toastify";
 import api from "../services/api";
 import { useTenant } from "../context/TenantContext";
 
-function Navbar() {
+function Navbar({ currentInstitution = null }) {
   const { userData } = useSelector((state) => state.user);
   const { tenant } = useTenant();
   const navigate = useNavigate();
@@ -30,18 +30,35 @@ function Navbar() {
   const handleLogout = async () => {
     try {
       await api.get("/api/auth/logout");
-      dispatch(setUserData(null));
-      setDropdownOpen(false);
-      setMobileMenuOpen(false);
-      navigate("/");
-      toast.success("Logged out successfully!");
     } catch (error) {
-      toast.error(error.response?.data?.message || "Logout failed");
+      // Proceed with local logout regardless of network state
     }
+    dispatch(setUserData(null));
+    try {
+      const { setCreatorCourseData } = await import("../redux/courseSlice");
+      dispatch(setCreatorCourseData([]));
+    } catch (e) {}
+    localStorage.removeItem("skillio_active_tenant");
+    sessionStorage.clear();
+    setDropdownOpen(false);
+    setMobileMenuOpen(false);
+    toast.success("Logged out successfully!");
+    // Hard redirect to platform root wipes browser history and prevents protected UI re-entry
+    window.location.replace("/");
   };
 
-  const tenantName = tenant?.name || "Skillio Academy";
-  const tenantLogo = tenant?.logo || "/skillio.png";
+  // Determine if we are rendering within an institution context or the public platform
+  const activeInstitution =
+    currentInstitution ||
+    (tenant && !tenant.isPlatform && tenant.slug !== "platform" && tenant.slug !== "default"
+      ? tenant
+      : null);
+
+  const brandName = activeInstitution ? activeInstitution.name : "Skillio";
+  const brandLogo = activeInstitution ? (activeInstitution.logo || "/skillio.png") : "/skillio.png";
+  const brandSubtitle = activeInstitution
+    ? activeInstitution.institutionType || "Academy"
+    : "SaaS Platform";
 
   const isEducator =
     userData?.role === "educator" ||
@@ -54,39 +71,54 @@ function Navbar() {
         {/* Brand / Logo + Institution Switcher Link */}
         <div className="flex items-center gap-3 sm:gap-6">
           <Link
-            to="/"
+            to={activeInstitution ? `/institution/${activeInstitution.slug}` : "/"}
             className="flex items-center gap-2.5 sm:gap-3 group cursor-pointer focus:outline-none focus:ring-2 focus:ring-[#1e3a8a] rounded-lg p-1"
           >
             <img
-              src={tenantLogo}
-              alt={tenantName}
-              className="h-8 sm:h-10 w-auto max-w-[130px] sm:max-w-[160px] object-contain transition-transform group-hover:scale-102"
+              src={brandLogo}
+              alt={brandName}
+              className="h-8 sm:h-9 w-auto max-w-[130px] sm:max-w-[160px] object-contain transition-transform group-hover:scale-102"
               onError={(e) => {
                 e.target.src = "/skillio.png";
               }}
             />
             <div className="hidden min-[480px]:flex flex-col">
               <span className="font-extrabold text-sm sm:text-base tracking-tight text-[#1c1917] truncate max-w-[150px] sm:max-w-[200px] leading-tight">
-                {tenantName}
+                {brandName}
               </span>
               <span className="text-[10px] text-[#78716c] font-medium tracking-wide uppercase">
-                {tenant?.institutionType || "Academy"}
+                {brandSubtitle}
               </span>
             </div>
           </Link>
 
-          {/* Current Institution Badge / Selector */}
-          <Link
-            to="/institutions"
-            className="hidden lg:inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-[#f8f7f4] hover:bg-[#f2efe9] border border-[#e8e5dc] text-xs font-semibold text-[#44403c] transition cursor-pointer"
-            title="Browse or switch institution"
-          >
-            <Building2 size={13} className="text-[#1e3a8a]" />
-            <span className="truncate max-w-[120px]">{tenantName}</span>
-            <span className="text-[10px] font-mono text-[#78716c] bg-white px-1.5 py-0.5 rounded border border-[#e8e5dc]">
-              Change
-            </span>
-          </Link>
+          {/* If inside an institution, provide easy switch / platform links */}
+          {activeInstitution ? (
+            <div className="hidden lg:flex items-center gap-2">
+              <Link
+                to="/"
+                className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#f8f7f4] hover:bg-[#f2efe9] border border-[#e8e5dc] text-xs font-semibold text-[#44403c] transition cursor-pointer"
+                title="Return to Skillio Platform Homepage"
+              >
+                <span>← Skillio Platform</span>
+              </Link>
+              <Link
+                to="/institutions"
+                className="inline-flex items-center gap-1 text-[11px] font-semibold text-[#1e3a8a] hover:underline px-2 py-0.5"
+              >
+                <Building2 size={12} />
+                Switch Academy
+              </Link>
+            </div>
+          ) : (
+            <Link
+              to="/institutions"
+              className="hidden lg:inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-[#eff6ff] hover:bg-blue-100/70 border border-[#bfdbfe] text-xs font-semibold text-[#1e3a8a] transition cursor-pointer"
+            >
+              <Building2 size={13} />
+              <span>Explore Institutions</span>
+            </Link>
+          )}
         </div>
 
         {/* Desktop Navigation Links */}

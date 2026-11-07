@@ -133,8 +133,14 @@ function AllCourses() {
               </h1>
             </div>
             <p className="text-xs sm:text-sm text-[#78716c]">
-              Explore courses and study resources offered by{" "}
-              <span className="font-semibold text-[#1e3a8a]">{tenantName}</span>
+              {tenant?.isPlatform ? (
+                <span>Explore accredited courses and study resources across institutions on Skillio</span>
+              ) : (
+                <span>
+                  Explore courses and study resources offered by{" "}
+                  <strong className="text-[#1e3a8a]">{tenantName}</strong>
+                </span>
+              )}
             </p>
           </div>
 

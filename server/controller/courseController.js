@@ -40,8 +40,21 @@ export const getPublishedCourses = async (req, res) => {
   try {
     const tenantId = req.tenantId;
     const courses = await Course.find({ isPublished: true, tenantId })
-      .populate("lectures reviews")
-      .sort({ createdAt: -1 });
+      .populate({
+        path: "lectures",
+        select: "_id title isPreviewFree duration",
+      })
+      .populate({
+        path: "reviews",
+        select: "rating",
+      })
+      .populate({
+        path: "creator",
+        select: "name profilePicture",
+      })
+      .select("title subTitle category level price thumbnail creator enrolledStudents isPublished tenantId createdAt")
+      .sort({ createdAt: -1 })
+      .lean();
 
     return res.status(200).json(courses);
   } catch (error) {
@@ -59,7 +72,8 @@ export const getCreatorCourses = async (req, res) => {
 
     const courses = await Course.find({ creator: userId, tenantId })
       .populate("lectures")
-      .sort({ createdAt: -1 });
+      .sort({ createdAt: -1 })
+      .lean();
 
     return res.status(200).json({ courses: courses || [] });
   } catch (error) {

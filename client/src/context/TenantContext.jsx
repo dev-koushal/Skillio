@@ -18,14 +18,34 @@ export const TenantProvider = ({ children }) => {
     try {
       setLoading(true);
       setError(null);
-      const res = await api.get("/api/tenant/current");
+      const slug = getActiveTenantSlug();
+
+      // If no specific tenant slug is present (browsing Platform homepage "/")
+      if (!slug || slug === "platform") {
+        const platformTenant = {
+          isPlatform: true,
+          name: "Skillio",
+          slug: "platform",
+          logo: "/skillio.png",
+          favicon: "/skillio.png",
+          title: "Learning Infrastructure for Modern Educators",
+          subtitle: "The platform for educators to build, manage, and grow their own online learning business.",
+          institutionType: "Platform",
+        };
+        setTenant(platformTenant);
+        document.title = "Skillio — Platform for Educators & Online Academies";
+        setLoading(false);
+        return;
+      }
+
+      const res = await api.get(`/api/tenant/by-slug/${slug}`);
 
       if (res.data?.success && res.data?.tenant) {
         const tenantData = res.data.tenant;
         setTenant(tenantData);
 
         // Update Page Title
-        document.title = `${tenantData.name} — ${tenantData.title || "LMS Platform"}`;
+        document.title = `${tenantData.name} — ${tenantData.title || "Academy"}`;
 
         // Update Favicon dynamically
         const faviconElem = document.getElementById("tenant-favicon");
@@ -41,27 +61,36 @@ export const TenantProvider = ({ children }) => {
         if (tenantData.secondaryColor) {
           root.style.setProperty("--tenant-secondary", tenantData.secondaryColor);
         }
+      } else {
+        // Fallback for specified slug
+        setTenant({
+          name: slug.charAt(0).toUpperCase() + slug.slice(1) + " Academy",
+          slug,
+          logo: "/skillio.png",
+          institutionType: "Academy",
+        });
       }
     } catch (err) {
-      console.warn("[TenantContext] Could not fetch tenant, using default fallback:", err.message);
-      // Fallback tenant for offline or pre-init state
-      const fallback = {
-        name: "Skillio Academy",
-        slug: getActiveTenantSlug(),
-        logo: "/skillio.png",
-        favicon: "/skillio.png",
-        primaryColor: "#164e63",
-        secondaryColor: "#0f172a",
-        title: "Learn Without Limits",
-        subtitle: "A modern learning platform where educators build powerful courses and students master real skills.",
-        heroContent: "Access industry-vetted courses designed to bridge the gap between where you are and where you want to be.",
-        organizationName: "Skillio Academy",
-        footerText: "Skillio. All rights reserved.",
-        features: { quizzes: true, certificates: true, analytics: true, reviews: true },
-        settings: { currencySymbol: "₹" },
-        status: "active",
-      };
-      setTenant(fallback);
+      console.warn("[TenantContext] Could not fetch tenant:", err.message);
+      // Fallback
+      const slug = getActiveTenantSlug() || "platform";
+      if (slug === "platform") {
+        setTenant({
+          isPlatform: true,
+          name: "Skillio",
+          slug: "platform",
+          logo: "/skillio.png",
+          title: "Learning Infrastructure for Modern Educators",
+          institutionType: "Platform",
+        });
+      } else {
+        setTenant({
+          name: slug.charAt(0).toUpperCase() + slug.slice(1) + " Academy",
+          slug,
+          logo: "/skillio.png",
+          institutionType: "Academy",
+        });
+      }
       setError(err);
     } finally {
       setLoading(false);
@@ -70,19 +99,20 @@ export const TenantProvider = ({ children }) => {
 
   const switchTenant = (slug) => {
     if (typeof window !== "undefined") {
-      const hostname = window.location.hostname;
-      if (hostname.endsWith(".lvh.me") || hostname === "localhost" || hostname === "127.0.0.1") {
-        localStorage.setItem("skillio_active_tenant", slug);
-        // If testing on lvh.me, navigate to that subdomain
-        if (hostname.includes("lvh.me")) {
-          const port = window.location.port ? `:${window.location.port}` : "";
-          window.location.href = `${window.location.protocol}//${slug}.lvh.me${port}${window.location.pathname}`;
-          return;
-        }
-        window.location.href = `${window.location.pathname}?tenant=${slug}`;
-      } else {
-        window.location.href = `${window.location.pathname}?tenant=${slug}`;
+      if (!slug || slug === "platform") {
+        localStorage.removeItem("skillio_active_tenant");
+        window.location.href = "/";
+        return;
       }
+
+      localStorage.setItem("skillio_active_tenant", slug);
+      const hostname = window.location.hostname;
+      if (hostname.endsWith(".lvh.me")) {
+        const port = window.location.port ? `:${window.location.port}` : "";
+        window.location.href = `${window.location.protocol}//${slug}.lvh.me${port}/institution/${slug}`;
+        return;
+      }
+      window.location.href = `/institution/${slug}`;
     }
   };
 

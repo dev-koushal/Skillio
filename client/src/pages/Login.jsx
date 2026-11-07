@@ -41,7 +41,32 @@ export default function Login() {
 
       dispatch(setUserData(data.user));
       toast.success(`Welcome back, ${data.user.name}!`);
-      navigate("/");
+
+      // Resolve user's institution
+      const userRole = data.user.role;
+      const tenantSlug =
+        data.user.tenant?.slug ||
+        (typeof data.user.tenantId === "object" ? data.user.tenantId?.slug : null);
+
+      if (tenantSlug) {
+        localStorage.setItem("skillio_active_tenant", tenantSlug);
+      }
+
+      // Route educators directly to their institution management workspace
+      if (
+        userRole === "educator" ||
+        userRole === "tenant_admin" ||
+        userRole === "platform_admin"
+      ) {
+        navigate("/dashboard");
+      } else {
+        // Direct students to their institution learning experience
+        if (tenantSlug && tenantSlug !== "default") {
+          navigate(`/institution/${tenantSlug}`);
+        } else {
+          navigate("/mycourses");
+        }
+      }
     } catch (error) {
       console.error("[Login Error]", error);
       const message =

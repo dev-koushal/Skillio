@@ -2,6 +2,7 @@ import React from "react";
 import { Star, BookOpen, Clock, Users } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useTenant } from "../context/TenantContext";
+import { optimizeImage } from "../utils/imageOptimizer";
 
 function CourseCard({
   thumbnail,
@@ -45,7 +46,7 @@ function CourseCard({
       {/* Thumbnail */}
       <div className="relative w-full aspect-video sm:h-44 overflow-hidden bg-[#f8f7f4]">
         <img
-          src={thumbnail || defaultThumbnail}
+          src={optimizeImage(thumbnail || defaultThumbnail, 500)}
           alt={title || "Course thumbnail"}
           className="w-full h-full object-cover group-hover:scale-102 transition-transform duration-300"
           onError={(e) => {

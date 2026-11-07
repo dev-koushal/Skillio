@@ -2,6 +2,7 @@ import validator from "validator";
 import bcrypt from "bcryptjs";
 import { genToken } from "../config/token.js";
 import User from "../models/userModel.js";
+import Tenant from "../models/tenantModel.js";
 import sendMail from "../config/sendMail.js";
 
 const getCookieOptions = () => {
@@ -127,6 +128,18 @@ export const login = async (req, res) => {
 
     const safeUser = user.toObject();
     delete safeUser.password;
+
+    try {
+      const tenantDoc = await Tenant.findById(user.tenantId).select("name slug logo institutionType");
+      if (tenantDoc) {
+        safeUser.tenant = {
+          name: tenantDoc.name,
+          slug: tenantDoc.slug,
+          logo: tenantDoc.logo,
+          institutionType: tenantDoc.institutionType,
+        };
+      }
+    } catch (e) {}
 
     return res.status(200).json({
       success: true,

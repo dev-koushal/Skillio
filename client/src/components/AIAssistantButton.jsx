@@ -1,7 +1,9 @@
-import React, { useState } from "react";
+import React, { useState, lazy, Suspense } from "react";
 import { Sparkles, X } from "lucide-react";
 import { useLocation } from "react-router-dom";
-import AIAssistantModal from "./AIAssistantModal";
+
+// Lazy-load modal so audio analyzers and large AI components do not hurt initial page load
+const AIAssistantModal = lazy(() => import("./AIAssistantModal"));
 
 export default function AIAssistantButton({ currentCourseId = null, onCourseCreated = null }) {
   const [modalOpen, setModalOpen] = useState(false);
@@ -47,13 +49,17 @@ export default function AIAssistantButton({ currentCourseId = null, onCourseCrea
         )}
       </div>
 
-      {/* Floating Copilot Dock */}
-      <AIAssistantModal
-        isOpen={modalOpen}
-        onClose={() => setModalOpen(false)}
-        currentCourseId={activeCourseId}
-        onCourseCreated={onCourseCreated}
-      />
+      {/* Floating Copilot Dock (Loaded only when activated) */}
+      {modalOpen && (
+        <Suspense fallback={null}>
+          <AIAssistantModal
+            isOpen={modalOpen}
+            onClose={() => setModalOpen(false)}
+            currentCourseId={activeCourseId}
+            onCourseCreated={onCourseCreated}
+          />
+        </Suspense>
+      )}
     </>
   );
 }

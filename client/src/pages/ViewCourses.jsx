@@ -28,6 +28,7 @@ import { useTenant } from "../context/TenantContext";
 import Button from "../components/common/Button";
 import Navbar from "../components/Navbar";
 import Footer from "../components/Footer";
+import { optimizeImage } from "../utils/imageOptimizer";
 
 // Helper to load Razorpay checkout script dynamically
 const loadRazorpayScript = () => {
@@ -114,8 +115,8 @@ function ViewCourses() {
   // Check if current user is creator or tenant admin
   const isCreator = Boolean(
     userData?._id &&
-      course?.creator &&
-      ((typeof course.creator === "string" ? course.creator : course.creator?._id)?.toString() === userData._id.toString())
+    course?.creator &&
+    ((typeof course.creator === "string" ? course.creator : course.creator?._id)?.toString() === userData._id.toString())
   );
   const isTenantAdmin = Boolean(
     userData && (userData.role === "admin" || userData.role === "tenant_admin" || userData.role === "platform_admin")
@@ -127,7 +128,7 @@ function ViewCourses() {
     if (userData && courseId) {
       const isCreatorUser = Boolean(
         course?.creator &&
-          ((typeof course.creator === "string" ? course.creator : course.creator?._id)?.toString() === userData._id?.toString())
+        ((typeof course.creator === "string" ? course.creator : course.creator?._id)?.toString() === userData._id?.toString())
       );
       const isAdminUser = userData.role === "admin" || userData.role === "tenant_admin" || userData.role === "platform_admin";
       const enrolled = userData.enrolledCourses?.some(
@@ -444,7 +445,7 @@ function ViewCourses() {
                 />
               ) : course?.thumbnail ? (
                 <img
-                  src={course.thumbnail}
+                  src={optimizeImage(course.thumbnail, 800)}
                   alt={course.title}
                   className="w-full h-full object-cover"
                 />
@@ -490,7 +491,7 @@ function ViewCourses() {
                   size="lg"
                   className="w-full bg-[#1e3a8a] hover:bg-[#172554] text-white font-bold py-3.5 rounded-xl shadow-md cursor-pointer flex items-center justify-center gap-2"
                 >
-                  <SquarePen size={17} />
+                  <SquarePen className="inline-block mr-4" size={17} />
                   Edit in Course Builder
                 </Button>
                 <Button

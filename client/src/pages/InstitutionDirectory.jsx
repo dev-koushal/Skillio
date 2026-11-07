@@ -5,6 +5,7 @@ import api from "../services/api";
 import { useTenant } from "../context/TenantContext";
 import Navbar from "../components/Navbar";
 import Footer from "../components/Footer";
+import { optimizeImage } from "../utils/imageOptimizer";
 
 function InstitutionDirectory() {
   const navigate = useNavigate();
@@ -43,11 +44,8 @@ function InstitutionDirectory() {
   }, [searchQuery, selectedType]);
 
   const handleSelectInstitution = (inst) => {
-    if (inst.slug === currentTenant?.slug) {
-      navigate("/");
-    } else {
-      switchTenant(inst.slug);
-    }
+    localStorage.setItem("skillio_active_tenant", inst.slug);
+    navigate(`/institution/${inst.slug}`);
   };
 
   return (
@@ -145,7 +143,7 @@ function InstitutionDirectory() {
                       <div className="flex items-center gap-3.5">
                         {inst.logo ? (
                           <img
-                            src={inst.logo}
+                            src={optimizeImage(inst.logo, 100)}
                             alt={inst.name}
                             className="w-12 h-12 rounded-xl object-contain border border-[#e8e5dc] p-1 bg-[#faf9f6]"
                             onError={(e) => {

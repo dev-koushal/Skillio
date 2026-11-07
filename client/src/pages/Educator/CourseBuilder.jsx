@@ -415,11 +415,10 @@ export default function CourseBuilder() {
                   {title || "Untitled Course Builder"}
                 </h1>
                 <span
-                  className={`text-[11px] font-semibold px-2.5 py-0.5 rounded-full border shrink-0 ${
-                    isPublished
-                      ? "bg-emerald-50 text-emerald-700 border-emerald-200"
-                      : "bg-amber-50 text-amber-700 border-amber-200"
-                  }`}
+                  className={`text-[11px] font-semibold px-2.5 py-0.5 rounded-full border shrink-0 ${isPublished
+                    ? "bg-emerald-50 text-emerald-700 border-emerald-200"
+                    : "bg-amber-50 text-amber-700 border-amber-200"
+                    }`}
                 >
                   {isPublished ? "Published (Live)" : "Draft"}
                 </span>
@@ -466,11 +465,10 @@ export default function CourseBuilder() {
               type="button"
               disabled={loading}
               onClick={() => handleSaveCourse(!isPublished)}
-              className={`inline-flex items-center gap-1.5 text-xs font-semibold px-4 py-2 rounded-xl shadow-xs transition cursor-pointer disabled:opacity-50 ${
-                isPublished
-                  ? "bg-amber-700 hover:bg-amber-800 text-white"
-                  : "bg-[#1e3a8a] hover:bg-[#172554] text-white"
-              }`}
+              className={`inline-flex items-center gap-1.5 text-xs font-semibold px-4 py-2 rounded-xl shadow-xs transition cursor-pointer disabled:opacity-50 ${isPublished
+                ? "bg-amber-700 hover:bg-amber-800 text-white"
+                : "bg-[#1e3a8a] hover:bg-[#172554] text-white"
+                }`}
             >
               {isPublished ? <EyeOff size={14} /> : <Eye size={14} />}
               <span>{isPublished ? "Unpublish to Draft" : "Publish Course"}</span>
@@ -867,11 +865,10 @@ export default function CourseBuilder() {
                     setPrice(0);
                     setSaveStatus("Unsaved changes");
                   }}
-                  className={`p-3 rounded-xl border text-left transition cursor-pointer ${
-                    !price || Number(price) === 0
-                      ? "bg-[#eff6ff] border-[#1e3a8a] text-[#1e3a8a] font-bold"
-                      : "bg-[#faf8f5] border-[#e8e5dc] text-[#57534e]"
-                  }`}
+                  className={`p-3 rounded-xl border text-left transition cursor-pointer ${!price || Number(price) === 0
+                    ? "bg-[#eff6ff] border-[#1e3a8a] text-[#1e3a8a] font-bold"
+                    : "bg-[#faf8f5] border-[#e8e5dc] text-[#57534e]"
+                    }`}
                 >
                   <p className="text-xs">Free Access</p>
                   <p className="text-[10px] font-normal opacity-80">Instant 1-click enroll</p>
@@ -883,11 +880,10 @@ export default function CourseBuilder() {
                     if (!price || Number(price) === 0) setPrice(499);
                     setSaveStatus("Unsaved changes");
                   }}
-                  className={`p-3 rounded-xl border text-left transition cursor-pointer ${
-                    price && Number(price) > 0
-                      ? "bg-[#eff6ff] border-[#1e3a8a] text-[#1e3a8a] font-bold"
-                      : "bg-[#faf8f5] border-[#e8e5dc] text-[#57534e]"
-                  }`}
+                  className={`p-3 rounded-xl border text-left transition cursor-pointer ${price && Number(price) > 0
+                    ? "bg-[#eff6ff] border-[#1e3a8a] text-[#1e3a8a] font-bold"
+                    : "bg-[#faf8f5] border-[#e8e5dc] text-[#57534e]"
+                    }`}
                 >
                   <p className="text-xs">Paid Tuition</p>
                   <p className="text-[10px] font-normal opacity-80">Enforces payment</p>
@@ -938,11 +934,10 @@ export default function CourseBuilder() {
                     setIsPublished(!isPublished);
                     setSaveStatus("Unsaved changes");
                   }}
-                  className={`text-xs font-semibold px-3 py-1.5 rounded-xl border transition cursor-pointer shrink-0 ${
-                    isPublished
-                      ? "bg-amber-50 border-amber-300 text-amber-900"
-                      : "bg-emerald-50 border-emerald-300 text-emerald-900"
-                  }`}
+                  className={`text-xs font-semibold px-3 py-1.5 rounded-xl border transition cursor-pointer shrink-0 ${isPublished
+                    ? "bg-amber-50 border-amber-300 text-amber-900"
+                    : "bg-emerald-50 border-emerald-300 text-emerald-900"
+                    }`}
                 >
                   {isPublished ? "Switch to Draft" : "Make Live"}
                 </button>
@@ -977,9 +972,9 @@ export default function CourseBuilder() {
               size="md"
               loading={loading}
               onClick={() => handleSaveCourse(true)}
-              className="!bg-[#1e3a8a] hover:!bg-[#172554] text-white font-semibold px-6 py-2.5 rounded-xl shadow-xs"
+              className="!bg-[#1e3a8a] inline hover:!bg-[#172554] text-white font-semibold px-6 py-2.5 rounded-xl shadow-xs"
             >
-              <Save size={15} /> Save & Publish
+              <Save size={15} className="inline-block" /> Save & Publish
             </Button>
           </div>
         </div>

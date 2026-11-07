@@ -33,41 +33,53 @@ export const serverURL = getApiBaseUrl();
 
 /**
  * Extract active tenant slug from window.location
+ * Returns null when browsing the global Skillio Platform.
  */
 export const getActiveTenantSlug = () => {
-  if (typeof window === "undefined") return "default";
+  if (typeof window === "undefined") return null;
 
-  // 1. Check URL search param (e.g. ?tenant=physics for dev testing)
+  // 1. Check Path: e.g. /institution/physics or /institution/english
+  const pathMatch = window.location.pathname.match(/\/institution\/([^/]+)/);
+  if (pathMatch && pathMatch[1]) {
+    return pathMatch[1].toLowerCase().trim();
+  }
+
+  // 2. Check URL search param: e.g. ?tenant=physics
   const params = new URLSearchParams(window.location.search);
   const paramTenant = params.get("tenant");
   if (paramTenant) {
     return paramTenant.toLowerCase().trim();
   }
 
-  // 2. Check localStorage override (useful for testing tenant switcher)
-  const storedTenant = localStorage.getItem("skillio_active_tenant");
-  if (storedTenant && (window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1")) {
-    return storedTenant.toLowerCase().trim();
-  }
-
-  // 3. Extract from subdomain (e.g. physics.mylms.com or physics.lvh.me)
+  // 3. Extract from Subdomain (e.g. physics.mylms.com or physics.lvh.me)
   const hostname = window.location.hostname.toLowerCase();
   if (hostname.endsWith(".lvh.me")) {
     const sub = hostname.replace(".lvh.me", "");
-    return sub || "default";
+    if (sub && sub !== "www" && sub !== "app") return sub;
   }
 
   if (hostname.endsWith(".localhost")) {
     const sub = hostname.replace(".localhost", "");
-    return sub || "default";
+    if (sub && sub !== "www" && sub !== "app") return sub;
   }
 
   const parts = hostname.split(".");
-  if (parts.length >= 3 && !hostname.endsWith(".onrender.com")) {
-    return parts[0];
+  if (parts.length >= 3 && !hostname.endsWith(".onrender.com") && !hostname.endsWith(".vercel.app")) {
+    const sub = parts[0];
+    if (sub && sub !== "www" && sub !== "app") return sub;
   }
 
-  return "default";
+  // 4. Stored tenant only when inside specific course views or educator workflows,
+  // NOT on root platform "/" or general platform pages
+  const isPlatformRoot = window.location.pathname === "/" || window.location.pathname === "/institutions";
+  if (!isPlatformRoot) {
+    const storedTenant = localStorage.getItem("skillio_active_tenant");
+    if (storedTenant) {
+      return storedTenant.toLowerCase().trim();
+    }
+  }
+
+  return null;
 };
 
 // Create configured Axios instance
