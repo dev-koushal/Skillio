@@ -39,68 +39,130 @@ export default function AIAssistantModal({
     },
   ]);
 
-  // Voice speech recognition state
+  // Voice speech recognition refs and state
   const [isListening, setIsListening] = useState(false);
   const recognitionRef = useRef(null);
-
-  // High-impact confirmation state
+  const silenceTimerRef = useRef(null);
+  const speechTranscriptRef = useRef("");
   const [pendingConfirmation, setPendingConfirmation] = useState(null);
-
   const messagesEndRef = useRef(null);
 
-  // Initialize Speech Recognition if supported
+  // Clean up speech recognition and timers on unmount
   useEffect(() => {
-    const SpeechRecognition =
-      window.SpeechRecognition || window.webkitSpeechRecognition;
-    if (SpeechRecognition) {
-      const recognition = new SpeechRecognition();
-      recognition.continuous = false;
-      recognition.interimResults = false;
-      recognition.lang = "en-IN"; // Supports Indian English & Hinglish accents well
-
-      recognition.onstart = () => {
-        setIsListening(true);
-      };
-
-      recognition.onresult = (event) => {
-        const transcript = event.results[0][0].transcript;
-        setPrompt((prev) => (prev ? `${prev} ${transcript}` : transcript));
-        setIsListening(false);
-      };
-
-      recognition.onerror = (event) => {
-        console.warn("[SpeechRecognition Error]", event.error);
-        setIsListening(false);
-      };
-
-      recognition.onend = () => {
-        setIsListening(false);
-      };
-
-      recognitionRef.current = recognition;
-    }
+    return () => {
+      if (silenceTimerRef.current) clearTimeout(silenceTimerRef.current);
+      if (recognitionRef.current) {
+        try {
+          recognitionRef.current.abort();
+        } catch (e) {}
+      }
+    };
   }, []);
 
-  const toggleListening = () => {
-    if (!recognitionRef.current) {
+  const stopListeningAndSubmit = () => {
+    if (silenceTimerRef.current) {
+      clearTimeout(silenceTimerRef.current);
+      silenceTimerRef.current = null;
+    }
+
+    if (recognitionRef.current) {
+      try {
+        recognitionRef.current.stop();
+      } catch (e) {}
+      recognitionRef.current = null;
+    }
+
+    setIsListening(false);
+
+    const spokenText = speechTranscriptRef.current.trim();
+    if (spokenText) {
+      handleSubmit(spokenText);
+      speechTranscriptRef.current = "";
+    }
+  };
+
+  const startListening = () => {
+    const SpeechRecognition =
+      window.SpeechRecognition || window.webkitSpeechRecognition;
+
+    if (!SpeechRecognition) {
       setMessages((prev) => [
         ...prev,
         {
           sender: "ai",
-          text: "Microphone speech recognition is not enabled in this browser. You can type your request directly into the input box below!",
+          text: "Voice speech recognition isn't enabled in this browser. Feel free to type your request below!",
         },
       ]);
       return;
     }
 
-    if (isListening) {
-      recognitionRef.current.stop();
-    } else {
+    // Stop existing instance if any
+    if (recognitionRef.current) {
       try {
-        recognitionRef.current.start();
-      } catch (e) {
-        console.warn("Speech recognition restart", e);
+        recognitionRef.current.abort();
+      } catch (e) {}
+    }
+
+    speechTranscriptRef.current = "";
+    const recognition = new SpeechRecognition();
+    recognition.continuous = true;
+    recognition.interimResults = true;
+    recognition.lang = "en-IN"; // Accurately captures Indian English, Hindi, and Hinglish
+
+    recognition.onstart = () => {
+      setIsListening(true);
+    };
+
+    recognition.onresult = (event) => {
+      let interim = "";
+      let final = "";
+
+      for (let i = 0; i < event.results.length; ++i) {
+        if (event.results[i].isFinal) {
+          final += event.results[i][0].transcript + " ";
+        } else {
+          interim += event.results[i][0].transcript;
+        }
       }
+
+      const currentText = (final + interim).trim();
+      if (currentText) {
+        setPrompt(currentText);
+        speechTranscriptRef.current = currentText;
+
+        // Auto-submit 1.5 seconds after user stops speaking
+        if (silenceTimerRef.current) clearTimeout(silenceTimerRef.current);
+        silenceTimerRef.current = setTimeout(() => {
+          stopListeningAndSubmit();
+        }, 1500);
+      }
+    };
+
+    recognition.onerror = (event) => {
+      console.warn("[SpeechRecognition Error]", event.error);
+      if (event.error === "not-allowed" || event.error === "service-not-allowed") {
+        setIsListening(false);
+      }
+    };
+
+    recognition.onend = () => {
+      setIsListening(false);
+    };
+
+    try {
+      recognition.start();
+      recognitionRef.current = recognition;
+    } catch (e) {
+      console.warn("Speech start error:", e);
+      setIsListening(false);
+    }
+  };
+
+  const toggleListening = () => {
+    if (isListening) {
+      stopListeningAndSubmit();
+    } else {
+      startListening();
     }
   };
 
@@ -416,10 +478,19 @@ export default function AIAssistantModal({
           </form>
 
           {isListening && (
-            <p className="text-[11px] text-rose-600 font-semibold pt-1.5 flex items-center gap-1">
-              <Volume2 size={13} className="animate-bounce" />
-              Microphone active — speak naturally in English, Hindi, or Hinglish...
-            </p>
+            <div className="pt-2 flex items-center justify-between text-[11px] text-rose-600 font-semibold">
+              <span className="flex items-center gap-1.5">
+                <span className="w-2 h-2 rounded-full bg-rose-500 animate-ping" />
+                Listening... Speak naturally (auto-executes when you pause)
+              </span>
+              <button
+                type="button"
+                onClick={stopListeningAndSubmit}
+                className="text-xs bg-rose-100 hover:bg-rose-200 text-rose-800 px-2 py-0.5 rounded-md transition cursor-pointer font-bold"
+              >
+                Send Voice →
+              </button>
+            </div>
           )}
         </div>
       </div>
