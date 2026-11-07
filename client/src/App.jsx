@@ -15,6 +15,7 @@ import useGetPublishedCourse from "./hooks/useGetPublishedCourse";
 import useGetAllReviews from "./hooks/useGetAllReviews";
 
 import Home from "./pages/Home";
+import AIAssistantButton from "./components/AIAssistantButton";
 
 const Login = lazy(() => import("./pages/Login"));
 const Signup = lazy(() => import("./pages/SignUp"));
@@ -174,6 +175,9 @@ function AppRoutes() {
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </Suspense>
+
+      {/* Floating AI Teaching Assistant for Educators */}
+      <AIAssistantButton />
 
       <ToastContainer
         position="top-right"

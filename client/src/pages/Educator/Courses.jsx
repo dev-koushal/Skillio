@@ -62,7 +62,7 @@ function Courses() {
           </div>
 
           <button
-            onClick={() => navigate("/createcourses")}
+            onClick={() => navigate("/builder")}
             className="inline-flex items-center justify-center gap-2 bg-[#1e3a8a] hover:bg-[#172554] text-white text-xs sm:text-sm font-bold px-4 py-2.5 rounded-xl shadow-xs transition active:scale-95 cursor-pointer min-h-[42px]"
           >
             <Plus size={16} /> Create New Course
@@ -78,7 +78,7 @@ function Courses() {
               Start building your first curriculum with video lectures, lecture notes, and student enrollment.
             </p>
             <button
-              onClick={() => navigate("/createcourses")}
+              onClick={() => navigate("/builder")}
               className="bg-[#1e3a8a] hover:bg-[#172554] text-white text-xs font-bold px-5 py-2.5 rounded-xl transition cursor-pointer shadow-xs"
             >
               Create Your First Course
@@ -136,10 +136,10 @@ function Courses() {
                       </td>
                       <td className="py-4 px-6 text-right">
                         <button
-                          onClick={() => navigate(`/editcourse/${course._id}`)}
+                          onClick={() => navigate(`/builder/${course._id}`)}
                           className="inline-flex items-center gap-1.5 text-xs font-bold text-[#1e3a8a] hover:bg-blue-50 border border-[#d6d3c9] px-3 py-1.5 rounded-xl transition cursor-pointer"
                         >
-                          <SquarePen size={14} /> Manage Course
+                          <SquarePen size={14} /> Edit in Builder
                         </button>
                       </td>
                     </tr>
@@ -186,10 +186,10 @@ function Courses() {
                   </div>
 
                   <button
-                    onClick={() => navigate(`/editcourse/${course._id}`)}
-                    className="w-full text-center py-2.5 rounded-xl border border-[#d6d3c9] text-xs font-bold text-[#1e3a8a] bg-[#faf9f6] hover:bg-[#f2efe9]"
+                    onClick={() => navigate(`/builder/${course._id}`)}
+                    className="w-full text-center py-2.5 rounded-xl border border-[#d6d3c9] text-xs font-bold text-[#1e3a8a] bg-[#faf9f6] hover:bg-[#f2efe9] cursor-pointer"
                   >
-                    Manage Course & Materials
+                    Open Course Builder
                   </button>
                 </div>
               ))}
