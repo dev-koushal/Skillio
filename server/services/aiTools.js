@@ -937,3 +937,4 @@ export const TOOL_REGISTRY = {
  * All OpenAI Tool Definitions formatted for the API
  */
 export const OPENAI_TOOL_DEFINITIONS = Object.values(TOOL_REGISTRY).map((t) => t.definition);
+

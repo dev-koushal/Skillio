@@ -114,3 +114,4 @@ export const resourceService = {
     return { success: true, deletedResourceId: resourceId, title: resource.title };
   },
 };
+

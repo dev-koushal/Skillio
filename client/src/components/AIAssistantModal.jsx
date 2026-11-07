@@ -75,14 +75,14 @@ export default function AIAssistantModal({
     if (recognitionRef.current) {
       try {
         recognitionRef.current.abort();
-      } catch (e) {}
+      } catch (e) { }
       recognitionRef.current = null;
     }
 
     if (mediaRecorderRef.current && mediaRecorderRef.current.state !== "inactive") {
       try {
         mediaRecorderRef.current.stop();
-      } catch (e) {}
+      } catch (e) { }
       mediaRecorderRef.current = null;
     }
 
@@ -94,7 +94,7 @@ export default function AIAssistantModal({
     if (audioContextRef.current && audioContextRef.current.state !== "closed") {
       try {
         audioContextRef.current.close();
-      } catch (e) {}
+      } catch (e) { }
       audioContextRef.current = null;
     }
   };
@@ -285,7 +285,7 @@ export default function AIAssistantModal({
     if (recognitionRef.current) {
       try {
         recognitionRef.current.stop();
-      } catch (e) {}
+      } catch (e) { }
       recognitionRef.current = null;
     }
 
@@ -384,7 +384,7 @@ export default function AIAssistantModal({
               ]);
               if (coursesRes.data) dispatch(setCreatorCourseData(coursesRes.data));
               if (publishedRes.data) dispatch(setCourseData(publishedRes.data));
-            } catch (e) {}
+            } catch (e) { }
 
             if (onCourseCreated && data.data?.course) {
               onCourseCreated(data.data.course);
@@ -599,16 +599,14 @@ export default function AIAssistantModal({
           {messages.map((m, idx) => (
             <div
               key={idx}
-              className={`flex flex-col ${
-                m.sender === "user" ? "items-end" : "items-start"
-              }`}
+              className={`flex flex-col ${m.sender === "user" ? "items-end" : "items-start"
+                }`}
             >
               <div
-                className={`max-w-[88%] rounded-2xl px-4 py-2.5 text-xs sm:text-sm leading-relaxed ${
-                  m.sender === "user"
+                className={`max-w-[88%] rounded-2xl px-4 py-2.5 text-xs sm:text-sm leading-relaxed ${m.sender === "user"
                     ? "bg-[#1e3a8a] text-white shadow-xs"
                     : "bg-white border border-[#e8e5dc] text-[#1c1917] shadow-xs"
-                }`}
+                  }`}
               >
                 {m.text}
 
@@ -620,11 +618,10 @@ export default function AIAssistantModal({
                         {m.data.course.title}
                       </span>
                       <span
-                        className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${
-                          m.data.course.isPublished
+                        className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${m.data.course.isPublished
                             ? "bg-emerald-100 text-emerald-800 border-emerald-300"
                             : "bg-amber-100 text-amber-800 border-amber-300"
-                        }`}
+                          }`}
                       >
                         {m.data.course.isPublished ? "Published (Live)" : "Draft"}
                       </span>
@@ -746,7 +743,7 @@ export default function AIAssistantModal({
                   <span>{prompt}</span>
                 ) : (
                   <span className="text-gray-400 italic font-normal">
-                    Listening to your voice... Speak naturally in English, Hindi, or Hinglish
+                    Listening to your voice...
                   </span>
                 )}
               </div>
