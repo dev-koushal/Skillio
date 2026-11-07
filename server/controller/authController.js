@@ -99,11 +99,21 @@ export const login = async (req, res) => {
     }
 
     // Look for user in active tenant
-    let user = await User.findOne({ email, tenantId }).select("+password");
+    let user = await User.findOne({ email, tenantId })
+      .select("+password")
+      .populate({
+        path: "enrolledCourses",
+        select: "title thumbnail description subTitle category price creator lectures isPublished",
+      });
 
     // Platform admin fallback: allow platform admin to log in from any domain
     if (!user) {
-      const platformAdmin = await User.findOne({ email, role: "platform_admin" }).select("+password");
+      const platformAdmin = await User.findOne({ email, role: "platform_admin" })
+        .select("+password")
+        .populate({
+          path: "enrolledCourses",
+          select: "title thumbnail description subTitle category price creator lectures isPublished",
+        });
       if (platformAdmin) {
         user = platformAdmin;
       }

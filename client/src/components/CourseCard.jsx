@@ -26,9 +26,6 @@ function CourseCard({
   const avgRating = calculateAvgReview(reviews);
   const reviewCount = reviews?.length || 0;
 
-  const defaultThumbnail =
-    "https://images.unsplash.com/photo-1516321318423-f06f85e504b3?w=800&auto=format&fit=crop&q=60";
-
   const isFree = !price || Number(price) === 0;
   const instructorName = creator?.name || tenant?.name || "Verified Educator";
 
@@ -38,22 +35,40 @@ function CourseCard({
     ? enrolledStudents
     : null;
 
+  const hasThumbnail = Boolean(thumbnail);
+
   return (
     <div
       onClick={() => navigate(`/viewcourse/${id}`)}
       className="group w-full flex flex-col rounded-2xl overflow-hidden shadow-xs hover:shadow-md transition-all duration-300 bg-white border border-[#e8e5dc] hover:border-[#1e3a8a]/40 cursor-pointer text-[#1c1917] focus-within:ring-2 focus-within:ring-[#1e3a8a]"
     >
-      {/* Thumbnail */}
+      {/* Thumbnail / Clean Gradient Fallback */}
       <div className="relative w-full aspect-video sm:h-44 overflow-hidden bg-[#f8f7f4]">
-        <img
-          src={optimizeImage(thumbnail || defaultThumbnail, 500)}
-          alt={title || "Course thumbnail"}
-          className="w-full h-full object-cover group-hover:scale-102 transition-transform duration-300"
-          onError={(e) => {
-            e.target.src = defaultThumbnail;
-          }}
-          loading="lazy"
-        />
+        {hasThumbnail ? (
+          <img
+            src={optimizeImage(thumbnail, 500)}
+            alt={title || "Course thumbnail"}
+            className="w-full h-full object-cover group-hover:scale-102 transition-transform duration-300"
+            onError={(e) => {
+              e.target.style.display = "none";
+              if (e.target.nextSibling) e.target.nextSibling.style.display = "flex";
+            }}
+            loading="lazy"
+          />
+        ) : null}
+
+        {/* Elegant Branded Fallback if no thumbnail uploaded */}
+        <div
+          className={`w-full h-full bg-gradient-to-br from-[#0f172a] via-[#1e3a8a] to-[#0f172a] flex-col items-center justify-center text-white p-4 text-center space-y-1.5 ${
+            hasThumbnail ? "hidden" : "flex"
+          }`}
+        >
+          <div className="w-10 h-10 rounded-xl bg-white/10 border border-white/20 flex items-center justify-center text-amber-300 shadow-xs">
+            <BookOpen size={20} />
+          </div>
+          <span className="text-xs font-bold text-white/90 line-clamp-1">{title}</span>
+        </div>
+
         {category && (
           <span className="absolute top-2.5 left-2.5 text-[11px] font-semibold bg-white/90 backdrop-blur-xs text-[#1e3a8a] px-2.5 py-0.5 rounded-md border border-[#e8e5dc] shadow-xs">
             {category}

@@ -65,9 +65,6 @@ export default function Dashboard() {
   const greeting =
     hour < 12 ? "Good morning" : hour < 18 ? "Good afternoon" : "Good evening";
 
-  const defaultThumbnail =
-    "https://images.unsplash.com/photo-1516321318423-f06f85e504b3?w=800&auto=format&fit=crop&q=60";
-
   return (
     <div className="min-h-screen bg-[#f8f7f4] text-[#1c1917] flex flex-col font-sans">
       <Navbar />
@@ -251,15 +248,30 @@ export default function Dashboard() {
                 <div>
                   {/* Thumbnail Banner */}
                   <div className="relative w-full aspect-video overflow-hidden bg-[#f8f7f4]">
-                    <img
-                      src={optimizeImage(course.thumbnail || defaultThumbnail, 500)}
-                      alt={course.title}
-                      className="w-full h-full object-cover group-hover:scale-103 transition-transform duration-300"
-                      onError={(e) => {
-                        e.target.src = defaultThumbnail;
-                      }}
-                      loading="lazy"
-                    />
+                    {course.thumbnail ? (
+                      <img
+                        src={optimizeImage(course.thumbnail, 500)}
+                        alt={course.title}
+                        className="w-full h-full object-cover group-hover:scale-103 transition-transform duration-300"
+                        onError={(e) => {
+                          e.target.style.display = "none";
+                          if (e.target.nextSibling) e.target.nextSibling.style.display = "flex";
+                        }}
+                        loading="lazy"
+                      />
+                    ) : null}
+
+                    {/* Clean Gradient Fallback */}
+                    <div
+                      className={`w-full h-full bg-gradient-to-br from-[#0f172a] via-[#1e3a8a] to-[#0f172a] flex-col items-center justify-center text-white p-4 text-center space-y-1.5 ${
+                        course.thumbnail ? "hidden" : "flex"
+                      }`}
+                    >
+                      <div className="w-10 h-10 rounded-xl bg-white/10 border border-white/20 flex items-center justify-center text-amber-300 shadow-xs">
+                        <BookOpen size={20} />
+                      </div>
+                      <span className="text-xs font-bold text-white/90 line-clamp-1">{course.title}</span>
+                    </div>
 
                     {/* Floating Status & Category Badges */}
                     <div className="absolute top-2.5 left-2.5 right-2.5 flex items-center justify-between gap-2 pointer-events-none">

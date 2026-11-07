@@ -8,13 +8,19 @@ export const getCurrentUser = async (req, res) => {
     // Tenant-isolated current user lookup
     let user = await User.findOne({ _id: req.userId, tenantId })
       .select("-password")
-      .populate("enrolledCourses");
+      .populate({
+        path: "enrolledCourses",
+        select: "title thumbnail description subTitle category price creator lectures isPublished",
+      });
 
     // Fallback for platform_admin logging into any tenant
     if (!user) {
       const platformAdmin = await User.findOne({ _id: req.userId, role: "platform_admin" })
         .select("-password")
-        .populate("enrolledCourses");
+        .populate({
+          path: "enrolledCourses",
+          select: "title thumbnail description subTitle category price creator lectures isPublished",
+        });
       if (platformAdmin) {
         user = platformAdmin;
       }
