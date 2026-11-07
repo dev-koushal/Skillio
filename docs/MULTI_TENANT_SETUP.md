@@ -113,3 +113,4 @@ node server/scripts/migrateMultiTenant.js --dry-run
 ```bash
 node server/scripts/migrateMultiTenant.js --rollback
 ```
+

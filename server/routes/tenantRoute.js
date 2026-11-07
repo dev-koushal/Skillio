@@ -27,3 +27,4 @@ tenantRouter.put("/:id/status", isAuth, requirePlatformAdmin, updateTenantStatus
 tenantRouter.put("/:id/branding", isAuth, requirePlatformAdmin, upload.single("logo"), updateTenantBranding);
 
 export default tenantRouter;
+

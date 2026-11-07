@@ -50,3 +50,4 @@ export const requireRole = (allowedRoles = []) => {
 export const requirePlatformAdmin = requireRole(["platform_admin"]);
 export const requireTenantAdmin = requireRole(["tenant_admin", "platform_admin"]);
 export const requireEducator = requireRole(["educator", "tenant_admin", "platform_admin"]);
+

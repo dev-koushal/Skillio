@@ -160,3 +160,4 @@ console.log(` RESULTS: ${passedTests}/${totalTests} in-process tests passed`);
 console.log("--------------------------------------------------");
 
 process.exit(passedTests === totalTests ? 0 : 1);
+

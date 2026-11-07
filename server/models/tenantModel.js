@@ -91,3 +91,4 @@ tenantSchema.index({ customDomain: 1, status: 1 });
 
 const Tenant = mongoose.model("Tenant", tenantSchema);
 export default Tenant;
+
