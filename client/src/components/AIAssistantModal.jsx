@@ -13,12 +13,13 @@ import {
   ExternalLink,
   Loader2,
   Volume2,
+  RotateCcw,
 } from "lucide-react";
 import api from "../services/api";
 import { toast } from "react-toastify";
 import { useNavigate } from "react-router-dom";
 import { useDispatch } from "react-redux";
-import { setCreatorCourseData } from "../redux/courseSlice";
+import { setCreatorCourseData, setCourseData } from "../redux/courseSlice";
 
 export default function AIAssistantModal({
   isOpen,
@@ -156,12 +157,16 @@ export default function AIAssistantModal({
           },
         ]);
 
-        // Refresh creator courses list in Redux
+        // Refresh both creator and published courses in Redux so catalog & studio update live
         try {
-          const coursesRes = await api.get("/api/course/getcreator");
-          dispatch(setCreatorCourseData(coursesRes.data));
+          const [coursesRes, publishedRes] = await Promise.all([
+            api.get("/api/course/getcreator"),
+            api.get("/api/course/getpublished"),
+          ]);
+          if (coursesRes.data) dispatch(setCreatorCourseData(coursesRes.data));
+          if (publishedRes.data) dispatch(setCourseData(publishedRes.data));
         } catch (e) {
-          // ignore
+          // ignore background refresh error
         }
 
         if (onCourseCreated && data.data?.course) {
@@ -193,38 +198,58 @@ export default function AIAssistantModal({
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-6 bg-black/40 backdrop-blur-xs font-sans animate-in fade-in duration-200">
-      <div className="w-full max-w-lg bg-white border border-[#e8e5dc] rounded-3xl shadow-2xl flex flex-col max-h-[85vh] sm:max-h-[80vh] overflow-hidden">
-        {/* Header */}
-        <div className="flex items-center justify-between p-4 sm:p-5 border-b border-[#e8e5dc] bg-gradient-to-r from-[#eff6ff] via-white to-white">
+    <div className="fixed bottom-24 right-4 sm:right-6 z-[999998] w-[420px] max-w-[calc(100vw-2rem)] h-[600px] max-h-[calc(100vh-7.5rem)] font-sans animate-in slide-in-from-bottom-5 duration-300 pointer-events-auto">
+      <div className="w-full h-full bg-white/98 backdrop-blur-md border border-[#e8e5dc] rounded-3xl shadow-[0_25px_60px_-15px_rgba(0,0,0,0.35),0_0_1px_rgba(0,0,0,0.2)] flex flex-col overflow-hidden">
+        {/* Multi-Million Dollar SaaS Header */}
+        <div className="flex items-center justify-between p-4 sm:p-4.5 border-b border-[#e8e5dc] bg-gradient-to-r from-[#0f172a] via-[#111827] to-[#1e3a8a] text-white">
           <div className="flex items-center gap-2.5">
-            <div className="w-9 h-9 rounded-xl bg-[#1e3a8a] text-white flex items-center justify-center shadow-xs">
+            <div className="w-9 h-9 rounded-xl bg-white/10 border border-white/20 text-amber-300 flex items-center justify-center shadow-xs">
               <Sparkles size={18} />
             </div>
             <div>
-              <h3 className="font-bold text-sm sm:text-base text-[#1c1917] flex items-center gap-1.5">
-                AI Teaching Assistant
-                <span className="text-[10px] font-semibold uppercase bg-blue-100 text-[#1e3a8a] px-2 py-0.5 rounded-full">
-                  Voice & Text
+              <div className="flex items-center gap-2">
+                <h3 className="font-bold text-sm text-white tracking-tight">
+                  Skillio Copilot
+                </h3>
+                <span className="flex items-center gap-1 text-[10px] font-semibold uppercase bg-emerald-500/20 text-emerald-300 px-2 py-0.5 rounded-full border border-emerald-500/30">
+                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                  Active
                 </span>
-              </h3>
-              <p className="text-[11px] text-[#78716c]">
-                Speak or type natural instructions to build and organize your courses
+              </div>
+              <p className="text-[11px] text-white/70">
+                Voice & natural language course assistant
               </p>
             </div>
           </div>
 
-          <button
-            onClick={onClose}
-            className="p-2 rounded-xl text-[#78716c] hover:text-[#1c1917] hover:bg-[#f1ede4] transition cursor-pointer"
-            aria-label="Close Assistant"
-          >
-            <X size={18} />
-          </button>
+          <div className="flex items-center gap-1">
+            <button
+              onClick={() => {
+                setMessages([
+                  {
+                    sender: "ai",
+                    text: "Conversation reset. What would you like to teach or build today?",
+                  },
+                ]);
+                setPendingConfirmation(null);
+              }}
+              className="p-1.5 rounded-lg text-white/70 hover:text-white hover:bg-white/10 transition cursor-pointer"
+              title="Reset Chat"
+            >
+              <RotateCcw size={15} />
+            </button>
+            <button
+              onClick={onClose}
+              className="p-1.5 rounded-lg text-white/70 hover:text-white hover:bg-white/10 transition cursor-pointer"
+              aria-label="Close Assistant"
+            >
+              <X size={18} />
+            </button>
+          </div>
         </div>
 
         {/* Message Stream */}
-        <div className="flex-1 p-4 sm:p-5 overflow-y-auto space-y-3.5 bg-[#fcfbf9]">
+        <div className="flex-1 p-4 overflow-y-auto space-y-3.5 bg-[#fcfbf9]">
           {messages.map((m, idx) => (
             <div
               key={idx}
@@ -233,7 +258,7 @@ export default function AIAssistantModal({
               }`}
             >
               <div
-                className={`max-w-[85%] rounded-2xl px-4 py-2.5 text-xs sm:text-sm leading-relaxed ${
+                className={`max-w-[88%] rounded-2xl px-4 py-2.5 text-xs sm:text-sm leading-relaxed ${
                   m.sender === "user"
                     ? "bg-[#1e3a8a] text-white shadow-xs"
                     : "bg-white border border-[#e8e5dc] text-[#1c1917] shadow-xs"
@@ -241,21 +266,45 @@ export default function AIAssistantModal({
               >
                 {m.text}
 
-                {/* If result is a course creation */}
+                {/* If result is a course creation or update */}
                 {m.data?.course && (
-                  <div className="mt-2.5 pt-2 border-t border-[#f1ede4] flex items-center justify-between gap-2">
-                    <span className="font-semibold text-[#1e3a8a] text-xs">
-                      {m.data.course.title}
-                    </span>
-                    <button
-                      onClick={() => {
-                        navigate(`/editcourse/${m.data.course._id}`);
-                        onClose();
-                      }}
-                      className="inline-flex items-center gap-1 bg-[#eff6ff] hover:bg-blue-100 text-[#1e3a8a] text-[11px] font-semibold px-2.5 py-1 rounded-lg border border-[#bfdbfe] transition cursor-pointer"
-                    >
-                      Open in Builder <ExternalLink size={12} />
-                    </button>
+                  <div className="mt-3 p-3 bg-blue-50/70 border border-blue-200/80 rounded-2xl space-y-2">
+                    <div className="flex items-center justify-between gap-2">
+                      <span className="font-bold text-[#1e3a8a] text-xs sm:text-sm">
+                        {m.data.course.title}
+                      </span>
+                      <span
+                        className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${
+                          m.data.course.isPublished
+                            ? "bg-emerald-100 text-emerald-800 border-emerald-300"
+                            : "bg-amber-100 text-amber-800 border-amber-300"
+                        }`}
+                      >
+                        {m.data.course.isPublished ? "Published (Live)" : "Draft"}
+                      </span>
+                    </div>
+
+                    <div className="flex items-center gap-2 pt-1">
+                      <button
+                        onClick={() => {
+                          navigate(`/builder/${m.data.course._id}`);
+                          onClose();
+                        }}
+                        className="flex-1 bg-[#1e3a8a] hover:bg-[#172554] text-white text-xs font-semibold py-1.5 px-3 rounded-xl transition cursor-pointer flex items-center justify-center gap-1.5 shadow-xs"
+                      >
+                        Open in Builder <ExternalLink size={12} />
+                      </button>
+
+                      {!m.data.course.isPublished && (
+                        <button
+                          onClick={() => handleSubmit(`Publish course ${m.data.course.title}`)}
+                          className="bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold py-1.5 px-3 rounded-xl transition cursor-pointer flex items-center justify-center gap-1 shadow-xs"
+                          title="Publish course immediately so students can see it in catalog"
+                        >
+                          Publish Now 🚀
+                        </button>
+                      )}
+                    </div>
                   </div>
                 )}
 
@@ -293,7 +342,7 @@ export default function AIAssistantModal({
           ))}
 
           {loading && (
-            <div className="flex items-center gap-2 text-xs text-[#78716c] p-2 bg-white rounded-xl border border-[#e8e5dc] w-fit shadow-xs">
+            <div className="flex items-center gap-2 text-xs text-[#78716c] p-2.5 bg-white rounded-2xl border border-[#e8e5dc] w-fit shadow-xs animate-pulse">
               <Loader2 size={14} className="animate-spin text-[#1e3a8a]" />
               <span>Executing authorized teaching instruction...</span>
             </div>
@@ -303,7 +352,7 @@ export default function AIAssistantModal({
         </div>
 
         {/* Quick Suggestion Chips */}
-        <div className="px-4 py-2 border-t border-[#e8e5dc] bg-white flex items-center gap-1.5 overflow-x-auto text-[11px]">
+        <div className="px-3 py-2 border-t border-[#e8e5dc] bg-white flex items-center gap-1.5 overflow-x-auto text-[11px] scrollbar-none">
           <span className="text-[#78716c] font-semibold whitespace-nowrap">Try:</span>
           {quickPrompts.map((p, i) => (
             <button
@@ -318,7 +367,7 @@ export default function AIAssistantModal({
         </div>
 
         {/* Voice & Text Input Box */}
-        <div className="p-3 sm:p-4 bg-white border-t border-[#e8e5dc]">
+        <div className="p-3 bg-white border-t border-[#e8e5dc]">
           <form
             onSubmit={(e) => {
               e.preventDefault();
@@ -330,9 +379,9 @@ export default function AIAssistantModal({
             <button
               type="button"
               onClick={toggleListening}
-              className={`p-2.5 sm:p-3 rounded-xl transition cursor-pointer shrink-0 ${
+              className={`p-2.5 rounded-xl transition cursor-pointer shrink-0 ${
                 isListening
-                  ? "bg-rose-600 text-white animate-pulse"
+                  ? "bg-rose-600 text-white animate-pulse shadow-md shadow-rose-500/30"
                   : "bg-[#f8f7f4] text-[#44403c] hover:bg-[#f1ede4] border border-[#d6d3d1]"
               }`}
               title={isListening ? "Listening... Click to stop" : "Speak instruction in Hindi/English"}
@@ -348,16 +397,16 @@ export default function AIAssistantModal({
               placeholder={
                 isListening
                   ? "Listening to your voice..."
-                  : "e.g. 'Ek course banao jiska naam English Full Course hai'..."
+                  : "Type or speak (e.g. 'Publish English Full Course')..."
               }
-              className="flex-1 bg-[#fcfbf9] border border-[#d6d3d1] rounded-xl px-4 py-2.5 text-xs sm:text-sm text-[#1c1917] placeholder-[#a8a29e] focus:outline-none focus:border-[#1e3a8a] focus:ring-1 focus:ring-[#1e3a8a] min-h-[44px]"
+              className="flex-1 bg-[#fcfbf9] border border-[#d6d3d1] rounded-xl px-3.5 py-2 text-xs sm:text-sm text-[#1c1917] placeholder-[#a8a29e] focus:outline-none focus:border-[#1e3a8a] focus:ring-1 focus:ring-[#1e3a8a] min-h-[42px]"
             />
 
             {/* Send Button */}
             <button
               type="submit"
               disabled={loading || !prompt.trim()}
-              className="bg-[#1e3a8a] hover:bg-[#172554] text-white p-2.5 sm:p-3 rounded-xl transition shadow-xs cursor-pointer disabled:opacity-50 shrink-0 min-h-[44px] min-w-[44px] flex items-center justify-center"
+              className="bg-[#1e3a8a] hover:bg-[#172554] text-white p-2.5 rounded-xl transition shadow-xs cursor-pointer disabled:opacity-50 shrink-0 min-h-[42px] min-w-[42px] flex items-center justify-center"
             >
               <Send size={16} />
             </button>

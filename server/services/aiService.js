@@ -161,10 +161,18 @@ export const aiService = {
     // 4. PUBLISH / UNPUBLISH COURSE
     if (text.includes("publish") || text.includes("unpublish") || text.includes("live karo")) {
       const isUnpublish = text.includes("unpublish") || text.includes("draft");
+
+      let title = "";
+      const match = prompt.match(/(?:course|publish|unpublish|live|naam)\s+["']?([^"'\n]+?)["']?(?:\s+(?:ko|publish|karo|hai)|$)/i);
+      if (match && match[1]) {
+        title = match[1].replace(/publish|unpublish|live|course|ko|kar do|karo/gi, "").trim();
+      }
+
       return {
         tool: "publishCourse",
         args: {
           courseId: currentCourseId,
+          title,
           isPublished: !isUnpublish,
         },
       };
@@ -473,7 +481,22 @@ export const aiService = {
 
     // 7. PUBLISH / UNPUBLISH COURSE
     if (tool === "publishCourse") {
-      if (!args.courseId) {
+      let targetCourseId = args.courseId;
+
+      if (!targetCourseId && args.title) {
+        const found = await courseService.findCourseByTitle({ tenantId, userId, title: args.title });
+        if (found) targetCourseId = found._id;
+      }
+
+      if (!targetCourseId) {
+        // Fallback: get the educator's most recent course
+        const recent = await courseService.listCreatorCourses({ tenantId, userId });
+        if (recent && recent.length > 0) {
+          targetCourseId = recent[0]._id;
+        }
+      }
+
+      if (!targetCourseId) {
         throw new Error("Please specify which course you would like to publish or unpublish.");
       }
 
@@ -481,13 +504,13 @@ export const aiService = {
         tenantId,
         userId,
         userRole,
-        courseId: args.courseId,
+        courseId: targetCourseId,
         isPublished: args.isPublished,
       });
 
       return {
         message: args.isPublished
-          ? `"${updated.title}" is now published and visible to students in your academy catalog!`
+          ? `"${updated.title}" is now published and live in your academy catalog! Students can now see and enroll in it.`
           : `"${updated.title}" has been moved to Draft and is hidden from public students.`,
         data: { course: updated },
       };
