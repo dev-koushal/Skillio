@@ -48,3 +48,4 @@ aiActionLogSchema.index({ tenantId: 1, userId: 1, createdAt: -1 });
 
 const AIActionLog = mongoose.model("AIActionLog", aiActionLogSchema);
 export default AIActionLog;
+

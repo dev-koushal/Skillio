@@ -1132,3 +1132,4 @@ export default function CourseBuilder() {
     </div>
   );
 }
+

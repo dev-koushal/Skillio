@@ -97,7 +97,7 @@ function CreateLecture() {
         <div className="flex items-center justify-between pb-4 border-b border-[#e8e5dc]">
           <div className="flex items-center gap-3">
             <button
-              onClick={() => navigate(`/editcourse/${courseId}`)}
+              onClick={() => navigate(`/builder/${courseId}`)}
               className="p-1.5 rounded-lg text-[#78716c] hover:text-[#1c1917] hover:bg-[#f2efe9] transition cursor-pointer"
             >
               <ArrowLeft size={18} />
@@ -114,6 +114,30 @@ function CreateLecture() {
           <span className="text-xs font-bold text-[#1e3a8a] bg-blue-50 px-3 py-1 rounded-full border border-blue-200">
             {lectures.length} Total Lectures
           </span>
+        </div>
+
+        {/* AI & Course Builder Quick Bar */}
+        <div className="p-4 rounded-2xl bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200/80 flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-xs">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl bg-[#1e3a8a] text-white flex items-center justify-center shrink-0">
+              <Sparkles size={20} className="text-amber-300" />
+            </div>
+            <div>
+              <p className="text-xs sm:text-sm font-bold text-[#1c1917]">
+                Try the New Unified Course Builder & AI Teaching Assistant
+              </p>
+              <p className="text-[11px] text-[#57534e]">
+                Build lessons, notes, videos, and curricula from one workspace, or simply speak to AI.
+              </p>
+            </div>
+          </div>
+          <button
+            type="button"
+            onClick={() => navigate(`/builder/${courseId}`)}
+            className="px-4 py-2 bg-[#1e3a8a] hover:bg-[#172554] text-white text-xs font-bold rounded-xl transition cursor-pointer shrink-0"
+          >
+            Open in Course Builder →
+          </button>
         </div>
 
         {/* Add Lecture Card */}

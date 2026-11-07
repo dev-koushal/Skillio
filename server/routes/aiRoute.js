@@ -14,3 +14,4 @@ aiRouter.post("/plan", handleGeneratePlan);
 aiRouter.get("/logs", getAILogs);
 
 export default aiRouter;
+

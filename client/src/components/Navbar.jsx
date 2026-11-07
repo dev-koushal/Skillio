@@ -18,6 +18,7 @@ import { setUserData } from "../redux/userSlice";
 import { toast } from "react-toastify";
 import api from "../services/api";
 import { useTenant } from "../context/TenantContext";
+import AIAssistantModal from "./AIAssistantModal";
 
 function Navbar() {
   const { userData } = useSelector((state) => state.user);
@@ -26,6 +27,7 @@ function Navbar() {
   const dispatch = useDispatch();
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [aiModalOpen, setAiModalOpen] = useState(false);
 
   const handleLogout = async () => {
     try {
@@ -125,6 +127,16 @@ function Navbar() {
             </button>
           )}
 
+          {/* Prominent Ask AI Button in Navbar */}
+          <button
+            onClick={() => setAiModalOpen(true)}
+            className="inline-flex items-center gap-1.5 bg-[#1e3a8a] text-white hover:bg-[#172554] border border-[#1e3a8a] text-xs sm:text-sm font-bold px-3.5 py-2 rounded-xl cursor-pointer transition shadow-xs active:scale-95"
+            title="Ask AI Teaching Assistant"
+          >
+            <Sparkles size={15} className="text-amber-300" />
+            <span>Ask AI ✨</span>
+          </button>
+
           {!userData ? (
             <div className="flex items-center gap-2 pl-2">
               <button
@@ -206,6 +218,16 @@ function Navbar() {
                         Educator Dashboard
                       </button>
                     )}
+                    <button
+                      onClick={() => {
+                        setAiModalOpen(true);
+                        setDropdownOpen(false);
+                      }}
+                      className="w-full flex items-center gap-2.5 px-4 py-2 text-xs sm:text-sm text-[#1e3a8a] hover:bg-blue-50/80 transition cursor-pointer text-left font-bold"
+                    >
+                      <Sparkles size={15} className="text-amber-500" />
+                      Ask AI Teaching Assistant
+                    </button>
                     <button
                       onClick={() => {
                         navigate("/create-institution");
@@ -385,6 +407,17 @@ function Navbar() {
 
                 <button
                   onClick={() => {
+                    setAiModalOpen(true);
+                    setMobileMenuOpen(false);
+                  }}
+                  className="w-full text-left px-3.5 py-3 rounded-xl text-xs sm:text-sm font-bold text-white bg-[#1e3a8a] hover:bg-[#172554] flex items-center gap-2"
+                >
+                  <Sparkles size={15} className="text-amber-300" />
+                  <span>Ask AI Assistant ✨</span>
+                </button>
+
+                <button
+                  onClick={() => {
                     navigate("/create-institution");
                     setMobileMenuOpen(false);
                   }}
@@ -411,6 +444,12 @@ function Navbar() {
           </div>
         </div>
       )}
+
+      {/* AI Assistant Modal launched from Navbar */}
+      <AIAssistantModal
+        isOpen={aiModalOpen}
+        onClose={() => setAiModalOpen(false)}
+      />
     </header>
   );
 }

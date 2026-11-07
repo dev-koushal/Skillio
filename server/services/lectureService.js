@@ -148,3 +148,4 @@ export const lectureService = {
     return { success: true, deletedLectureId: lectureId, lectureTitle: lecture.lectureTitle };
   },
 };
+
