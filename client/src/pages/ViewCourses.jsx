@@ -17,6 +17,7 @@ import {
   CheckCircle2,
   ShieldCheck,
   Award,
+  SquarePen,
 } from "lucide-react";
 import { useDispatch, useSelector } from "react-redux";
 import { setSelectedCourse } from "../redux/courseSlice";
@@ -110,15 +111,33 @@ function ViewCourses() {
     loadCourse();
   }, [courseId]);
 
-  // Check enrollment from user data
+  // Check if current user is creator or tenant admin
+  const isCreator = Boolean(
+    userData?._id &&
+      course?.creator &&
+      ((typeof course.creator === "string" ? course.creator : course.creator?._id)?.toString() === userData._id.toString())
+  );
+  const isTenantAdmin = Boolean(
+    userData && (userData.role === "admin" || userData.role === "tenant_admin" || userData.role === "platform_admin")
+  );
+  const hasFullAccess = Boolean(isEnrolled || isCreator || isTenantAdmin);
+
+  // Check enrollment & ownership from user data
   useEffect(() => {
-    if (userData?.enrolledCourses && courseId) {
-      const enrolled = userData.enrolledCourses.some(
+    if (userData && courseId) {
+      const isCreatorUser = Boolean(
+        course?.creator &&
+          ((typeof course.creator === "string" ? course.creator : course.creator?._id)?.toString() === userData._id?.toString())
+      );
+      const isAdminUser = userData.role === "admin" || userData.role === "tenant_admin" || userData.role === "platform_admin";
+      const enrolled = userData.enrolledCourses?.some(
         (c) => (typeof c === "string" ? c : c._id)?.toString() === courseId.toString()
       );
-      if (enrolled) setIsEnrolled(true);
+      if (isCreatorUser || isAdminUser || enrolled) {
+        setIsEnrolled(true);
+      }
     }
-  }, [userData, courseId]);
+  }, [userData, course, courseId]);
 
   // Fetch Creator Info
   useEffect(() => {
@@ -171,6 +190,12 @@ function ViewCourses() {
     if (!userData) {
       toast.info("Please sign in to enroll in this course");
       navigate("/login");
+      return;
+    }
+
+    if (isCreator) {
+      toast.info("You are the instructor of this course. Full access is granted.");
+      setIsEnrolled(true);
       return;
     }
 
@@ -453,7 +478,31 @@ function ViewCourses() {
             </div>
 
             {/* Main Action Button */}
-            {!isEnrolled ? (
+            {isCreator ? (
+              <div className="flex flex-col gap-2.5">
+                <div className="p-3 bg-blue-50 border border-blue-200 rounded-xl text-blue-950 text-xs flex items-center gap-2">
+                  <CheckCircle className="w-4 h-4 text-blue-600 shrink-0" />
+                  <span className="font-semibold">Instructor Access: You own this course</span>
+                </div>
+                <Button
+                  onClick={() => navigate(`/builder/${courseId}`)}
+                  variant="primary"
+                  size="lg"
+                  className="w-full bg-[#1e3a8a] hover:bg-[#172554] text-white font-bold py-3.5 rounded-xl shadow-md cursor-pointer flex items-center justify-center gap-2"
+                >
+                  <SquarePen size={17} />
+                  Edit in Course Builder
+                </Button>
+                <Button
+                  onClick={() => navigate(`/viewlecture/${courseId}`)}
+                  variant="secondary"
+                  size="sm"
+                  className="w-full justify-center text-xs text-[#57534e]"
+                >
+                  Watch Course Lectures
+                </Button>
+              </div>
+            ) : !isEnrolled ? (
               <Button
                 onClick={handleEnroll}
                 loading={enrollLoading}
@@ -571,7 +620,7 @@ function ViewCourses() {
                 {course?.lectures?.length > 0 ? (
                   course.lectures.map((lec, idx) => {
                     const isPreview = Boolean(lec.isPreviewFree);
-                    const canPlay = isEnrolled || isPreview;
+                    const canPlay = hasFullAccess || isPreview;
 
                     return (
                       <div
@@ -654,7 +703,7 @@ function ViewCourses() {
                 </div>
               </div>
 
-              {!isEnrolled && (
+              {!hasFullAccess && (
                 <div className="p-4 rounded-xl bg-amber-50 border border-amber-200 text-amber-900 text-xs flex items-center justify-between gap-3">
                   <div className="flex items-center gap-2">
                     <Lock size={16} className="text-amber-700 shrink-0" />
@@ -701,7 +750,7 @@ function ViewCourses() {
                         </div>
                       </div>
 
-                      {isEnrolled ? (
+                      {hasFullAccess ? (
                         <a
                           href={res.fileUrl}
                           target="_blank"

@@ -25,6 +25,7 @@ const Dashboard = lazy(() => import("./pages/Educator/Dashboard"));
 const Courses = lazy(() => import("./pages/Educator/Courses"));
 const CreateCourses = lazy(() => import("./pages/Educator/CreateCourses"));
 const EditCourse = lazy(() => import("./pages/Educator/EditCourse"));
+const CourseBuilder = lazy(() => import("./pages/Educator/CourseBuilder"));
 const AllCourses = lazy(() => import("./pages/AllCourses"));
 const CreateLecture = lazy(() => import("./pages/Educator/CreateLecture"));
 const EditLecture = lazy(() => import("./pages/Educator/EditLecture"));
@@ -109,10 +110,30 @@ function AppRoutes() {
             }
           />
           <Route
+            path="/builder"
+            element={
+              userData?.role === "educator" || userData?.role === "tenant_admin" || userData?.role === "platform_admin" ? (
+                <CourseBuilder />
+              ) : (
+                <Navigate to="/login" />
+              )
+            }
+          />
+          <Route
+            path="/builder/:courseId"
+            element={
+              userData?.role === "educator" || userData?.role === "tenant_admin" || userData?.role === "platform_admin" ? (
+                <CourseBuilder />
+              ) : (
+                <Navigate to="/login" />
+              )
+            }
+          />
+          <Route
             path="/createcourses"
             element={
               userData?.role === "educator" || userData?.role === "tenant_admin" || userData?.role === "platform_admin" ? (
-                <CreateCourses />
+                <CourseBuilder />
               ) : (
                 <Navigate to="/login" />
               )
@@ -122,7 +143,7 @@ function AppRoutes() {
             path="/editcourse/:courseId"
             element={
               userData?.role === "educator" || userData?.role === "tenant_admin" || userData?.role === "platform_admin" ? (
-                <EditCourse />
+                <CourseBuilder />
               ) : (
                 <Navigate to="/login" />
               )

@@ -34,6 +34,18 @@ export const RazorpayOrder = async (req, res) => {
       return res.status(404).json({ success: false, message: "Course not found in this organization" });
     }
 
+    // Course creator bypass: Instructor never needs to purchase own course
+    if (userId && course.creator.toString() === userId.toString()) {
+      return res.status(200).json({
+        id: `creator_${courseId}_${Date.now()}`,
+        amount: 0,
+        currency: "INR",
+        free: true,
+        mock: true,
+        message: "You are the creator of this course and have full access.",
+      });
+    }
+
     // Free course handling
     if (!course.price || Number(course.price) <= 0) {
       return res.status(200).json({
@@ -106,9 +118,14 @@ export const verifyPayment = async (req, res) => {
 
     const instance = getRazorpayInstance();
 
-    // 1. Free enrollment check
-    if (freeEnrollment || (!course.price || Number(course.price) <= 0)) {
-      // Free courses require no payment transaction
+    // 1. Creator or Free enrollment check
+    if (
+      (userId && course.creator.toString() === userId.toString()) ||
+      (razorpay_order_id && razorpay_order_id.startsWith("creator_")) ||
+      freeEnrollment ||
+      (!course.price || Number(course.price) <= 0)
+    ) {
+      // Free or creator enrollment requires no financial transaction
     }
     // 2. Simulated mock order (dev/test mode)
     else if (razorpay_order_id && razorpay_order_id.startsWith("order_mock_")) {

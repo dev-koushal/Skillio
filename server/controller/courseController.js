@@ -5,21 +5,28 @@ import User from "../models/userModel.js";
 import Resource from "../models/resourceModel.js";
 import jwt from "jsonwebtoken";
 import { verifyCourseAccess, sanitizeLecturesForViewer } from "../utils/courseAccess.js";
+import { courseService } from "../services/courseService.js";
+import { lectureService } from "../services/lectureService.js";
 
 export const createCourse = async (req, res) => {
   try {
-    const { title, category } = req.body;
+    const { title, category, subTitle, description, price, level, isPublished } = req.body;
     const tenantId = req.tenantId;
 
-    if (!title || !category) {
-      return res.status(400).json({ success: false, message: "Title and category are required" });
+    if (!title || !title.trim()) {
+      return res.status(400).json({ success: false, message: "Title is required" });
     }
 
-    const course = await Course.create({
+    const course = await courseService.createCourse({
       tenantId,
-      title: title.trim(),
-      category: category.trim(),
-      creator: req.userId,
+      userId: req.userId,
+      title,
+      category: category || "General",
+      subTitle,
+      description,
+      price,
+      level,
+      isPublished,
     });
 
     return res.status(201).json(course);
@@ -208,7 +215,7 @@ export const removeCourse = async (req, res) => {
 
 export const createLecture = async (req, res) => {
   try {
-    const { lectureTitle, resourceTitle, resourceDescription, resourceType, resourceFileUrl } = req.body;
+    const { lectureTitle, isPreviewFree, resourceTitle, resourceDescription, resourceType, resourceFileUrl } = req.body;
     const { courseId } = req.params;
     const tenantId = req.tenantId;
 
@@ -216,41 +223,25 @@ export const createLecture = async (req, res) => {
       return res.status(400).json({ success: false, message: "lectureTitle and courseId are required" });
     }
 
-    const course = await Course.findOne({ _id: courseId, tenantId });
-    if (!course) {
-      return res.status(404).json({ success: false, message: "Course not found in this organization" });
-    }
+    const resourceData = (resourceTitle && resourceFileUrl) ? {
+      title: resourceTitle,
+      description: resourceDescription,
+      type: resourceType,
+      fileUrl: resourceFileUrl,
+    } : null;
 
-    if (course.creator.toString() !== req.userId.toString() && req.userRole !== "tenant_admin" && req.userRole !== "platform_admin") {
-      return res.status(403).json({ success: false, message: "Not authorized to add lectures to this course" });
-    }
-
-    const lecture = await Lecture.create({
+    const result = await lectureService.createLecture({
       tenantId,
+      userId: req.userId,
+      userRole: req.userRole,
       courseId,
-      lectureTitle: lectureTitle.trim(),
+      lectureTitle,
+      isPreviewFree,
+      videoFile: req.file,
+      resourceData,
     });
 
-    course.lectures.push(lecture._id);
-    await course.save();
-    await course.populate("lectures");
-
-    // Optional: create lecture resource if attached during creation
-    let attachedResource = null;
-    if (resourceTitle && resourceFileUrl) {
-      attachedResource = await Resource.create({
-        tenantId,
-        courseId,
-        lectureId: lecture._id,
-        title: resourceTitle.trim(),
-        description: resourceDescription ? resourceDescription.trim() : "",
-        type: resourceType || "pdf",
-        fileUrl: resourceFileUrl,
-        uploadedBy: req.userId,
-      });
-    }
-
-    return res.status(201).json({ lecture, course, resource: attachedResource });
+    return res.status(201).json({ lecture: result.lecture, course: result.course, resource: result.resource });
   } catch (error) {
     console.error("[CreateLecture Error]", error);
     return res.status(500).json({ success: false, message: `Failed to create lecture: ${error.message}` });
@@ -355,20 +346,14 @@ export const removeLecture = async (req, res) => {
     const { lectureId } = req.params;
     const tenantId = req.tenantId;
 
-    const lecture = await Lecture.findOneAndDelete({ _id: lectureId, tenantId });
-    if (!lecture) {
-      return res.status(404).json({ success: false, message: "Lecture not found!" });
-    }
+    const result = await lectureService.deleteLecture({
+      tenantId,
+      userId: req.userId,
+      userRole: req.userRole,
+      lectureId,
+    });
 
-    // Delete associated resources
-    await Resource.deleteMany({ lectureId, tenantId });
-
-    await Course.updateOne(
-      { lectures: lectureId, tenantId },
-      { $pull: { lectures: lectureId } }
-    );
-
-    return res.status(200).json({ success: true, message: "Lecture removed successfully!" });
+    return res.status(200).json({ success: true, message: "Lecture removed successfully!", ...result });
   } catch (error) {
     return res.status(500).json({ success: false, message: `Failed to remove lecture: ${error.message}` });
   }

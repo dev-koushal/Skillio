@@ -33,7 +33,7 @@ courseRouter.post("/editcourse/:courseId", isAuth, requireEducator, upload.singl
 courseRouter.delete("/remove/:courseId", isAuth, requireEducator, removeCourse);
 
 // Lecture Management Endpoints
-courseRouter.post("/createlecture/:courseId", isAuth, requireEducator, createLecture);
+courseRouter.post("/createlecture/:courseId", isAuth, requireEducator, upload.single("video"), createLecture);
 courseRouter.post("/editlecture/:lectureId", isAuth, requireEducator, upload.single("videoUrl"), editLecture);
 courseRouter.delete("/removelecture/:lectureId", isAuth, requireEducator, removeLecture);
 

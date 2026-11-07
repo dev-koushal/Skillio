@@ -16,6 +16,7 @@ import paymentRouter from "./routes/paymentRoute.js";
 import reviewRouter from "./routes/reviewRoute.js";
 import tenantRouter from "./routes/tenantRoute.js";
 import resourceRouter from "./routes/resourceRoute.js";
+import aiRouter from "./routes/aiRoute.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -80,6 +81,7 @@ app.use("/api/course", courseRouter);
 app.use("/api/order", paymentRouter);
 app.use("/api/review", reviewRouter);
 app.use("/api/resource", resourceRouter);
+app.use("/api/ai", aiRouter);
 
 // Centralized Error Handler
 app.use((err, req, res, next) => {

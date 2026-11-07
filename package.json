@@ -9,7 +9,7 @@
     "server": "node server/index.js",
     "client": "cd client && npm run dev",
     "build:client": "cd client && npx vite build",
-    "test": "node server/tests/multiTenantSecurity.test.js && node server/tests/inProcessRoutes.test.js && node server/tests/courseAccessAndResources.test.js",
+    "test": "node server/tests/multiTenantSecurity.test.js && node server/tests/inProcessRoutes.test.js && node server/tests/courseAccessAndResources.test.js && node server/tests/aiAssistant.test.js",
     "migrate:tenants": "node server/scripts/migrateMultiTenant.js"
   },
   "keywords": [
