@@ -68,3 +68,4 @@ resourceSchema.index({ courseId: 1, createdAt: -1 });
 
 const Resource = mongoose.model("Resource", resourceSchema);
 export default Resource;
+

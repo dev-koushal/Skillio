@@ -1,6 +1,17 @@
 import React, { lazy, Suspense } from "react";
 import Navbar from "../components/Navbar";
-import { ArrowRight, PlayCircle, Users, BookOpen, GraduationCap, Sparkles, Building2, FileText, CheckCircle2 } from "lucide-react";
+import {
+  ArrowRight,
+  PlayCircle,
+  Users,
+  BookOpen,
+  GraduationCap,
+  Sparkles,
+  Building2,
+  FileText,
+  CheckCircle2,
+  Award,
+} from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
 import { useTenant } from "../context/TenantContext";
@@ -14,10 +25,29 @@ function Home() {
   const navigate = useNavigate();
   const { tenant } = useTenant();
 
-  const tenantTitle = tenant?.title || "Learn Without Limits";
+  const tenantName = tenant?.name || "Skillio Academy";
+  const tenantTitle =
+    tenant?.title ||
+    (tenant?.slug === "physics"
+      ? "Master Physics from Basics to Advanced"
+      : tenant?.slug === "english"
+      ? "Master English with Practical Fluency"
+      : tenant?.slug === "coding"
+      ? "Master Modern Software Engineering"
+      : `Welcome to ${tenantName}`);
+
   const tenantSubtitle =
     tenant?.subtitle ||
-    "A modern multi-tenant learning platform where educators build comprehensive courses and students master real skills through structured learning.";
+    tenant?.description ||
+    (tenant?.slug === "physics"
+      ? "Structured preparation for competitive exams, school board excellence, and university physics with concept-first lectures and problem sets."
+      : tenant?.slug === "english"
+      ? "Build practical speaking confidence, correct grammar, and ace corporate interviews or IELTS with structured everyday lessons."
+      : tenant?.slug === "coding"
+      ? "Full-stack web development, backend engineering, algorithms, and real-world system design taught by veteran engineers."
+      : "Structured, milestone-driven courses taught by accredited educators with video lectures, downloadable notes, and verified access.");
+
+  const institutionType = tenant?.institutionType || "Online Academy";
 
   const fadeUp = {
     hidden: { opacity: 0, y: 20 },
@@ -45,11 +75,11 @@ function Home() {
   };
 
   return (
-    <div className="w-full bg-[#f8f7f4] min-h-screen text-[#1c1917] flex flex-col">
+    <div className="w-full bg-[#f8f7f4] min-h-screen text-[#1c1917] flex flex-col font-sans">
       <Navbar />
 
-      {/* Hero Section */}
-      <section className="relative w-full bg-gradient-to-b from-white via-[#faf9f6] to-[#f8f7f4] border-b border-[#e8e5dc] py-16 sm:py-24 overflow-hidden">
+      {/* Tenant-Specific Hero Section */}
+      <section className="relative w-full bg-gradient-to-b from-white via-[#fcfbf9] to-[#f8f7f4] border-b border-[#e8e5dc] py-16 sm:py-24 overflow-hidden">
         <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 items-center">
             {/* Left Content */}
@@ -62,10 +92,10 @@ function Home() {
               <motion.div
                 custom={1}
                 variants={fadeUp}
-                className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-[#f2efe9] border border-[#e8e5dc] text-[#451a03] text-xs font-bold"
+                className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-[#eff6ff] border border-[#bfdbfe] text-[#1e3a8a] text-xs font-semibold"
               >
-                <Sparkles size={14} className="text-[#b45309]" />
-                <span>Modern Academic SaaS Platform</span>
+                <Sparkles size={14} className="text-[#1e3a8a]" />
+                <span>{institutionType} • {tenantName}</span>
               </motion.div>
 
               <motion.h1
@@ -92,14 +122,14 @@ function Home() {
               >
                 <button
                   onClick={() => navigate("/allcourses")}
-                  className="inline-flex items-center justify-center gap-2 bg-[#1e3a8a] hover:bg-[#172554] text-white font-bold text-sm sm:text-base px-7 py-3.5 rounded-xl shadow-md transition-all active:scale-95 cursor-pointer min-h-[44px]"
+                  className="inline-flex items-center justify-center gap-2 bg-[#1e3a8a] hover:bg-[#172554] text-white font-semibold text-sm sm:text-base px-7 py-3.5 rounded-xl shadow-xs transition-all active:scale-95 cursor-pointer min-h-[46px]"
                 >
                   Explore Courses <ArrowRight size={18} />
                 </button>
 
                 <button
                   onClick={() => navigate("/institutions")}
-                  className="inline-flex items-center justify-center gap-2 border border-[#d6d3c9] bg-white hover:bg-[#f2efe9] text-[#1c1917] font-bold text-sm sm:text-base px-6 py-3.5 rounded-xl shadow-xs transition-all active:scale-95 cursor-pointer min-h-[44px]"
+                  className="inline-flex items-center justify-center gap-2 border border-[#d6d3d1] bg-white hover:bg-[#f1ede4] text-[#1c1917] font-semibold text-sm sm:text-base px-6 py-3.5 rounded-xl shadow-xs transition-all active:scale-95 cursor-pointer min-h-[46px]"
                 >
                   <Building2 size={18} className="text-[#1e3a8a]" />
                   Find Your Institution
@@ -114,20 +144,20 @@ function Home() {
               >
                 <div className="flex items-center gap-2 font-medium">
                   <CheckCircle2 size={16} className="text-emerald-700" />
-                  <span>Enforced Course Access</span>
+                  <span>Verified Course Curriculum</span>
                 </div>
                 <div className="flex items-center gap-2 font-medium">
                   <CheckCircle2 size={16} className="text-emerald-700" />
-                  <span>Lecture Notes & PDFs</span>
+                  <span>Downloadable Notes & PDFs</span>
                 </div>
                 <div className="flex items-center gap-2 font-medium">
                   <CheckCircle2 size={16} className="text-emerald-700" />
-                  <span>Multi-Tenant Isolation</span>
+                  <span>Lifetime Learning Access</span>
                 </div>
               </motion.div>
             </motion.div>
 
-            {/* Right Feature Highlights */}
+            {/* Right Academy Pillars */}
             <div className="lg:col-span-5 grid grid-cols-1 sm:grid-cols-2 gap-4">
               <motion.div
                 variants={cardVariant}
@@ -143,7 +173,7 @@ function Home() {
                   Curated Curriculum
                 </h3>
                 <p className="text-xs text-[#78716c] mt-1.5 leading-relaxed">
-                  Sequenced video lectures with free previews and lifetime access upon enrollment.
+                  Sequenced video lectures with free previews and structured chapters.
                 </p>
               </motion.div>
 
@@ -154,14 +184,14 @@ function Home() {
                 custom={2}
                 className="bg-white border border-[#e8e5dc] p-5 sm:p-6 rounded-2xl shadow-xs hover:border-[#1e3a8a]/40 transition"
               >
-                <div className="w-10 h-10 rounded-xl bg-amber-50 text-[#b45309] flex items-center justify-center mb-3">
+                <div className="w-10 h-10 rounded-xl bg-amber-50 text-amber-700 flex items-center justify-center mb-3">
                   <FileText size={20} />
                 </div>
                 <h3 className="font-bold text-sm sm:text-base text-[#1c1917]">
                   Notes & Resources
                 </h3>
                 <p className="text-xs text-[#78716c] mt-1.5 leading-relaxed">
-                  Download lecture notes, formula sheets, problem sets, and supplementary materials.
+                  Download lecture notes, formula sheets, problem sets, and practice materials.
                 </p>
               </motion.div>
 
@@ -176,10 +206,10 @@ function Home() {
                   <GraduationCap size={20} />
                 </div>
                 <h3 className="font-bold text-sm sm:text-base text-[#1c1917]">
-                  Verified Instructors
+                  Direct Instruction
                 </h3>
                 <p className="text-xs text-[#78716c] mt-1.5 leading-relaxed">
-                  Learn from accredited teachers, university professors, and industry practitioners.
+                  Learn directly from specialized educators dedicated to your learning progress.
                 </p>
               </motion.div>
 
@@ -191,13 +221,13 @@ function Home() {
                 className="bg-white border border-[#e8e5dc] p-5 sm:p-6 rounded-2xl shadow-xs hover:border-[#1e3a8a]/40 transition"
               >
                 <div className="w-10 h-10 rounded-xl bg-emerald-50 text-emerald-700 flex items-center justify-center mb-3">
-                  <Building2 size={20} />
+                  <Award size={20} />
                 </div>
                 <h3 className="font-bold text-sm sm:text-base text-[#1c1917]">
-                  Multi-Institution
+                  Dedicated Academy
                 </h3>
                 <p className="text-xs text-[#78716c] mt-1.5 leading-relaxed">
-                  Explore specialized coaching centers and academies across multiple academic domains.
+                  Your independent learning home with personalized courses and notes.
                 </p>
               </motion.div>
             </div>
@@ -205,13 +235,13 @@ function Home() {
         </div>
       </section>
 
-      {/* Featured Courses Grid */}
+      {/* Featured Courses for this Organization */}
       <CardPage />
 
-      {/* Course Domains Section */}
+      {/* Organization Curriculum Tracks or Educational Values */}
       <ExploreCourses />
 
-      {/* About & Architecture Section */}
+      {/* About & Organization Pedagogy Section */}
       <Suspense fallback={<div className="h-40 bg-[#f8f7f4]" />}>
         <About />
       </Suspense>

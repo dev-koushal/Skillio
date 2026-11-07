@@ -35,6 +35,19 @@ export const ensureDefaultTenants = async () => {
     // 2. Ensure Test / Demo Tenants for local & subdomain testing
     const seedTenants = [
       {
+        name: "English Academy",
+        slug: "english",
+        title: "Master English with Practical Confidence",
+        subtitle: "Build fluent speaking skills, correct grammar, and ace IELTS or corporate interviews.",
+        primaryColor: "#0f766e",
+        secondaryColor: "#042f2e",
+        organizationName: "English Academy",
+        institutionType: "Language Institute",
+        description: "Specialized language training for spoken fluency, IELTS band 8+, corporate communication, and vocabulary.",
+        domainTags: ["English", "IELTS", "Communication"],
+        status: "active",
+      },
+      {
         name: "Physics Academy",
         slug: "physics",
         title: "Master Physics from Basics to Advanced",

@@ -19,7 +19,7 @@ function CreateLecture() {
   const [isPreviewFree, setIsPreviewFree] = useState(false);
 
   // Optional attached resource
-  const [resourceTitle, setResourceTitle] = useState("");
+  const [resourceTitle, setResourceTitle] = useState(`${lectureTitle} Notes`);
   const [resourceFile, setResourceFile] = useState(null);
 
   const { lectureData } = useSelector((state) => state.lecture);
@@ -153,6 +153,7 @@ function CreateLecture() {
                 <input
                   type="text"
                   value={resourceTitle}
+
                   onChange={(e) => setResourceTitle(e.target.value)}
                   placeholder="Notes title (e.g. Chapter 1 Summary PDF)"
                   className="w-full bg-white border border-[#d6d3c9] rounded-xl px-3 py-2 text-xs text-[#1c1917] focus:outline-none focus:ring-2 focus:ring-[#1e3a8a]"

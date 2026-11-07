@@ -12,6 +12,11 @@ import {
   BookOpen,
   Sparkles,
   CheckCircle,
+  CreditCard,
+  Settings,
+  Layers,
+  Save,
+  ExternalLink,
 } from "lucide-react";
 import { useNavigate, useParams } from "react-router-dom";
 import api from "../../services/api";
@@ -22,19 +27,17 @@ import Button from "../../components/common/Button";
 import Navbar from "../../components/Navbar";
 import Footer from "../../components/Footer";
 
-const CATEGORIES = [
-  "Development",
-  "Physics",
-  "Cyber Security",
-  "Business",
-  "AI/ML",
-  "Data Science",
-  "UI/UX Design",
-  "Cloud & DevOps",
-  "Engineering",
-];
-
 const LEVELS = ["Beginner", "Intermediate", "Advanced"];
+const SUGGESTED_TOPICS = [
+  "General",
+  "Spoken English",
+  "Grammar",
+  "Physics",
+  "Mathematics",
+  "Programming",
+  "Exam Preparation",
+  "Business & Career",
+];
 
 function EditCourse() {
   const navigate = useNavigate();
@@ -42,8 +45,8 @@ function EditCourse() {
   const dispatch = useDispatch();
   const { courseData } = useSelector((state) => state.course);
 
-  // Active Tab: "overview" | "resources"
-  const [activeTab, setActiveTab] = useState("overview");
+  // Workflow steps: "info" | "curriculum" | "resources" | "pricing" | "publish"
+  const [activeTab, setActiveTab] = useState("info");
 
   // Course Fields
   const [title, setTitle] = useState("");
@@ -124,17 +127,22 @@ function EditCourse() {
     }
   };
 
-  const handleEditCourse = async (e) => {
-    e?.preventDefault();
+  const handleSaveCourse = async (e, shouldNotify = true) => {
+    if (e) e.preventDefault();
+    if (!title.trim()) {
+      toast.error("Course title is required");
+      return;
+    }
+
     setLoading(true);
 
     const formData = new FormData();
-    formData.append("title", title);
-    formData.append("subTitle", subTitle);
-    formData.append("description", description);
-    formData.append("category", category);
+    formData.append("title", title.trim());
+    formData.append("subTitle", subTitle.trim());
+    formData.append("description", description.trim());
+    formData.append("category", category.trim() || "General");
     formData.append("level", level);
-    formData.append("price", price);
+    formData.append("price", Number(price) || 0);
     formData.append("isPublished", isPublished);
 
     if (backendImage) {
@@ -156,13 +164,43 @@ function EditCourse() {
         dispatch(setCourseData(updatedList));
       }
 
-      toast.success("Course updated successfully!");
-      navigate("/courses");
+      if (shouldNotify) {
+        toast.success("Changes saved successfully!");
+      }
     } catch (error) {
       console.error("[EditCourse Save Error]", error);
       toast.error(error.response?.data?.message || "Failed to update course");
     } finally {
       setLoading(false);
+    }
+  };
+
+  // Toggle publish state and save immediately
+  const togglePublishState = async () => {
+    const nextState = !isPublished;
+    setIsPublished(nextState);
+
+    const formData = new FormData();
+    formData.append("title", title.trim());
+    formData.append("subTitle", subTitle.trim());
+    formData.append("description", description.trim());
+    formData.append("category", category.trim() || "General");
+    formData.append("level", level);
+    formData.append("price", Number(price) || 0);
+    formData.append("isPublished", nextState);
+
+    try {
+      await api.post(`/api/course/editcourse/${courseId}`, formData, {
+        headers: { "Content-Type": "multipart/form-data" },
+      });
+      toast.success(
+        nextState
+          ? "Course published! It is now visible to students in your academy."
+          : "Course moved to Draft. It is now hidden from public students."
+      );
+    } catch (err) {
+      toast.error("Failed to update publication status");
+      setIsPublished(!nextState); // rollback
     }
   };
 
@@ -194,7 +232,7 @@ function EditCourse() {
         headers: { "Content-Type": "multipart/form-data" },
       });
       if (res.data?.success) {
-        toast.success("Resource uploaded successfully!");
+        toast.success("Resource attached successfully!");
         setResourceTitle("");
         setResourceTopic("General");
         setResourceFile(null);
@@ -222,8 +260,13 @@ function EditCourse() {
     }
   };
 
+  // Delete Course Permanently
   const handleRemoveCourse = async () => {
-    if (!window.confirm("Are you sure you want to permanently delete this course, all its lectures, and all attached notes?")) {
+    if (
+      !window.confirm(
+        "Are you sure you want to permanently delete this course, its lectures, and all attached study resources? This cannot be undone."
+      )
+    ) {
       return;
     }
 
@@ -244,222 +287,233 @@ function EditCourse() {
   };
 
   return (
-    <div className="min-h-screen bg-[#f8f7f4] text-[#1c1917] flex flex-col">
+    <div className="min-h-screen bg-[#f8f7f4] text-[#1c1917] flex flex-col font-sans">
       <Navbar />
 
       <main className="max-w-5xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-12 space-y-6 flex-1">
-        {/* Top Header */}
+        {/* Top Header & Sticky Action Bar */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-[#e8e5dc]">
           <div className="flex items-center gap-3">
             <button
               onClick={() => navigate("/courses")}
-              className="p-1.5 rounded-lg text-[#78716c] hover:text-[#1c1917] hover:bg-[#f2efe9] transition cursor-pointer"
+              className="p-2 rounded-xl text-[#78716c] hover:text-[#1c1917] hover:bg-[#f1ede4] transition cursor-pointer"
+              aria-label="Back to courses"
             >
               <ArrowLeft size={18} />
             </button>
             <div>
-              <h1 className="text-xl sm:text-2xl font-extrabold text-[#1c1917] tracking-tight">
-                Course Studio & Asset Manager
-              </h1>
-              <p className="text-xs text-[#78716c]">
-                Configure curriculum, lecture videos, notes, and resources
+              <div className="flex items-center gap-2">
+                <h1 className="text-xl sm:text-2xl font-bold text-[#1c1917] tracking-tight truncate max-w-md">
+                  {title || "Course Studio"}
+                </h1>
+                <span
+                  className={`text-[11px] font-semibold px-2.5 py-0.5 rounded-full border ${
+                    isPublished
+                      ? "bg-emerald-50 text-emerald-700 border-emerald-200"
+                      : "bg-amber-50 text-amber-700 border-amber-200"
+                  }`}
+                >
+                  {isPublished ? "Published" : "Draft"}
+                </span>
+              </div>
+              <p className="text-xs text-[#78716c] mt-0.5">
+                {courseLectures.length} {courseLectures.length === 1 ? "lecture" : "lectures"} •{" "}
+                {resources.length} {resources.length === 1 ? "resource" : "resources"} attached
               </p>
             </div>
           </div>
 
           <div className="flex items-center gap-2">
             <button
-              onClick={() => navigate(`/createlecture/${courseId}`)}
-              className="inline-flex items-center gap-1.5 bg-[#1e3a8a] hover:bg-[#172554] text-white text-xs sm:text-sm font-bold px-4 py-2 rounded-xl transition cursor-pointer shadow-xs"
+              type="button"
+              onClick={() => navigate(`/viewcourse/${courseId}`)}
+              className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl border border-[#d6d3d1] bg-white hover:bg-[#f1ede4] text-xs font-semibold text-[#44403c] transition cursor-pointer"
             >
-              <Video size={16} />
-              Manage Lectures ({courseLectures.length})
+              <ExternalLink size={14} /> Preview
             </button>
-            <button
-              onClick={handleRemoveCourse}
-              disabled={deleteLoading}
-              className="inline-flex items-center gap-1.5 bg-red-50 hover:bg-red-100 text-red-700 border border-red-200 text-xs sm:text-sm font-bold px-3.5 py-2 rounded-xl transition cursor-pointer"
+
+            <Button
+              type="button"
+              variant="primary"
+              size="sm"
+              loading={loading}
+              onClick={(e) => handleSaveCourse(e, true)}
+              className="!bg-[#1e3a8a] hover:!bg-[#172554] text-white font-semibold px-4 py-2 rounded-xl shadow-xs"
             >
-              <Trash2 size={15} />
-              Delete Course
-            </button>
+              <Save size={14} /> Save Changes
+            </Button>
           </div>
         </div>
 
-        {/* Tab Selector */}
-        <div className="flex items-center gap-2 border-b border-[#e8e5dc]">
+        {/* 5-Step Progressive Studio Workflow Navigation */}
+        <div className="flex items-center gap-1 border-b border-[#e8e5dc] overflow-x-auto pb-1">
           <button
-            onClick={() => setActiveTab("overview")}
-            className={`px-4 py-2.5 text-xs sm:text-sm font-bold border-b-2 transition cursor-pointer ${
-              activeTab === "overview"
+            onClick={() => setActiveTab("info")}
+            className={`px-4 py-3 text-xs sm:text-sm font-semibold border-b-2 whitespace-nowrap transition cursor-pointer flex items-center gap-2 ${
+              activeTab === "info"
                 ? "border-[#1e3a8a] text-[#1e3a8a]"
                 : "border-transparent text-[#78716c] hover:text-[#1c1917]"
             }`}
           >
-            Course Overview & Settings
+            <BookOpen size={15} />
+            <span>1. Course Information</span>
           </button>
+
+          <button
+            onClick={() => setActiveTab("curriculum")}
+            className={`px-4 py-3 text-xs sm:text-sm font-semibold border-b-2 whitespace-nowrap transition cursor-pointer flex items-center gap-2 ${
+              activeTab === "curriculum"
+                ? "border-[#1e3a8a] text-[#1e3a8a]"
+                : "border-transparent text-[#78716c] hover:text-[#1c1917]"
+            }`}
+          >
+            <Video size={15} />
+            <span>2. Lectures ({courseLectures.length})</span>
+          </button>
+
           <button
             onClick={() => setActiveTab("resources")}
-            className={`inline-flex items-center gap-2 px-4 py-2.5 text-xs sm:text-sm font-bold border-b-2 transition cursor-pointer ${
+            className={`px-4 py-3 text-xs sm:text-sm font-semibold border-b-2 whitespace-nowrap transition cursor-pointer flex items-center gap-2 ${
               activeTab === "resources"
                 ? "border-[#1e3a8a] text-[#1e3a8a]"
                 : "border-transparent text-[#78716c] hover:text-[#1c1917]"
             }`}
           >
             <FileText size={15} />
-            Notes & Resources ({resources.length})
+            <span>3. Notes & Resources ({resources.length})</span>
+          </button>
+
+          <button
+            onClick={() => setActiveTab("pricing")}
+            className={`px-4 py-3 text-xs sm:text-sm font-semibold border-b-2 whitespace-nowrap transition cursor-pointer flex items-center gap-2 ${
+              activeTab === "pricing"
+                ? "border-[#1e3a8a] text-[#1e3a8a]"
+                : "border-transparent text-[#78716c] hover:text-[#1c1917]"
+            }`}
+          >
+            <CreditCard size={15} />
+            <span>4. Pricing & Access</span>
+          </button>
+
+          <button
+            onClick={() => setActiveTab("publish")}
+            className={`px-4 py-3 text-xs sm:text-sm font-semibold border-b-2 whitespace-nowrap transition cursor-pointer flex items-center gap-2 ${
+              activeTab === "publish"
+                ? "border-[#1e3a8a] text-[#1e3a8a]"
+                : "border-transparent text-[#78716c] hover:text-[#1c1917]"
+            }`}
+          >
+            <Eye size={15} />
+            <span>5. Visibility & Publish</span>
           </button>
         </div>
 
-        {/* TAB 1: OVERVIEW & SETTINGS */}
-        {activeTab === "overview" && (
-          <div className="space-y-6">
-            {/* Publication Status Banner */}
-            <div className="p-4 rounded-2xl bg-white border border-[#e8e5dc] flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-xs">
-              <div>
-                <span className="text-xs font-bold uppercase tracking-wider text-[#78716c]">
-                  Catalog Visibility:{" "}
-                </span>
-                <span
-                  className={`font-bold text-xs ml-1 ${
-                    isPublished ? "text-emerald-700 bg-emerald-50 px-2.5 py-0.5 rounded border border-emerald-200" : "text-amber-800 bg-amber-50 px-2.5 py-0.5 rounded border border-amber-200"
-                  }`}
-                >
-                  {isPublished ? "Published (Live)" : "Draft (Hidden from Catalog)"}
-                </span>
-              </div>
-
-              <button
-                type="button"
-                onClick={() => setIsPublished(!isPublished)}
-                className={`inline-flex items-center gap-1.5 text-xs font-bold px-4 py-2 rounded-xl transition cursor-pointer ${
-                  isPublished
-                    ? "bg-amber-50 border border-amber-300 text-amber-800 hover:bg-amber-100"
-                    : "bg-emerald-50 border border-emerald-300 text-emerald-800 hover:bg-emerald-100"
-                }`}
-              >
-                {isPublished ? (
-                  <>
-                    <EyeOff size={14} /> Unpublish to Draft
-                  </>
-                ) : (
-                  <>
-                    <Eye size={14} /> Publish Course Live
-                  </>
-                )}
-              </button>
+        {/* STEP 1: COURSE INFORMATION */}
+        {activeTab === "info" && (
+          <div className="bg-white border border-[#e8e5dc] rounded-2xl p-6 sm:p-8 space-y-6 shadow-sm">
+            <div>
+              <h2 className="text-base font-bold text-[#1c1917]">Course Fundamentals</h2>
+              <p className="text-xs text-[#78716c] mt-0.5">
+                Set title, subject, headline, and course thumbnail
+              </p>
             </div>
 
-            {/* Course Form */}
-            <form onSubmit={handleEditCourse} className="space-y-6">
-              <div className="bg-white border border-[#e8e5dc] rounded-3xl p-6 sm:p-8 space-y-4 shadow-xs">
-                <h2 className="text-xs font-bold uppercase tracking-wider text-[#1e3a8a]">
-                  Basic Information
-                </h2>
+            <div className="space-y-4">
+              {/* Title */}
+              <div>
+                <label className="block text-xs font-semibold uppercase tracking-wider text-[#44403c] mb-1.5">
+                  Course Title <span className="text-rose-600">*</span>
+                </label>
+                <input
+                  type="text"
+                  required
+                  value={title}
+                  onChange={(e) => setTitle(e.target.value)}
+                  placeholder="e.g. Master Practical Spoken English"
+                  className="w-full bg-[#fcfbf9] border border-[#d6d3d1] rounded-xl px-4 py-2.5 text-[#1c1917] text-sm focus:outline-none focus:border-[#1e3a8a] focus:ring-1 focus:ring-[#1e3a8a] min-h-[44px]"
+                />
+              </div>
 
-                {/* Title */}
-                <div className="space-y-1">
-                  <label className="block text-xs font-bold uppercase tracking-wider text-[#44403c]">
-                    Course Title *
+              {/* Subtitle */}
+              <div>
+                <label className="block text-xs font-semibold uppercase tracking-wider text-[#44403c] mb-1.5">
+                  Headline / Brief Subtitle
+                </label>
+                <input
+                  type="text"
+                  value={subTitle}
+                  onChange={(e) => setSubTitle(e.target.value)}
+                  placeholder="e.g. Real-world speaking drills, vocabulary, and grammar confidence"
+                  className="w-full bg-[#fcfbf9] border border-[#d6d3d1] rounded-xl px-4 py-2.5 text-[#1c1917] text-sm focus:outline-none focus:border-[#1e3a8a] focus:ring-1 focus:ring-[#1e3a8a] min-h-[44px]"
+                />
+              </div>
+
+              {/* Subject / Topic + Difficulty Level */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-xs font-semibold uppercase tracking-wider text-[#44403c] mb-1.5">
+                    Subject or Topic
                   </label>
                   <input
                     type="text"
-                    required
-                    value={title}
-                    onChange={(e) => setTitle(e.target.value)}
-                    placeholder="e.g. Modern Full-Stack System Design"
-                    className="w-full bg-[#faf9f6] border border-[#d6d3c9] rounded-xl px-4 py-2.5 text-[#1c1917] text-sm focus:outline-none focus:ring-2 focus:ring-[#1e3a8a] focus:bg-white"
+                    value={category}
+                    onChange={(e) => setCategory(e.target.value)}
+                    placeholder="e.g. Spoken English, Mechanics, React..."
+                    className="w-full bg-[#fcfbf9] border border-[#d6d3d1] rounded-xl px-4 py-2.5 text-[#1c1917] text-sm focus:outline-none focus:border-[#1e3a8a] focus:ring-1 focus:ring-[#1e3a8a] min-h-[44px]"
                   />
+                  <div className="flex flex-wrap gap-1 mt-2">
+                    {SUGGESTED_TOPICS.slice(0, 5).map((t) => (
+                      <button
+                        key={t}
+                        type="button"
+                        onClick={() => setCategory(t)}
+                        className="text-[10px] px-2 py-0.5 rounded bg-[#f8f7f4] border border-[#e8e5dc] text-[#57534e] hover:bg-[#f1ede4] cursor-pointer"
+                      >
+                        {t}
+                      </button>
+                    ))}
+                  </div>
                 </div>
 
-                {/* Subtitle */}
-                <div className="space-y-1">
-                  <label className="block text-xs font-bold uppercase tracking-wider text-[#44403c]">
-                    Short Subtitle
+                <div>
+                  <label className="block text-xs font-semibold uppercase tracking-wider text-[#44403c] mb-1.5">
+                    Difficulty Level
                   </label>
-                  <input
-                    type="text"
-                    value={subTitle}
-                    onChange={(e) => setSubTitle(e.target.value)}
-                    placeholder="Brief summary displayed under the title"
-                    className="w-full bg-[#faf9f6] border border-[#d6d3c9] rounded-xl px-4 py-2.5 text-[#1c1917] text-sm focus:outline-none focus:ring-2 focus:ring-[#1e3a8a] focus:bg-white"
-                  />
-                </div>
-
-                {/* Description */}
-                <div className="space-y-1">
-                  <label className="block text-xs font-bold uppercase tracking-wider text-[#44403c]">
-                    Detailed Description
-                  </label>
-                  <textarea
-                    rows={4}
-                    value={description}
-                    onChange={(e) => setDescription(e.target.value)}
-                    placeholder="Describe what students will learn, prerequisites, and milestone outcomes..."
-                    className="w-full bg-[#faf9f6] border border-[#d6d3c9] rounded-xl p-3 text-[#1c1917] text-sm focus:outline-none focus:ring-2 focus:ring-[#1e3a8a] focus:bg-white"
-                  />
-                </div>
-
-                {/* Category / Level / Price Grid */}
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 pt-2">
-                  <div className="space-y-1">
-                    <label className="block text-xs font-bold uppercase tracking-wider text-[#44403c]">
-                      Category
-                    </label>
-                    <select
-                      value={category}
-                      onChange={(e) => setCategory(e.target.value)}
-                      className="w-full bg-[#faf9f6] border border-[#d6d3c9] rounded-xl px-3 py-2.5 text-[#1c1917] text-sm focus:outline-none focus:ring-2 focus:ring-[#1e3a8a] focus:bg-white"
-                    >
-                      <option value="">Select Category</option>
-                      {CATEGORIES.map((c) => (
-                        <option key={c} value={c}>
-                          {c}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-
-                  <div className="space-y-1">
-                    <label className="block text-xs font-bold uppercase tracking-wider text-[#44403c]">
-                      Difficulty Level
-                    </label>
-                    <select
-                      value={level}
-                      onChange={(e) => setLevel(e.target.value)}
-                      className="w-full bg-[#faf9f6] border border-[#d6d3c9] rounded-xl px-3 py-2.5 text-[#1c1917] text-sm focus:outline-none focus:ring-2 focus:ring-[#1e3a8a] focus:bg-white"
-                    >
-                      {LEVELS.map((lvl) => (
-                        <option key={lvl} value={lvl}>
-                          {lvl}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-
-                  <div className="space-y-1">
-                    <label className="block text-xs font-bold uppercase tracking-wider text-[#44403c]">
-                      Price (INR ₹ - 0 for Free)
-                    </label>
-                    <input
-                      type="number"
-                      min="0"
-                      value={price}
-                      onChange={(e) => setPrice(e.target.value)}
-                      className="w-full bg-[#faf9f6] border border-[#d6d3c9] rounded-xl px-4 py-2.5 text-[#1c1917] text-sm focus:outline-none focus:ring-2 focus:ring-[#1e3a8a] focus:bg-white"
-                    />
-                  </div>
+                  <select
+                    value={level}
+                    onChange={(e) => setLevel(e.target.value)}
+                    className="w-full bg-[#fcfbf9] border border-[#d6d3d1] rounded-xl px-3 py-2.5 text-[#1c1917] text-sm focus:outline-none focus:border-[#1e3a8a] focus:ring-1 focus:ring-[#1e3a8a] min-h-[44px]"
+                  >
+                    {LEVELS.map((lvl) => (
+                      <option key={lvl} value={lvl}>
+                        {lvl}
+                      </option>
+                    ))}
+                  </select>
                 </div>
               </div>
 
-              {/* Thumbnail Media Asset */}
-              <div className="bg-white border border-[#e8e5dc] rounded-3xl p-6 sm:p-8 space-y-4 shadow-xs">
-                <h2 className="text-xs font-bold uppercase tracking-wider text-[#1e3a8a]">
-                  Course Thumbnail
-                </h2>
+              {/* Description */}
+              <div>
+                <label className="block text-xs font-semibold uppercase tracking-wider text-[#44403c] mb-1.5">
+                  Detailed Course Description
+                </label>
+                <textarea
+                  rows={4}
+                  value={description}
+                  onChange={(e) => setDescription(e.target.value)}
+                  placeholder="Detail the course curriculum, learning outcomes, required background, and target students..."
+                  className="w-full bg-[#fcfbf9] border border-[#d6d3d1] rounded-xl p-3 text-[#1c1917] text-sm focus:outline-none focus:border-[#1e3a8a] focus:ring-1 focus:ring-[#1e3a8a]"
+                />
+              </div>
 
-                <div className="flex flex-col sm:flex-row items-center gap-6">
-                  <div className="w-full sm:w-64 aspect-video rounded-2xl bg-[#faf9f6] border border-[#d6d3c9] overflow-hidden flex items-center justify-center">
+              {/* Thumbnail */}
+              <div className="pt-2">
+                <label className="block text-xs font-semibold uppercase tracking-wider text-[#44403c] mb-2">
+                  Course Thumbnail Image
+                </label>
+                <div className="flex flex-col sm:flex-row items-center gap-5">
+                  <div className="w-full sm:w-60 aspect-video rounded-xl bg-[#f8f7f4] border border-[#d6d3d1] overflow-hidden flex items-center justify-center">
                     {frontendImage ? (
                       <img
                         src={frontendImage}
@@ -467,16 +521,16 @@ function EditCourse() {
                         className="w-full h-full object-cover"
                       />
                     ) : (
-                      <span className="text-xs text-[#78716c]">No image selected</span>
+                      <span className="text-xs text-[#a8a29e]">No image chosen</span>
                     )}
                   </div>
 
-                  <div className="space-y-2 flex-1">
+                  <div className="space-y-1.5 flex-1">
                     <label
                       htmlFor="thumbnail-upload"
-                      className="inline-flex items-center gap-2 bg-[#f2efe9] hover:bg-[#ebe7df] text-[#1c1917] text-xs sm:text-sm font-bold px-4 py-2.5 rounded-xl border border-[#d6d3c9] transition cursor-pointer"
+                      className="inline-flex items-center gap-2 bg-[#faf8f5] hover:bg-[#f1ede4] text-[#1c1917] text-xs sm:text-sm font-semibold px-4 py-2.5 rounded-xl border border-[#d6d3d1] transition cursor-pointer"
                     >
-                      <UploadCloud size={16} /> Choose Image File
+                      <UploadCloud size={16} /> Choose Image
                     </label>
                     <input
                       id="thumbnail-upload"
@@ -491,107 +545,200 @@ function EditCourse() {
                   </div>
                 </div>
               </div>
+            </div>
 
-              {/* Submit Actions */}
-              <div className="flex justify-end gap-3 pt-2">
-                <button
-                  type="button"
-                  onClick={() => navigate("/courses")}
-                  className="bg-white hover:bg-[#f2efe9] text-[#57534e] text-xs sm:text-sm font-bold px-5 py-2.5 rounded-xl border border-[#d6d3c9] transition cursor-pointer"
-                >
-                  Cancel
-                </button>
-                <Button
-                  type="submit"
-                  variant="primary"
-                  size="md"
-                  loading={loading}
-                  className="px-6 bg-[#1e3a8a] hover:bg-[#172554] text-white font-bold rounded-xl shadow-xs"
-                >
-                  Save Course Changes
-                </Button>
-              </div>
-            </form>
+            <div className="pt-4 border-t border-[#e8e5dc] flex items-center justify-between">
+              <span className="text-xs text-[#78716c]">Step 1 of 5</span>
+              <Button
+                type="button"
+                variant="primary"
+                size="md"
+                onClick={() => {
+                  handleSaveCourse(null, false);
+                  setActiveTab("curriculum");
+                }}
+                className="!bg-[#1e3a8a] hover:!bg-[#172554] text-white font-semibold px-5 py-2.5 rounded-xl"
+              >
+                Save & Continue to Lectures →
+              </Button>
+            </div>
           </div>
         )}
 
-        {/* TAB 2: NOTES & RESOURCES MANAGEMENT */}
+        {/* STEP 2: CURRICULUM & LECTURES */}
+        {activeTab === "curriculum" && (
+          <div className="bg-white border border-[#e8e5dc] rounded-2xl p-6 sm:p-8 space-y-6 shadow-sm">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-4 border-b border-[#e8e5dc]">
+              <div>
+                <h2 className="text-base font-bold text-[#1c1917]">Course Lectures & Video Lessons</h2>
+                <p className="text-xs text-[#78716c] mt-0.5">
+                  Organize video lessons. Mark introductory lessons as free preview for prospective students.
+                </p>
+              </div>
+
+              <button
+                type="button"
+                onClick={() => navigate(`/createlecture/${courseId}`)}
+                className="inline-flex items-center gap-1.5 bg-[#1e3a8a] hover:bg-[#172554] text-white text-xs sm:text-sm font-semibold px-4 py-2.5 rounded-xl transition shadow-xs cursor-pointer"
+              >
+                <Plus size={16} /> Add New Lecture
+              </button>
+            </div>
+
+            {courseLectures.length === 0 ? (
+              <div className="text-center py-12 px-6 bg-[#faf8f5] rounded-xl border border-[#e8e5dc] space-y-3">
+                <Video size={36} className="mx-auto text-[#a8a29e]" />
+                <h3 className="text-sm font-bold text-[#1c1917]">No lectures uploaded yet</h3>
+                <p className="text-xs text-[#78716c] max-w-sm mx-auto">
+                  Add your first video lecture to start building the curriculum for your students.
+                </p>
+                <button
+                  type="button"
+                  onClick={() => navigate(`/createlecture/${courseId}`)}
+                  className="bg-[#1e3a8a] hover:bg-[#172554] text-white text-xs font-semibold px-4 py-2 rounded-xl transition cursor-pointer"
+                >
+                  Upload Lecture 1
+                </button>
+              </div>
+            ) : (
+              <div className="divide-y divide-[#f1ede4]">
+                {courseLectures.map((lec, idx) => (
+                  <div
+                    key={lec._id}
+                    className="py-3.5 flex flex-col sm:flex-row sm:items-center justify-between gap-3"
+                  >
+                    <div className="space-y-1">
+                      <div className="flex items-center gap-2">
+                        <span className="w-6 h-6 rounded-md bg-[#eff6ff] text-[#1e3a8a] text-xs font-bold flex items-center justify-center shrink-0">
+                          {idx + 1}
+                        </span>
+                        <h4 className="text-xs sm:text-sm font-semibold text-[#1c1917]">
+                          {lec.lectureTitle}
+                        </h4>
+                      </div>
+                      <div className="flex items-center gap-3 text-[11px] text-[#78716c] pl-8">
+                        {lec.isPreviewFree ? (
+                          <span className="text-emerald-700 font-semibold bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200">
+                            Free Preview Available
+                          </span>
+                        ) : (
+                          <span className="text-[#78716c]">Locked (Enrollment Required)</span>
+                        )}
+                      </div>
+                    </div>
+
+                    <div className="flex items-center gap-2 self-end sm:self-auto pl-8 sm:pl-0">
+                      <button
+                        type="button"
+                        onClick={() => navigate(`/editlecture/${courseId}/${lec._id}`)}
+                        className="text-xs font-semibold px-3 py-1.5 rounded-lg border border-[#d6d3d1] hover:bg-[#f1ede4] text-[#44403c] transition cursor-pointer"
+                      >
+                        Edit Video
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            <div className="pt-4 border-t border-[#e8e5dc] flex items-center justify-between">
+              <button
+                type="button"
+                onClick={() => setActiveTab("info")}
+                className="text-xs text-[#78716c] hover:text-[#1c1917] font-semibold"
+              >
+                ← Back to Information
+              </button>
+              <Button
+                type="button"
+                variant="primary"
+                size="md"
+                onClick={() => setActiveTab("resources")}
+                className="!bg-[#1e3a8a] hover:!bg-[#172554] text-white font-semibold px-5 py-2.5 rounded-xl"
+              >
+                Continue to Notes & Resources →
+              </Button>
+            </div>
+          </div>
+        )}
+
+        {/* STEP 3: NOTES & RESOURCES */}
         {activeTab === "resources" && (
           <div className="space-y-6">
             {/* Upload New Resource Form */}
-            <div className="bg-white border border-[#e8e5dc] rounded-3xl p-6 sm:p-8 space-y-4 shadow-xs">
-              <div className="space-y-1 pb-3 border-b border-[#f2efe9]">
+            <div className="bg-white border border-[#e8e5dc] rounded-2xl p-6 sm:p-8 space-y-4 shadow-sm">
+              <div className="pb-3 border-b border-[#e8e5dc]">
                 <h2 className="text-base font-bold text-[#1c1917] flex items-center gap-2">
                   <UploadCloud size={18} className="text-[#1e3a8a]" />
-                  Upload Course or Lecture Resource
+                  Upload Course Notes, Formula Sheets or Practice Files
                 </h2>
-                <p className="text-xs text-[#78716c]">
-                  Attach lecture notes, formula sheets, problem sets, or code repositories.
+                <p className="text-xs text-[#78716c] mt-0.5">
+                  Attach PDF study sheets or notes at either the course level or to a specific lecture
                 </p>
               </div>
 
               <form onSubmit={handleUploadResource} className="space-y-4">
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   {/* Title */}
-                  <div className="space-y-1">
-                    <label className="block text-xs font-bold uppercase tracking-wider text-[#44403c]">
-                      Resource Title *
+                  <div>
+                    <label className="block text-xs font-semibold uppercase tracking-wider text-[#44403c] mb-1.5">
+                      Resource Title <span className="text-rose-600">*</span>
                     </label>
                     <input
                       type="text"
                       required
                       value={resourceTitle}
                       onChange={(e) => setResourceTitle(e.target.value)}
-                      placeholder="e.g. Physics Formula Sheet Chapter 1"
-                      className="w-full bg-[#faf9f6] border border-[#d6d3c9] rounded-xl px-3.5 py-2 text-xs sm:text-sm text-[#1c1917] focus:outline-none focus:ring-2 focus:ring-[#1e3a8a] focus:bg-white"
+                      placeholder="e.g. Vocabulary Checklist & Common Idioms"
+                      className="w-full bg-[#fcfbf9] border border-[#d6d3d1] rounded-xl px-3.5 py-2 text-xs sm:text-sm text-[#1c1917] focus:outline-none focus:border-[#1e3a8a] min-h-[42px]"
                     />
                   </div>
 
                   {/* Topic */}
-                  <div className="space-y-1">
-                    <label className="block text-xs font-bold uppercase tracking-wider text-[#44403c]">
-                      Topic / Module
+                  <div>
+                    <label className="block text-xs font-semibold uppercase tracking-wider text-[#44403c] mb-1.5">
+                      Topic or Module
                     </label>
                     <input
                       type="text"
                       value={resourceTopic}
                       onChange={(e) => setResourceTopic(e.target.value)}
-                      placeholder="e.g. Mechanics, Thermodynamics"
-                      className="w-full bg-[#faf9f6] border border-[#d6d3c9] rounded-xl px-3.5 py-2 text-xs sm:text-sm text-[#1c1917] focus:outline-none focus:ring-2 focus:ring-[#1e3a8a] focus:bg-white"
+                      placeholder="e.g. Grammar Fundamentals, Mechanics"
+                      className="w-full bg-[#fcfbf9] border border-[#d6d3d1] rounded-xl px-3.5 py-2 text-xs sm:text-sm text-[#1c1917] focus:outline-none focus:border-[#1e3a8a] min-h-[42px]"
                     />
                   </div>
                 </div>
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   {/* Type */}
-                  <div className="space-y-1">
-                    <label className="block text-xs font-bold uppercase tracking-wider text-[#44403c]">
+                  <div>
+                    <label className="block text-xs font-semibold uppercase tracking-wider text-[#44403c] mb-1.5">
                       Resource Type
                     </label>
                     <select
                       value={resourceType}
                       onChange={(e) => setResourceType(e.target.value)}
-                      className="w-full bg-[#faf9f6] border border-[#d6d3c9] rounded-xl px-3 py-2 text-xs sm:text-sm text-[#1c1917] focus:outline-none focus:ring-2 focus:ring-[#1e3a8a] focus:bg-white"
+                      className="w-full bg-[#fcfbf9] border border-[#d6d3d1] rounded-xl px-3 py-2 text-xs sm:text-sm text-[#1c1917] focus:outline-none focus:border-[#1e3a8a] min-h-[42px]"
                     >
                       <option value="pdf">PDF Document</option>
                       <option value="notes">Lecture Notes</option>
-                      <option value="formula_sheet">Formula Sheet</option>
+                      <option value="formula_sheet">Formula Sheet / Cheat Sheet</option>
                       <option value="code">Code / Project Files</option>
-                      <option value="file">General File</option>
+                      <option value="file">General Study File</option>
                     </select>
                   </div>
 
-                  {/* Link to specific lecture (optional) */}
-                  <div className="space-y-1">
-                    <label className="block text-xs font-bold uppercase tracking-wider text-[#44403c]">
-                      Associate with Lecture (Optional)
+                  {/* Lecture link */}
+                  <div>
+                    <label className="block text-xs font-semibold uppercase tracking-wider text-[#44403c] mb-1.5">
+                      Attach to Specific Lecture (Optional)
                     </label>
                     <select
                       value={resourceLectureId}
                       onChange={(e) => setResourceLectureId(e.target.value)}
-                      className="w-full bg-[#faf9f6] border border-[#d6d3c9] rounded-xl px-3 py-2 text-xs sm:text-sm text-[#1c1917] focus:outline-none focus:ring-2 focus:ring-[#1e3a8a] focus:bg-white"
+                      className="w-full bg-[#fcfbf9] border border-[#d6d3d1] rounded-xl px-3 py-2 text-xs sm:text-sm text-[#1c1917] focus:outline-none focus:border-[#1e3a8a] min-h-[42px]"
                     >
-                      <option value="">Course-Level (All Lectures)</option>
+                      <option value="">Course-Level (Visible across all lectures)</option>
                       {courseLectures.map((lec, idx) => (
                         <option key={lec._id} value={lec._id}>
                           Lecture {idx + 1}: {lec.lectureTitle}
@@ -601,16 +748,16 @@ function EditCourse() {
                   </div>
                 </div>
 
-                {/* File picker */}
-                <div className="space-y-1">
-                  <label className="block text-xs font-bold uppercase tracking-wider text-[#44403c]">
-                    File to Upload (PDF, Word, Zip, Code) *
+                {/* File input */}
+                <div>
+                  <label className="block text-xs font-semibold uppercase tracking-wider text-[#44403c] mb-1.5">
+                    File to Upload (PDF, Word, Zip, Code) <span className="text-rose-600">*</span>
                   </label>
                   <input
                     type="file"
                     required
                     onChange={(e) => setResourceFile(e.target.files[0])}
-                    className="w-full bg-[#faf9f6] border border-[#d6d3c9] rounded-xl p-2 text-xs text-[#1c1917] file:mr-3 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-bold file:bg-[#1e3a8a] file:text-white cursor-pointer"
+                    className="w-full bg-[#fcfbf9] border border-[#d6d3d1] rounded-xl p-2 text-xs text-[#1c1917] file:mr-3 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-[#1e3a8a] file:text-white cursor-pointer"
                   />
                 </div>
 
@@ -620,7 +767,7 @@ function EditCourse() {
                     variant="primary"
                     size="sm"
                     loading={resourceUploading}
-                    className="bg-[#1e3a8a] hover:bg-[#172554] text-white font-bold"
+                    className="!bg-[#1e3a8a] hover:!bg-[#172554] text-white font-semibold"
                   >
                     Upload Resource
                   </Button>
@@ -628,32 +775,31 @@ function EditCourse() {
               </form>
             </div>
 
-            {/* List of Uploaded Resources */}
-            <div className="bg-white border border-[#e8e5dc] rounded-3xl p-6 sm:p-8 space-y-4 shadow-xs">
+            {/* List of Resources */}
+            <div className="bg-white border border-[#e8e5dc] rounded-2xl p-6 sm:p-8 space-y-4 shadow-sm">
               <h3 className="text-sm font-bold text-[#1c1917]">
-                Existing Course Resources ({resources.length})
+                Existing Study Resources ({resources.length})
               </h3>
 
               {resourcesLoading ? (
                 <p className="text-xs text-[#78716c] py-4 text-center">Loading resources...</p>
               ) : resources.length > 0 ? (
-                <div className="divide-y divide-[#f2efe9]">
+                <div className="divide-y divide-[#f1ede4]">
                   {resources.map((r) => (
                     <div
                       key={r._id}
-                      className="py-3.5 flex flex-col sm:flex-row sm:items-center justify-between gap-3"
+                      className="py-3 flex flex-col sm:flex-row sm:items-center justify-between gap-3"
                     >
                       <div className="space-y-1">
                         <div className="flex items-center gap-2">
                           <FileText size={16} className="text-[#1e3a8a] shrink-0" />
-                          <h4 className="text-xs sm:text-sm font-bold text-[#1c1917]">{r.title}</h4>
+                          <h4 className="text-xs sm:text-sm font-semibold text-[#1c1917]">{r.title}</h4>
                         </div>
                         <div className="flex flex-wrap items-center gap-2 text-[11px] text-[#78716c]">
-                          <span className="uppercase font-mono bg-[#f2efe9] px-1.5 py-0.5 rounded border border-[#e8e5dc] font-bold">
+                          <span className="uppercase font-mono bg-[#f8f7f4] px-1.5 py-0.5 rounded border border-[#e8e5dc]">
                             {r.type}
                           </span>
                           {r.topic && <span>• Topic: {r.topic}</span>}
-                          {r.fileSize && <span>• {r.fileSize}</span>}
                           {r.lectureId?.lectureTitle ? (
                             <span className="text-[#1e3a8a] font-medium">
                               • Attached to: {r.lectureId.lectureTitle}
@@ -669,9 +815,9 @@ function EditCourse() {
                           href={r.fileUrl}
                           target="_blank"
                           rel="noopener noreferrer"
-                          className="p-1.5 rounded-lg border border-[#d6d3c9] text-[#1e3a8a] hover:bg-blue-50 text-xs font-semibold inline-flex items-center gap-1"
+                          className="p-1.5 rounded-lg border border-[#d6d3d1] text-[#1e3a8a] hover:bg-[#eff6ff] text-xs font-semibold inline-flex items-center gap-1"
                         >
-                          <Download size={13} /> View / Download
+                          <Download size={13} /> View
                         </a>
                         <button
                           onClick={() => handleDeleteResource(r._id)}
@@ -685,9 +831,211 @@ function EditCourse() {
                 </div>
               ) : (
                 <p className="text-xs text-[#78716c] py-6 text-center">
-                  No resources uploaded yet. Use the form above to add notes, cheat sheets, and study materials.
+                  No resources uploaded yet. Add lecture notes or cheat sheets above.
                 </p>
               )}
+            </div>
+
+            <div className="pt-4 border-t border-[#e8e5dc] flex items-center justify-between">
+              <button
+                type="button"
+                onClick={() => setActiveTab("curriculum")}
+                className="text-xs text-[#78716c] hover:text-[#1c1917] font-semibold"
+              >
+                ← Back to Lectures
+              </button>
+              <Button
+                type="button"
+                variant="primary"
+                size="md"
+                onClick={() => setActiveTab("pricing")}
+                className="!bg-[#1e3a8a] hover:!bg-[#172554] text-white font-semibold px-5 py-2.5 rounded-xl"
+              >
+                Continue to Pricing →
+              </Button>
+            </div>
+          </div>
+        )}
+
+        {/* STEP 4: PRICING & ACCESS */}
+        {activeTab === "pricing" && (
+          <div className="bg-white border border-[#e8e5dc] rounded-2xl p-6 sm:p-8 space-y-6 shadow-sm">
+            <div>
+              <h2 className="text-base font-bold text-[#1c1917]">Enrollment & Pricing Model</h2>
+              <p className="text-xs text-[#78716c] mt-0.5">
+                Configure student access fees or offer this course as free open access
+              </p>
+            </div>
+
+            <div className="space-y-4 max-w-lg">
+              <div className="grid grid-cols-2 gap-3">
+                <button
+                  type="button"
+                  onClick={() => setPrice(0)}
+                  className={`p-4 rounded-xl border text-left transition cursor-pointer ${
+                    !price || Number(price) === 0
+                      ? "bg-[#eff6ff] border-[#1e3a8a] text-[#1e3a8a]"
+                      : "bg-[#fcfbf9] border-[#e8e5dc] text-[#57534e] hover:bg-[#f1ede4]"
+                  }`}
+                >
+                  <p className="text-sm font-bold">Free Course</p>
+                  <p className="text-xs mt-1 opacity-80">Students enroll instantly with one click</p>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (!price || Number(price) === 0) setPrice(499);
+                  }}
+                  className={`p-4 rounded-xl border text-left transition cursor-pointer ${
+                    price && Number(price) > 0
+                      ? "bg-[#eff6ff] border-[#1e3a8a] text-[#1e3a8a]"
+                      : "bg-[#fcfbf9] border-[#e8e5dc] text-[#57534e] hover:bg-[#f1ede4]"
+                  }`}
+                >
+                  <p className="text-sm font-bold">Paid Tuition</p>
+                  <p className="text-xs mt-1 opacity-80">Enforces Razorpay payment before video access</p>
+                </button>
+              </div>
+
+              {price && Number(price) > 0 ? (
+                <div>
+                  <label className="block text-xs font-semibold uppercase tracking-wider text-[#44403c] mb-1.5">
+                    Course Fee (INR ₹)
+                  </label>
+                  <div className="relative">
+                    <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-sm font-bold text-[#78716c]">
+                      ₹
+                    </span>
+                    <input
+                      type="number"
+                      min="1"
+                      value={price}
+                      onChange={(e) => setPrice(e.target.value)}
+                      className="w-full bg-[#fcfbf9] border border-[#d6d3d1] rounded-xl pl-8 pr-4 py-2.5 text-[#1c1917] text-sm font-bold focus:outline-none focus:border-[#1e3a8a] min-h-[44px]"
+                    />
+                  </div>
+                  <p className="text-[11px] text-[#78716c] mt-1">
+                    Protected videos and downloads will only unlock once payment verification succeeds.
+                  </p>
+                </div>
+              ) : null}
+            </div>
+
+            <div className="pt-4 border-t border-[#e8e5dc] flex items-center justify-between">
+              <button
+                type="button"
+                onClick={() => setActiveTab("resources")}
+                className="text-xs text-[#78716c] hover:text-[#1c1917] font-semibold"
+              >
+                ← Back to Resources
+              </button>
+              <Button
+                type="button"
+                variant="primary"
+                size="md"
+                onClick={() => {
+                  handleSaveCourse(null, false);
+                  setActiveTab("publish");
+                }}
+                className="!bg-[#1e3a8a] hover:!bg-[#172554] text-white font-semibold px-5 py-2.5 rounded-xl"
+              >
+                Continue to Publish & Visibility →
+              </Button>
+            </div>
+          </div>
+        )}
+
+        {/* STEP 5: VISIBILITY & PUBLISH */}
+        {activeTab === "publish" && (
+          <div className="bg-white border border-[#e8e5dc] rounded-2xl p-6 sm:p-8 space-y-6 shadow-sm">
+            <div>
+              <h2 className="text-base font-bold text-[#1c1917]">Publication & Student Visibility</h2>
+              <p className="text-xs text-[#78716c] mt-0.5">
+                Control whether this course is live in your catalog or safely kept in draft mode
+              </p>
+            </div>
+
+            <div className="p-5 rounded-2xl bg-[#faf8f5] border border-[#e8e5dc] flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+              <div className="space-y-1">
+                <span className="text-xs font-semibold uppercase tracking-wider text-[#78716c]">
+                  Current Status
+                </span>
+                <div className="flex items-center gap-2">
+                  <span
+                    className={`text-sm font-bold px-3 py-1 rounded-full border ${
+                      isPublished
+                        ? "bg-emerald-50 text-emerald-700 border-emerald-200"
+                        : "bg-amber-50 text-amber-800 border-amber-200"
+                    }`}
+                  >
+                    {isPublished ? "Published (Live to Students)" : "Draft (Hidden from Catalog)"}
+                  </span>
+                </div>
+                <p className="text-xs text-[#78716c] pt-1">
+                  {isPublished
+                    ? "Students can discover this course, preview free lectures, enroll, and download materials."
+                    : "Only instructors and administrators can view this course while it is under construction."}
+                </p>
+              </div>
+
+              <button
+                type="button"
+                onClick={togglePublishState}
+                className={`inline-flex items-center gap-1.5 text-xs font-bold px-5 py-2.5 rounded-xl transition cursor-pointer min-h-[42px] ${
+                  isPublished
+                    ? "bg-amber-50 border border-amber-300 text-amber-800 hover:bg-amber-100"
+                    : "bg-emerald-50 border border-emerald-300 text-emerald-800 hover:bg-emerald-100"
+                }`}
+              >
+                {isPublished ? (
+                  <>
+                    <EyeOff size={15} /> Switch to Draft
+                  </>
+                ) : (
+                  <>
+                    <Eye size={15} /> Publish Course Live
+                  </>
+                )}
+              </button>
+            </div>
+
+            {/* Danger Zone */}
+            <div className="pt-6 border-t border-[#e8e5dc] space-y-2">
+              <h3 className="text-xs font-bold uppercase tracking-wider text-rose-700">Danger Zone</h3>
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-4 bg-rose-50/50 rounded-xl border border-rose-200">
+                <div>
+                  <p className="text-xs font-semibold text-rose-900">Permanently Delete Course</p>
+                  <p className="text-[11px] text-rose-700">
+                    Removes all associated lectures, video files, and student study resources.
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={handleRemoveCourse}
+                  disabled={deleteLoading}
+                  className="bg-rose-600 hover:bg-rose-700 text-white text-xs font-semibold px-4 py-2 rounded-xl transition cursor-pointer shrink-0"
+                >
+                  Delete Course
+                </button>
+              </div>
+            </div>
+
+            <div className="pt-4 border-t border-[#e8e5dc] flex items-center justify-between">
+              <button
+                type="button"
+                onClick={() => setActiveTab("pricing")}
+                className="text-xs text-[#78716c] hover:text-[#1c1917] font-semibold"
+              >
+                ← Back to Pricing
+              </button>
+              <button
+                type="button"
+                onClick={() => navigate("/courses")}
+                className="bg-[#1e3a8a] hover:bg-[#172554] text-white text-xs font-semibold px-5 py-2.5 rounded-xl transition cursor-pointer shadow-xs"
+              >
+                Done (Back to Courses)
+              </button>
             </div>
           </div>
         )}

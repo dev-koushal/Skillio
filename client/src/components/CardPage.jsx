@@ -68,6 +68,8 @@ function CardPage() {
                   price={course.price}
                   category={course.category}
                   reviews={course.reviews}
+                  creator={course.creator}
+                  enrolledStudents={course.enrolledStudents}
                 />
               </motion.div>
             ))}

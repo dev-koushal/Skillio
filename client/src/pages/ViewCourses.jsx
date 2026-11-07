@@ -14,6 +14,7 @@ import {
   ExternalLink,
   Search,
   Sparkles,
+  CheckCircle2,
   ShieldCheck,
   Award,
 } from "lucide-react";
@@ -344,8 +345,8 @@ function ViewCourses() {
           {/* Main Details (Left) */}
           <div className="lg:col-span-7 space-y-4">
             <div className="flex flex-wrap items-center gap-2">
-              <span className="text-xs font-bold uppercase tracking-wider text-[#1e3a8a] bg-blue-50 px-3 py-1 rounded-md border border-blue-200">
-                {course?.category || "General"}
+              <span className="text-xs font-bold uppercase tracking-wider text-[#1e3a8a] bg-[#eff6ff] px-3 py-1 rounded-md border border-[#bfdbfe]">
+                {tenant?.name || "Academy"} • {course?.category || "General"}
               </span>
               <span className="text-xs font-semibold text-[#57534e] bg-[#f8f7f4] px-3 py-1 rounded-md border border-[#e8e5dc]">
                 Level: {course?.level || "All Levels"}
@@ -506,11 +507,10 @@ function ViewCourses() {
                 <button
                   key={tab.id}
                   onClick={() => setActiveTab(tab.id)}
-                  className={`inline-flex items-center gap-2 px-4 py-3 text-xs sm:text-sm font-bold border-b-2 transition cursor-pointer whitespace-nowrap ${
-                    isActive
-                      ? "border-[#1e3a8a] text-[#1e3a8a]"
-                      : "border-transparent text-[#78716c] hover:text-[#1c1917]"
-                  }`}
+                  className={`inline-flex items-center gap-2 px-4 py-3 text-xs sm:text-sm font-bold border-b-2 transition cursor-pointer whitespace-nowrap ${isActive
+                    ? "border-[#1e3a8a] text-[#1e3a8a]"
+                    : "border-transparent text-[#78716c] hover:text-[#1c1917]"
+                    }`}
                 >
                   <Icon size={16} />
                   <span>{tab.label}</span>
@@ -583,19 +583,17 @@ function ViewCourses() {
                             toast.info("Please enroll in this course to watch locked lectures.");
                           }
                         }}
-                        className={`flex items-center justify-between p-3.5 rounded-xl border transition cursor-pointer ${
-                          selectedLecture?._id === lec._id
-                            ? "bg-blue-50/70 border-[#1e3a8a]"
-                            : "bg-[#faf9f6] border-[#e8e5dc] hover:bg-white"
-                        }`}
+                        className={`flex items-center justify-between p-3.5 rounded-xl border transition cursor-pointer ${selectedLecture?._id === lec._id
+                          ? "bg-blue-50/70 border-[#1e3a8a]"
+                          : "bg-[#faf9f6] border-[#e8e5dc] hover:bg-white"
+                          }`}
                       >
                         <div className="flex items-center gap-3">
                           <div
-                            className={`w-7 h-7 rounded-lg flex items-center justify-center text-xs font-bold ${
-                              canPlay
-                                ? "bg-blue-100 text-[#1e3a8a]"
-                                : "bg-gray-100 text-gray-500"
-                            }`}
+                            className={`w-7 h-7 rounded-lg flex items-center justify-center text-xs font-bold ${canPlay
+                              ? "bg-blue-100 text-[#1e3a8a]"
+                              : "bg-gray-100 text-gray-500"
+                              }`}
                           >
                             {idx + 1}
                           </div>
