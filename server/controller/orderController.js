@@ -125,7 +125,14 @@ export const verifyPayment = async (req, res) => {
         return res.status(400).json({ success: false, message: "Payment signature verification failed!" });
       }
     }
-    // 4. Fallback status verification from Razorpay API
+    // 4. Fallback verification via Razorpay payment ID
+    else if (instance && razorpay_payment_id) {
+      const paymentInfo = await instance.payments.fetch(razorpay_payment_id);
+      if (paymentInfo.status !== "captured" && paymentInfo.status !== "authorized") {
+        return res.status(400).json({ success: false, message: `Payment not completed: status is ${paymentInfo.status}` });
+      }
+    }
+    // 5. Fallback status verification from Razorpay order API
     else if (instance && razorpay_order_id) {
       const orderInfo = await instance.orders.fetch(razorpay_order_id);
       if (orderInfo.status !== "paid") {

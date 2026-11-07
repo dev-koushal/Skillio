@@ -1,4 +1,7 @@
 import Tenant from "../models/tenantModel.js";
+import Course from "../models/coursesModel.js";
+import User from "../models/userModel.js";
+import { genToken } from "../config/token.js";
 import { clearTenantCache } from "../middleware/tenantResolver.js";
 import uploadCloudinary from "../config/cloudinary.js";
 
@@ -63,6 +66,169 @@ export const getTenantBySlug = async (req, res) => {
       },
     });
   } catch (error) {
+    return res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+/**
+ * Public: Institution Directory for student discovery
+ * Searchable by name, slug, description, or domain tags
+ */
+export const getInstitutionDirectory = async (req, res) => {
+  try {
+    const { q, type } = req.query;
+
+    const filter = { status: "active" };
+
+    if (type && type !== "all") {
+      filter.institutionType = type;
+    }
+
+    if (q && q.trim()) {
+      const searchRegex = new RegExp(q.trim(), "i");
+      filter.$or = [
+        { name: searchRegex },
+        { slug: searchRegex },
+        { description: searchRegex },
+        { title: searchRegex },
+        { domainTags: searchRegex },
+      ];
+    }
+
+    const tenants = await Tenant.find(filter)
+      .select("name slug logo favicon primaryColor secondaryColor title subtitle description institutionType domainTags createdAt")
+      .sort({ createdAt: -1 });
+
+    // Aggregate course counts for each institution in parallel
+    const institutionsWithCounts = await Promise.all(
+      tenants.map(async (t) => {
+        const courseCount = await Course.countDocuments({ tenantId: t._id, isPublished: true });
+        return {
+          id: t._id,
+          name: t.name,
+          slug: t.slug,
+          logo: t.logo || "/skillio.png",
+          primaryColor: t.primaryColor,
+          secondaryColor: t.secondaryColor,
+          title: t.title,
+          subtitle: t.subtitle,
+          description: t.description || t.subtitle || "",
+          institutionType: t.institutionType || "Academy",
+          domainTags: t.domainTags || [],
+          courseCount,
+        };
+      })
+    );
+
+    return res.status(200).json({
+      success: true,
+      count: institutionsWithCounts.length,
+      institutions: institutionsWithCounts,
+    });
+  } catch (error) {
+    console.error("[GetInstitutionDirectory Error]", error);
+    return res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+/**
+ * Authenticated: Educator creates their own organization / institution
+ * The creating educator becomes the tenant_admin of the new organization.
+ */
+export const createOrganizationByEducator = async (req, res) => {
+  try {
+    const {
+      name,
+      slug,
+      description,
+      institutionType,
+      domainTags,
+      title,
+      subtitle,
+      primaryColor,
+      secondaryColor,
+    } = req.body;
+
+    const userId = req.userId;
+    if (!userId) {
+      return res.status(401).json({ success: false, message: "Authentication required" });
+    }
+
+    if (!name || !slug) {
+      return res.status(400).json({ success: false, message: "Institution name and subdomain slug are required" });
+    }
+
+    const cleanSlug = slug.toLowerCase().trim().replace(/[^a-z0-9-]/g, "");
+    if (cleanSlug.length < 3) {
+      return res.status(400).json({ success: false, message: "Subdomain slug must be at least 3 alphanumeric characters" });
+    }
+
+    // Reserved slugs
+    const reserved = ["api", "admin", "dashboard", "auth", "static", "public", "assets", "system", "app", "login", "signup", "help"];
+    if (reserved.includes(cleanSlug)) {
+      return res.status(400).json({ success: false, message: `The slug '${cleanSlug}' is reserved. Please choose another.` });
+    }
+
+    const existing = await Tenant.findOne({ slug: cleanSlug });
+    if (existing) {
+      return res.status(400).json({ success: false, message: `An institution with slug '${cleanSlug}' already exists.` });
+    }
+
+    let logo = "/skillio.png";
+    if (req.file) {
+      const upload = await uploadCloudinary(req.file.path);
+      if (upload) logo = upload;
+    }
+
+    let parsedTags = [];
+    if (domainTags) {
+      parsedTags = Array.isArray(domainTags)
+        ? domainTags
+        : domainTags.split(",").map((s) => s.trim()).filter(Boolean);
+    }
+
+    // Create the new tenant
+    const newTenant = await Tenant.create({
+      name: name.trim(),
+      slug: cleanSlug,
+      ownerId: userId,
+      logo,
+      primaryColor: primaryColor || "#1e3a8a",
+      secondaryColor: secondaryColor || "#0f172a",
+      title: title?.trim() || `Welcome to ${name.trim()}`,
+      subtitle: subtitle?.trim() || "",
+      description: description?.trim() || "",
+      institutionType: institutionType || "Academy",
+      domainTags: parsedTags,
+      status: "active",
+      features: { quizzes: true, certificates: true, analytics: true, reviews: true },
+    });
+
+    // Update user to tenant_admin
+    const user = await User.findById(userId);
+    if (user) {
+      user.role = "tenant_admin";
+      user.tenantId = newTenant._id;
+      await user.save();
+    }
+
+    clearTenantCache();
+
+    // Generate updated token reflecting tenant_admin role and new tenantId
+    const token = await genToken(user._id, newTenant._id, "tenant_admin");
+
+    const safeUser = user.toObject();
+    delete safeUser.password;
+
+    return res.status(201).json({
+      success: true,
+      message: `Institution '${newTenant.name}' created successfully!`,
+      tenant: newTenant,
+      user: safeUser,
+      token,
+    });
+  } catch (error) {
+    console.error("[CreateOrganizationByEducator Error]", error);
     return res.status(500).json({ success: false, message: error.message });
   }
 };

@@ -17,34 +17,34 @@ function ExploreCourses() {
   const navigate = useNavigate();
 
   const categories = [
-    { name: "Web Development", icon: Monitor, color: "bg-purple-950/40 text-purple-300 border-purple-800/40" },
-    { name: "UI/UX Design", icon: PenTool, color: "bg-emerald-950/40 text-emerald-300 border-emerald-800/40" },
-    { name: "App Development", icon: Smartphone, color: "bg-pink-950/40 text-pink-300 border-pink-800/40" },
-    { name: "Cybersecurity", icon: Shield, color: "bg-blue-950/40 text-blue-300 border-blue-800/40" },
-    { name: "AI / Machine Learning", icon: Brain, color: "bg-indigo-950/40 text-indigo-300 border-indigo-800/40" },
-    { name: "Data Science", icon: Share2, color: "bg-amber-950/40 text-amber-300 border-amber-800/40" },
-    { name: "Data Analytics", icon: BarChart3, color: "bg-teal-950/40 text-teal-300 border-teal-800/40" },
-    { name: "Cloud & DevOps", icon: Boxes, color: "bg-cyan-950/40 text-cyan-300 border-cyan-800/40" },
+    { name: "Web Development", icon: Monitor, bg: "bg-blue-50 text-blue-800 border-blue-200" },
+    { name: "UI/UX Design", icon: PenTool, bg: "bg-emerald-50 text-emerald-800 border-emerald-200" },
+    { name: "App Development", icon: Smartphone, bg: "bg-amber-50 text-amber-800 border-amber-200" },
+    { name: "Cybersecurity", icon: Shield, bg: "bg-indigo-50 text-indigo-800 border-indigo-200" },
+    { name: "AI / Machine Learning", icon: Brain, bg: "bg-purple-50 text-purple-800 border-purple-200" },
+    { name: "Data Science", icon: Share2, bg: "bg-rose-50 text-rose-800 border-rose-200" },
+    { name: "Physics & Engineering", icon: BarChart3, bg: "bg-sky-50 text-sky-800 border-sky-200" },
+    { name: "Cloud & DevOps", icon: Boxes, bg: "bg-teal-50 text-teal-800 border-teal-200" },
   ];
 
   return (
-    <section className="w-full py-16 sm:py-20 px-4 sm:px-6 lg:px-8 bg-black border-t border-gray-900">
+    <section className="w-full py-16 sm:py-20 px-4 sm:px-6 lg:px-8 bg-[#f8f7f4] border-t border-[#e8e5dc]">
       <div className="max-w-7xl mx-auto grid md:grid-cols-12 gap-8 lg:gap-12 items-center">
         {/* Left Intro */}
         <div className="md:col-span-5 space-y-4 text-center md:text-left">
-          <span className="text-xs uppercase tracking-widest text-cyan-400 font-bold font-mono">
-            Domains & Categories
+          <span className="text-xs uppercase tracking-wider text-[#b45309] font-bold bg-[#f2efe9] px-3 py-1 rounded-full border border-[#e8e5dc]">
+            Academic Disciplines
           </span>
-          <h2 className="text-3xl sm:text-4xl font-bold text-white tracking-tight leading-tight">
-            Explore <br className="hidden md:inline" /> Our Disciplines
+          <h2 className="text-2xl sm:text-4xl font-extrabold text-[#1c1917] tracking-tight leading-tight">
+            Explore Curriculums <br className="hidden md:inline" /> By Field
           </h2>
-          <p className="text-sm sm:text-base text-gray-400 max-w-md mx-auto md:mx-0 leading-relaxed">
-            Gain mastery in domains vetted by tech industry leaders. Each curriculum is tailored to bridge the gap from foundational knowledge to deployment.
+          <p className="text-xs sm:text-base text-[#57534e] max-w-md mx-auto md:mx-0 leading-relaxed">
+            From university physics to full-stack engineering. Every course provides verified video lessons, downloadable notes, and structured milestones.
           </p>
           <div className="pt-2">
             <button
               onClick={() => navigate("/allcourses")}
-              className="inline-flex items-center gap-2 bg-cyan-900 hover:bg-cyan-800 text-white text-sm font-semibold px-6 py-3 rounded-lg shadow-sm transition active:scale-95 cursor-pointer"
+              className="inline-flex items-center gap-2 bg-[#1e3a8a] hover:bg-[#172554] text-white text-xs sm:text-sm font-bold px-6 py-3 rounded-xl shadow-xs transition active:scale-95 cursor-pointer"
             >
               Explore All Courses <ArrowRight size={16} />
             </button>
@@ -58,17 +58,19 @@ function ExploreCourses() {
             return (
               <motion.div
                 key={index}
+                onClick={() => navigate(`/allcourses?category=${encodeURIComponent(cat.name)}`)}
                 initial={{ opacity: 0, scale: 0.95 }}
                 whileInView={{ opacity: 1, scale: 1 }}
                 viewport={{ once: true }}
-                transition={{ duration: 0.35, delay: index * 0.04 }}
-                onClick={() => navigate(`/allcourses?category=${encodeURIComponent(cat.name)}`)}
-                className={`flex flex-col items-center justify-center p-4 sm:p-5 rounded-xl border ${cat.color} hover:scale-[1.03] transition-all duration-200 cursor-pointer text-center group`}
+                transition={{ duration: 0.25, delay: index * 0.03 }}
+                className="bg-white border border-[#e8e5dc] rounded-2xl p-4 flex flex-col items-center text-center gap-2.5 cursor-pointer hover:border-[#1e3a8a]/50 hover:shadow-xs transition"
               >
-                <Icon size={26} className="mb-2.5 transition-transform group-hover:scale-110" />
-                <p className="text-xs sm:text-sm font-medium text-gray-200 line-clamp-1">
+                <div className={`w-10 h-10 rounded-xl flex items-center justify-center border ${cat.bg}`}>
+                  <Icon size={20} />
+                </div>
+                <span className="text-xs font-bold text-[#1c1917] leading-tight">
                   {cat.name}
-                </p>
+                </span>
               </motion.div>
             );
           })}

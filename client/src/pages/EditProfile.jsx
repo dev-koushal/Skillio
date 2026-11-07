@@ -60,25 +60,25 @@ const EditProfile = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gray-950 text-white flex flex-col">
+    <div className="min-h-screen bg-[#f8f7f4] text-[#1c1917] flex flex-col font-sans">
       <Navbar />
 
       <div className="max-w-2xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-6 flex-1">
         {/* Back Link */}
         <button
           onClick={() => navigate("/profile")}
-          className="inline-flex items-center gap-1.5 text-xs text-gray-400 hover:text-white transition cursor-pointer"
+          className="inline-flex items-center gap-1.5 text-xs text-[#78716c] hover:text-[#1c1917] transition cursor-pointer"
         >
           <ArrowLeft size={16} /> Back to Profile
         </button>
 
         {/* Card */}
-        <div className="bg-gray-900/80 border border-gray-800 rounded-2xl p-6 sm:p-8 space-y-6 shadow-xl">
-          <div className="pb-4 border-b border-gray-800">
-            <h1 className="text-xl sm:text-2xl font-bold text-white tracking-tight">
+        <div className="bg-white border border-[#e8e5dc] rounded-2xl p-6 sm:p-8 space-y-6 shadow-sm">
+          <div className="pb-4 border-b border-[#e8e5dc]">
+            <h1 className="text-xl sm:text-2xl font-bold text-[#1c1917] tracking-tight">
               Edit Your Profile
             </h1>
-            <p className="text-xs text-gray-400 mt-1">
+            <p className="text-xs text-[#78716c] mt-1">
               Update your public name, bio description, and avatar
             </p>
           </div>
@@ -86,7 +86,7 @@ const EditProfile = () => {
           <form onSubmit={submitHandler} className="space-y-6">
             {/* Avatar Upload */}
             <div className="flex flex-col sm:flex-row items-center gap-6">
-              <div className="w-24 h-24 rounded-full overflow-hidden bg-cyan-950 border-2 border-cyan-800 flex items-center justify-center text-3xl font-bold text-cyan-200 shrink-0">
+              <div className="w-24 h-24 rounded-full overflow-hidden bg-[#eff6ff] border-2 border-[#1e3a8a]/30 flex items-center justify-center text-3xl font-bold text-[#1e3a8a] shrink-0">
                 {previewImage ? (
                   <img
                     src={previewImage}
@@ -101,7 +101,7 @@ const EditProfile = () => {
               <div className="space-y-2 text-center sm:text-left">
                 <label
                   htmlFor="profile-picture-upload"
-                  className="inline-flex items-center gap-2 bg-gray-800 hover:bg-gray-700 text-white text-xs sm:text-sm font-medium px-4 py-2.5 rounded-lg border border-gray-700 transition cursor-pointer"
+                  className="inline-flex items-center gap-2 bg-[#faf8f5] hover:bg-[#f1ede4] text-[#1c1917] text-xs sm:text-sm font-semibold px-4 py-2.5 rounded-xl border border-[#d6d3d1] transition cursor-pointer"
                 >
                   <UploadCloud size={16} /> Choose Photo
                 </label>
@@ -112,7 +112,7 @@ const EditProfile = () => {
                   onChange={handleImageChange}
                   className="sr-only"
                 />
-                <p className="text-[11px] text-gray-400">
+                <p className="text-[11px] text-[#78716c]">
                   Recommended: Square JPG or PNG, up to 5MB.
                 </p>
               </div>
@@ -120,7 +120,7 @@ const EditProfile = () => {
 
             {/* Name */}
             <div>
-              <label className="block text-xs font-semibold uppercase tracking-wider text-gray-300 mb-1.5">
+              <label className="block text-xs font-semibold uppercase tracking-wider text-[#44403c] mb-1.5">
                 Full Name
               </label>
               <input
@@ -129,30 +129,30 @@ const EditProfile = () => {
                 value={name}
                 onChange={(e) => setName(e.target.value)}
                 placeholder="Your full name"
-                className="w-full bg-gray-950 border border-gray-700/80 rounded-lg px-4 py-2.5 text-white text-sm focus:outline-none focus:border-cyan-500 min-h-[44px]"
+                className="w-full bg-[#fcfbf9] border border-[#d6d3d1] rounded-xl px-4 py-2.5 text-[#1c1917] text-sm focus:outline-none focus:border-[#1e3a8a] focus:ring-1 focus:ring-[#1e3a8a] min-h-[44px]"
               />
             </div>
 
             {/* Description / Bio */}
             <div>
-              <label className="block text-xs font-semibold uppercase tracking-wider text-gray-300 mb-1.5">
+              <label className="block text-xs font-semibold uppercase tracking-wider text-[#44403c] mb-1.5">
                 Bio / Headline
               </label>
               <textarea
                 rows={3}
                 value={description}
                 onChange={(e) => setDescription(e.target.value)}
-                placeholder="Brief summary of your learning journey or teaching background..."
-                className="w-full bg-gray-950 border border-gray-700/80 rounded-lg p-3 text-white text-sm focus:outline-none focus:border-cyan-500"
+                placeholder="Share a short summary about your background, interests, or teaching expertise..."
+                className="w-full bg-[#fcfbf9] border border-[#d6d3d1] rounded-xl px-4 py-2.5 text-[#1c1917] text-sm focus:outline-none focus:border-[#1e3a8a] focus:ring-1 focus:ring-[#1e3a8a]"
               />
             </div>
 
-            {/* Actions */}
-            <div className="flex justify-end gap-3 pt-3 border-t border-gray-800">
+            {/* Buttons */}
+            <div className="pt-2 flex items-center justify-end gap-3">
               <button
                 type="button"
                 onClick={() => navigate("/profile")}
-                className="bg-gray-800 hover:bg-gray-700 text-gray-300 text-xs sm:text-sm font-medium px-4 py-2 rounded-lg transition"
+                className="px-5 py-2.5 rounded-xl border border-[#d6d3d1] text-[#78716c] hover:bg-[#f1ede4] text-xs sm:text-sm font-medium transition cursor-pointer"
               >
                 Cancel
               </button>
@@ -161,9 +161,9 @@ const EditProfile = () => {
                 variant="primary"
                 size="md"
                 loading={loading}
-                className="px-6"
+                className="!bg-[#1e3a8a] hover:!bg-[#172554] text-white font-medium px-6 py-2.5 rounded-xl transition shadow-xs"
               >
-                Save Profile
+                <Save size={16} /> Save Changes
               </Button>
             </div>
           </form>

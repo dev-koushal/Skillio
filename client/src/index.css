@@ -1,5 +1,48 @@
-@import url('https://fonts.googleapis.com/css2?family=Inter:ital,opsz,wght@0,14..32,100..900;1,14..32,100..900&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Inter:wght@400;500;600;700&display=swap');
 @import "tailwindcss";
-*{
-    font-family:  "Inter";
+
+:root {
+  --bg-main: #f8f7f4;
+  --bg-surface: #ffffff;
+  --bg-subtle: #f2efe9;
+  --bg-muted: #ebe7df;
+  --text-primary: #1c1917;
+  --text-secondary: #44403c;
+  --text-muted: #78716c;
+  --border-light: #e8e5dc;
+  --border-medium: #d6d3c9;
+  --brand-navy: #1e3a8a;
+  --brand-navy-dark: #172554;
+  --brand-accent: #2563eb;
+  --brand-brown: #451a03;
+  --brand-amber: #b45309;
+}
+
+* {
+  font-family: 'Plus Jakarta Sans', 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  box-sizing: border-box;
+}
+
+body {
+  background-color: var(--bg-main);
+  color: var(--text-primary);
+  min-height: 100vh;
+  margin: 0;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Custom subtle scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: #f2efe9;
+}
+::-webkit-scrollbar-thumb {
+  background: #d6d3c9;
+  border-radius: 9999px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #b5b1a6;
 }

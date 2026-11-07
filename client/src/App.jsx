@@ -31,6 +31,8 @@ const EditLecture = lazy(() => import("./pages/Educator/EditLecture"));
 const ViewCourses = lazy(() => import("./pages/ViewCourses"));
 const ViewLectures = lazy(() => import("./pages/ViewLectures"));
 const MyEnrolledCourses = lazy(() => import("./pages/MyEnrolledCourses"));
+const InstitutionDirectory = lazy(() => import("./pages/InstitutionDirectory"));
+const CreateInstitution = lazy(() => import("./pages/CreateInstitution"));
 
 export { serverURL };
 
@@ -48,9 +50,9 @@ function AppRoutes() {
       <ScrollToTop />
       <Suspense
         fallback={
-          <div className="w-full h-screen bg-black flex flex-col items-center justify-center space-y-3">
-            <div className="w-10 h-10 border-4 border-cyan-800 border-t-cyan-400 rounded-full animate-spin" />
-            <p className="text-gray-400 text-xs font-mono tracking-wider">LOADING APPLICATION...</p>
+          <div className="w-full h-screen bg-[#f8f7f4] flex flex-col items-center justify-center space-y-3">
+            <div className="w-10 h-10 border-4 border-[#1e3a8a] border-t-transparent rounded-full animate-spin" />
+            <p className="text-[#78716c] text-xs font-bold uppercase tracking-wider">Loading Platform...</p>
           </div>
         }
       >
@@ -58,12 +60,14 @@ function AppRoutes() {
           {/* Public / Landing Routes */}
           <Route path="/" element={<Home />} />
           <Route path="/allcourses" element={<AllCourses />} />
+          <Route path="/institutions" element={<InstitutionDirectory />} />
           <Route path="/viewcourse/:courseId" element={<ViewCourses />} />
 
           {/* Auth Routes */}
           <Route path="/login" element={!userData ? <Login /> : <Navigate to="/" />} />
           <Route path="/signup" element={!userData ? <Signup /> : <Navigate to="/" />} />
           <Route path="/forget" element={<ForgetPassword />} />
+          <Route path="/create-institution" element={<CreateInstitution />} />
 
           {/* Authenticated Student Routes */}
           <Route
@@ -150,14 +154,11 @@ function AppRoutes() {
         </Routes>
       </Suspense>
 
-      {/* Development Tenant Switcher */}
-      <TenantSwitcher />
-
       <ToastContainer
         position="top-right"
-        autoClose={2000}
-        theme="dark"
-        toastClassName="bg-gray-900 border border-gray-800 text-white"
+        autoClose={2500}
+        theme="light"
+        toastClassName="bg-white border border-[#e8e5dc] text-[#1c1917] shadow-lg rounded-xl text-xs font-semibold"
       />
     </>
   );

@@ -2,6 +2,9 @@ import Course from "../models/coursesModel.js";
 import Lecture from "../models/lectureModel.js";
 import uploadCloudinary from "../config/cloudinary.js";
 import User from "../models/userModel.js";
+import Resource from "../models/resourceModel.js";
+import jwt from "jsonwebtoken";
+import { verifyCourseAccess, sanitizeLecturesForViewer } from "../utils/courseAccess.js";
 
 export const createCourse = async (req, res) => {
   try {
@@ -116,11 +119,55 @@ export const getCourseById = async (req, res) => {
     const { courseId } = req.params;
     const tenantId = req.tenantId;
 
-    const course = await Course.findOne({ _id: courseId, tenantId }).populate("lectures reviews");
+    const course = await Course.findOne({ _id: courseId, tenantId })
+      .populate("lectures reviews")
+      .populate("creator", "name email profilePicture description");
+
     if (!course) {
       return res.status(404).json({ success: false, message: "Course not found" });
     }
-    return res.status(200).json(course);
+
+    // Try optional auth extraction for viewer from cookie or Authorization header
+    let userId = req.userId;
+    let userRole = req.userRole;
+    if (!userId && (req.cookies?.token || req.headers.authorization)) {
+      try {
+        let token = req.cookies?.token;
+        if (!token && req.headers.authorization?.startsWith("Bearer ")) {
+          token = req.headers.authorization.split(" ")[1];
+        }
+        if (token) {
+          const decoded = jwt.verify(token, process.env.JWT_SECRET);
+          if (
+            decoded &&
+            (!decoded.tenantId ||
+              decoded.tenantId.toString() === tenantId.toString() ||
+              decoded.role === "platform_admin")
+          ) {
+            userId = decoded.userId;
+            userRole = decoded.role;
+          }
+        }
+      } catch (e) {
+        // Unauthenticated visitor
+      }
+    }
+
+    const access = await verifyCourseAccess({
+      courseId,
+      userId,
+      userRole,
+      tenantId,
+    });
+
+    const courseObj = course.toObject();
+    // Sanitize lectures if viewer doesn't have full access (scrub locked videoUrl)
+    courseObj.lectures = sanitizeLecturesForViewer(courseObj.lectures, access.hasAccess);
+    courseObj.hasAccess = access.hasAccess;
+    courseObj.isEnrolled = access.isEnrolled;
+    courseObj.isFree = access.isFree;
+
+    return res.status(200).json(courseObj);
   } catch (error) {
     console.error("[GetCourseById Error]", error);
     return res.status(400).json({ success: false, message: `Failed to get course: ${error.message || error}` });
@@ -142,8 +189,9 @@ export const removeCourse = async (req, res) => {
       return res.status(403).json({ success: false, message: "You are not authorized to delete this course" });
     }
 
-    // Delete associated lectures
+    // Delete associated lectures and resources
     await Lecture.deleteMany({ _id: { $in: course.lectures }, tenantId });
+    await Resource.deleteMany({ courseId, tenantId });
     await Course.findByIdAndDelete(courseId);
 
     return res.status(200).json({ success: true, message: "Course removed successfully!" });
@@ -160,7 +208,7 @@ export const removeCourse = async (req, res) => {
 
 export const createLecture = async (req, res) => {
   try {
-    const { lectureTitle } = req.body;
+    const { lectureTitle, resourceTitle, resourceDescription, resourceType, resourceFileUrl } = req.body;
     const { courseId } = req.params;
     const tenantId = req.tenantId;
 
@@ -187,7 +235,22 @@ export const createLecture = async (req, res) => {
     await course.save();
     await course.populate("lectures");
 
-    return res.status(201).json({ lecture, course });
+    // Optional: create lecture resource if attached during creation
+    let attachedResource = null;
+    if (resourceTitle && resourceFileUrl) {
+      attachedResource = await Resource.create({
+        tenantId,
+        courseId,
+        lectureId: lecture._id,
+        title: resourceTitle.trim(),
+        description: resourceDescription ? resourceDescription.trim() : "",
+        type: resourceType || "pdf",
+        fileUrl: resourceFileUrl,
+        uploadedBy: req.userId,
+      });
+    }
+
+    return res.status(201).json({ lecture, course, resource: attachedResource });
   } catch (error) {
     console.error("[CreateLecture Error]", error);
     return res.status(500).json({ success: false, message: `Failed to create lecture: ${error.message}` });
@@ -198,13 +261,40 @@ export const getCourseLecture = async (req, res) => {
   try {
     const { courseId } = req.params;
     const tenantId = req.tenantId;
+    const userId = req.userId;
+    const userRole = req.userRole;
 
-    const course = await Course.findOne({ _id: courseId, tenantId }).populate("lectures");
+    // Strict Course Access Security Check
+    const access = await verifyCourseAccess({
+      courseId,
+      userId,
+      userRole,
+      tenantId,
+    });
+
+    if (!access.hasAccess) {
+      return res.status(403).json({
+        success: false,
+        accessDenied: true,
+        message: access.reason || "Payment required: You must be enrolled in this course to access the classroom lectures.",
+        isEnrolled: false,
+        isFree: access.isFree,
+      });
+    }
+
+    const course = await Course.findOne({ _id: courseId, tenantId })
+      .populate("lectures")
+      .populate("creator", "name email profilePicture description");
+
     if (!course) {
       return res.status(404).json({ success: false, message: "Course not found!" });
     }
 
-    return res.status(200).json(course);
+    const courseObj = course.toObject();
+    courseObj.hasAccess = true;
+    courseObj.isEnrolled = true;
+
+    return res.status(200).json(courseObj);
   } catch (error) {
     return res.status(500).json({ success: false, message: `Failed to get lecture: ${error.message}` });
   }
@@ -214,7 +304,7 @@ export const editLecture = async (req, res) => {
   try {
     const { lectureId } = req.params;
     const tenantId = req.tenantId;
-    const { isPreviewFree, lectureTitle } = req.body;
+    const { isPreviewFree, lectureTitle, resourceTitle, resourceDescription, resourceType, resourceFileUrl } = req.body;
 
     const lecture = await Lecture.findOne({ _id: lectureId, tenantId });
     if (!lecture) {
@@ -235,7 +325,23 @@ export const editLecture = async (req, res) => {
     }
 
     await lecture.save();
-    return res.status(200).json(lecture);
+
+    // Optional: create resource if attached during lecture editing
+    let attachedResource = null;
+    if (resourceTitle && resourceFileUrl) {
+      attachedResource = await Resource.create({
+        tenantId,
+        courseId: lecture.courseId,
+        lectureId: lecture._id,
+        title: resourceTitle.trim(),
+        description: resourceDescription ? resourceDescription.trim() : "",
+        type: resourceType || "pdf",
+        fileUrl: resourceFileUrl,
+        uploadedBy: req.userId,
+      });
+    }
+
+    return res.status(200).json({ lecture, resource: attachedResource });
   } catch (error) {
     return res.status(500).json({
       success: false,
@@ -253,6 +359,9 @@ export const removeLecture = async (req, res) => {
     if (!lecture) {
       return res.status(404).json({ success: false, message: "Lecture not found!" });
     }
+
+    // Delete associated resources
+    await Resource.deleteMany({ lectureId, tenantId });
 
     await Course.updateOne(
       { lectures: lectureId, tenantId },

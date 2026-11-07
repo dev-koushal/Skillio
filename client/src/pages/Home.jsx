@@ -1,6 +1,6 @@
 import React, { lazy, Suspense } from "react";
 import Navbar from "../components/Navbar";
-import { ArrowRight, PlayCircle, Users, BookOpen, GraduationCap, Sparkles } from "lucide-react";
+import { ArrowRight, PlayCircle, Users, BookOpen, GraduationCap, Sparkles, Building2, FileText, CheckCircle2 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
 import { useTenant } from "../context/TenantContext";
@@ -17,55 +17,40 @@ function Home() {
   const tenantTitle = tenant?.title || "Learn Without Limits";
   const tenantSubtitle =
     tenant?.subtitle ||
-    "A modern learning platform where educators build powerful courses and students master real skills through structured learning.";
-  const heroImage =
-    tenant?.heroImage ||
-    "https://images.freecreatives.com/wp-content/uploads/2016/04/Minimalistic-Website-Background.jpg";
+    "A modern multi-tenant learning platform where educators build comprehensive courses and students master real skills through structured learning.";
 
   const fadeUp = {
-    hidden: { opacity: 0, y: 25 },
+    hidden: { opacity: 0, y: 20 },
     visible: (i = 1) => ({
       opacity: 1,
       y: 0,
       transition: {
-        delay: i * 0.1,
-        duration: 0.6,
+        delay: i * 0.08,
+        duration: 0.5,
         ease: [0.22, 1, 0.36, 1],
       },
     }),
   };
 
   const cardVariant = {
-    hidden: { opacity: 0, y: 20 },
+    hidden: { opacity: 0, y: 15 },
     visible: (i = 1) => ({
       opacity: 1,
       y: 0,
       transition: {
-        delay: 0.2 + i * 0.08,
-        duration: 0.5,
+        delay: 0.15 + i * 0.06,
+        duration: 0.4,
       },
     }),
   };
 
   return (
-    <div className="w-full bg-black min-h-screen text-white flex flex-col">
+    <div className="w-full bg-[#f8f7f4] min-h-screen text-[#1c1917] flex flex-col">
       <Navbar />
 
       {/* Hero Section */}
-      <section className="relative w-full min-h-[85vh] flex items-center overflow-hidden border-b border-gray-900">
-        {/* Background Image with Dark Overlay */}
-        <motion.img
-          src={heroImage}
-          alt="Hero backdrop"
-          className="absolute inset-0 w-full h-full object-cover grayscale opacity-25"
-          initial={{ scale: 1.05 }}
-          animate={{ scale: 1 }}
-          transition={{ duration: 1.2 }}
-        />
-        <div className="absolute inset-0 bg-gradient-to-b from-black/60 via-black/85 to-black" />
-
-        {/* Hero Content */}
-        <div className="relative z-10 w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16 sm:py-24">
+      <section className="relative w-full bg-gradient-to-b from-white via-[#faf9f6] to-[#f8f7f4] border-b border-[#e8e5dc] py-16 sm:py-24 overflow-hidden">
+        <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 items-center">
             {/* Left Content */}
             <motion.div
@@ -74,15 +59,19 @@ function Home() {
               variants={fadeUp}
               className="lg:col-span-7 space-y-6 text-center lg:text-left"
             >
-              <motion.div custom={1} variants={fadeUp} className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-cyan-950/80 border border-cyan-800 text-cyan-300 text-xs font-semibold">
-                <Sparkles size={13} />
-                <span>Next-Gen Multi-Tenant Learning</span>
+              <motion.div
+                custom={1}
+                variants={fadeUp}
+                className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-[#f2efe9] border border-[#e8e5dc] text-[#451a03] text-xs font-bold"
+              >
+                <Sparkles size={14} className="text-[#b45309]" />
+                <span>Modern Academic SaaS Platform</span>
               </motion.div>
 
               <motion.h1
                 custom={2}
                 variants={fadeUp}
-                className="text-4xl sm:text-5xl lg:text-6xl font-extrabold tracking-tight text-white leading-tight"
+                className="text-3xl sm:text-5xl lg:text-6xl font-extrabold tracking-tight text-[#1c1917] leading-tight"
               >
                 {tenantTitle}
               </motion.h1>
@@ -90,12 +79,12 @@ function Home() {
               <motion.p
                 custom={3}
                 variants={fadeUp}
-                className="text-gray-300 text-base sm:text-lg max-w-xl mx-auto lg:mx-0 leading-relaxed"
+                className="text-[#57534e] text-base sm:text-lg max-w-xl mx-auto lg:mx-0 leading-relaxed"
               >
                 {tenantSubtitle}
               </motion.p>
 
-              {/* Call-to-Action Buttons */}
+              {/* Action Buttons */}
               <motion.div
                 custom={4}
                 variants={fadeUp}
@@ -103,39 +92,37 @@ function Home() {
               >
                 <button
                   onClick={() => navigate("/allcourses")}
-                  className="inline-flex items-center justify-center gap-2 bg-cyan-900 hover:bg-cyan-800 text-white font-semibold text-sm sm:text-base px-7 py-3.5 rounded-lg shadow-lg shadow-cyan-950/50 transition-all duration-150 active:scale-95 cursor-pointer min-h-[44px]"
+                  className="inline-flex items-center justify-center gap-2 bg-[#1e3a8a] hover:bg-[#172554] text-white font-bold text-sm sm:text-base px-7 py-3.5 rounded-xl shadow-md transition-all active:scale-95 cursor-pointer min-h-[44px]"
                 >
                   Explore Courses <ArrowRight size={18} />
                 </button>
 
                 <button
-                  onClick={() => {
-                    const el = document.getElementById("about");
-                    if (el) el.scrollIntoView({ behavior: "smooth" });
-                  }}
-                  className="inline-flex items-center justify-center gap-2 border border-gray-700 hover:border-gray-500 bg-white/5 hover:bg-white/10 text-white font-medium text-sm sm:text-base px-7 py-3.5 rounded-lg transition-all active:scale-95 cursor-pointer min-h-[44px]"
+                  onClick={() => navigate("/institutions")}
+                  className="inline-flex items-center justify-center gap-2 border border-[#d6d3c9] bg-white hover:bg-[#f2efe9] text-[#1c1917] font-bold text-sm sm:text-base px-6 py-3.5 rounded-xl shadow-xs transition-all active:scale-95 cursor-pointer min-h-[44px]"
                 >
-                  How It Works <PlayCircle size={18} />
+                  <Building2 size={18} className="text-[#1e3a8a]" />
+                  Find Your Institution
                 </button>
               </motion.div>
 
-              {/* Key Platform Stats */}
+              {/* Trust Indicators */}
               <motion.div
                 custom={5}
                 variants={fadeUp}
-                className="pt-8 border-t border-gray-800/80 grid grid-cols-3 gap-4 max-w-md mx-auto lg:mx-0 text-center lg:text-left"
+                className="pt-8 border-t border-[#e8e5dc] flex flex-wrap items-center justify-center lg:justify-start gap-6 text-xs text-[#78716c]"
               >
-                <div>
-                  <p className="text-2xl sm:text-3xl font-extrabold text-white">100%</p>
-                  <p className="text-xs text-gray-400 mt-0.5">Isolated Tenants</p>
+                <div className="flex items-center gap-2 font-medium">
+                  <CheckCircle2 size={16} className="text-emerald-700" />
+                  <span>Enforced Course Access</span>
                 </div>
-                <div>
-                  <p className="text-2xl sm:text-3xl font-extrabold text-white">500+</p>
-                  <p className="text-xs text-gray-400 mt-0.5">Active Courses</p>
+                <div className="flex items-center gap-2 font-medium">
+                  <CheckCircle2 size={16} className="text-emerald-700" />
+                  <span>Lecture Notes & PDFs</span>
                 </div>
-                <div>
-                  <p className="text-2xl sm:text-3xl font-extrabold text-white">99.9%</p>
-                  <p className="text-xs text-gray-400 mt-0.5">SaaS Uptime</p>
+                <div className="flex items-center gap-2 font-medium">
+                  <CheckCircle2 size={16} className="text-emerald-700" />
+                  <span>Multi-Tenant Isolation</span>
                 </div>
               </motion.div>
             </motion.div>
@@ -147,12 +134,16 @@ function Home() {
                 initial="hidden"
                 animate="visible"
                 custom={1}
-                className="bg-gray-950/70 border border-gray-800/80 p-5 rounded-2xl backdrop-blur-md"
+                className="bg-white border border-[#e8e5dc] p-5 sm:p-6 rounded-2xl shadow-xs hover:border-[#1e3a8a]/40 transition"
               >
-                <BookOpen size={26} className="text-cyan-400 mb-3" />
-                <h3 className="font-semibold text-base text-white">Structured Courses</h3>
-                <p className="text-xs sm:text-sm text-gray-400 mt-1 leading-normal">
-                  Step-by-step video curriculums structured for real mastery.
+                <div className="w-10 h-10 rounded-xl bg-blue-50 text-[#1e3a8a] flex items-center justify-center mb-3">
+                  <BookOpen size={20} />
+                </div>
+                <h3 className="font-bold text-sm sm:text-base text-[#1c1917]">
+                  Curated Curriculum
+                </h3>
+                <p className="text-xs text-[#78716c] mt-1.5 leading-relaxed">
+                  Sequenced video lectures with free previews and lifetime access upon enrollment.
                 </p>
               </motion.div>
 
@@ -161,12 +152,16 @@ function Home() {
                 initial="hidden"
                 animate="visible"
                 custom={2}
-                className="bg-gray-950/70 border border-gray-800/80 p-5 rounded-2xl backdrop-blur-md"
+                className="bg-white border border-[#e8e5dc] p-5 sm:p-6 rounded-2xl shadow-xs hover:border-[#1e3a8a]/40 transition"
               >
-                <Users size={26} className="text-cyan-400 mb-3" />
-                <h3 className="font-semibold text-base text-white">Community Driven</h3>
-                <p className="text-xs sm:text-sm text-gray-400 mt-1 leading-normal">
-                  Engage directly with instructors and peers within your tenant.
+                <div className="w-10 h-10 rounded-xl bg-amber-50 text-[#b45309] flex items-center justify-center mb-3">
+                  <FileText size={20} />
+                </div>
+                <h3 className="font-bold text-sm sm:text-base text-[#1c1917]">
+                  Notes & Resources
+                </h3>
+                <p className="text-xs text-[#78716c] mt-1.5 leading-relaxed">
+                  Download lecture notes, formula sheets, problem sets, and supplementary materials.
                 </p>
               </motion.div>
 
@@ -175,12 +170,16 @@ function Home() {
                 initial="hidden"
                 animate="visible"
                 custom={3}
-                className="bg-gray-950/70 border border-gray-800/80 p-5 rounded-2xl backdrop-blur-md"
+                className="bg-white border border-[#e8e5dc] p-5 sm:p-6 rounded-2xl shadow-xs hover:border-[#1e3a8a]/40 transition"
               >
-                <GraduationCap size={26} className="text-cyan-400 mb-3" />
-                <h3 className="font-semibold text-base text-white">Industry Instructors</h3>
-                <p className="text-xs sm:text-sm text-gray-400 mt-1 leading-normal">
-                  Learn skills directly from experienced practitioners.
+                <div className="w-10 h-10 rounded-xl bg-purple-50 text-purple-700 flex items-center justify-center mb-3">
+                  <GraduationCap size={20} />
+                </div>
+                <h3 className="font-bold text-sm sm:text-base text-[#1c1917]">
+                  Verified Instructors
+                </h3>
+                <p className="text-xs text-[#78716c] mt-1.5 leading-relaxed">
+                  Learn from accredited teachers, university professors, and industry practitioners.
                 </p>
               </motion.div>
 
@@ -189,12 +188,16 @@ function Home() {
                 initial="hidden"
                 animate="visible"
                 custom={4}
-                className="bg-gray-950/70 border border-gray-800/80 p-5 rounded-2xl backdrop-blur-md"
+                className="bg-white border border-[#e8e5dc] p-5 sm:p-6 rounded-2xl shadow-xs hover:border-[#1e3a8a]/40 transition"
               >
-                <PlayCircle size={26} className="text-cyan-400 mb-3" />
-                <h3 className="font-semibold text-base text-white">Instant Streaming</h3>
-                <p className="text-xs sm:text-sm text-gray-400 mt-1 leading-normal">
-                  High-speed video playback with free preview access.
+                <div className="w-10 h-10 rounded-xl bg-emerald-50 text-emerald-700 flex items-center justify-center mb-3">
+                  <Building2 size={20} />
+                </div>
+                <h3 className="font-bold text-sm sm:text-base text-[#1c1917]">
+                  Multi-Institution
+                </h3>
+                <p className="text-xs text-[#78716c] mt-1.5 leading-relaxed">
+                  Explore specialized coaching centers and academies across multiple academic domains.
                 </p>
               </motion.div>
             </div>
@@ -202,19 +205,19 @@ function Home() {
         </div>
       </section>
 
-      {/* Featured Courses Carousel / Grid */}
+      {/* Featured Courses Grid */}
       <CardPage />
 
       {/* Course Domains Section */}
       <ExploreCourses />
 
       {/* About & Architecture Section */}
-      <Suspense fallback={<div className="h-40 bg-black" />}>
+      <Suspense fallback={<div className="h-40 bg-[#f8f7f4]" />}>
         <About />
       </Suspense>
 
       {/* Global Footer */}
-      <Suspense fallback={<div className="h-40 bg-black" />}>
+      <Suspense fallback={<div className="h-40 bg-white" />}>
         <Footer />
       </Suspense>
     </div>

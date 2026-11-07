@@ -18,12 +18,15 @@ export const ensureDefaultTenants = async () => {
         slug: "default",
         logo: "/skillio.png",
         favicon: "/skillio.png",
-        primaryColor: "#164e63",
+        primaryColor: "#1e3a8a",
         secondaryColor: "#0f172a",
         title: "Learn Without Limits",
         subtitle: "A modern learning platform where educators build powerful courses and students master real skills.",
         heroContent: "Access industry-vetted courses designed to bridge the gap between where you are and where you want to be.",
         organizationName: "Skillio Academy",
+        institutionType: "Academy",
+        description: "Comprehensive multidisciplinary courses in technology, engineering, and creative skills.",
+        domainTags: ["Technology", "Engineering", "Design"],
         status: "active",
       });
       console.log(`[Multi-Tenant] Created default tenant (${defaultTenant.name}, ID: ${defaultTenant._id})`);
@@ -39,6 +42,9 @@ export const ensureDefaultTenants = async () => {
         primaryColor: "#1e3a8a",
         secondaryColor: "#0f172a",
         organizationName: "Physics Academy",
+        institutionType: "Coaching Center",
+        description: "Premier preparation for competitive exams and university physics with in-depth lectures and problem sets.",
+        domainTags: ["Physics", "JEE", "Science"],
         status: "active",
       },
       {
@@ -49,6 +55,9 @@ export const ensureDefaultTenants = async () => {
         primaryColor: "#065f46",
         secondaryColor: "#0f172a",
         organizationName: "Coding Academy",
+        institutionType: "Bootcamp",
+        description: "Modern software engineering, full-stack development, and algorithms taught by veteran engineers.",
+        domainTags: ["Programming", "Web Dev", "React"],
         status: "active",
       },
       {
@@ -59,6 +68,9 @@ export const ensureDefaultTenants = async () => {
         primaryColor: "#7c2d12",
         secondaryColor: "#0f172a",
         organizationName: "ABC Academy",
+        institutionType: "Academy",
+        description: "Executive leadership, business communication, and career acceleration programs.",
+        domainTags: ["Business", "Management", "Career"],
         status: "active",
       },
     ];

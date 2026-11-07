@@ -62,6 +62,27 @@ const tenantSchema = new mongoose.Schema(
       type: String,
       default: "Skillio Academy",
     },
+    ownerId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "User",
+      default: null,
+      index: true,
+    },
+    institutionType: {
+      type: String,
+      default: "Academy",
+      trim: true,
+    },
+    description: {
+      type: String,
+      default: "",
+    },
+    domainTags: [
+      {
+        type: String,
+        trim: true,
+      },
+    ],
     features: {
       quizzes: { type: Boolean, default: true },
       certificates: { type: Boolean, default: true },
@@ -88,6 +109,7 @@ const tenantSchema = new mongoose.Schema(
 // Compound index for domain resolution
 tenantSchema.index({ slug: 1, status: 1 });
 tenantSchema.index({ customDomain: 1, status: 1 });
+tenantSchema.index({ status: 1, createdAt: -1 });
 
 const Tenant = mongoose.model("Tenant", tenantSchema);
 export default Tenant;
