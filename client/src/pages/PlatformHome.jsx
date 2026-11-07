@@ -694,3 +694,4 @@ export default function PlatformHome() {
     </div>
   );
 }
+

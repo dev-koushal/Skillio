@@ -33,3 +33,4 @@ export function optimizeImage(url, width = 600) {
 
   return url;
 }
+
