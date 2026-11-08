@@ -26,6 +26,7 @@ import { setCourseData } from "../../redux/courseSlice";
 import Button from "../../components/common/Button";
 import Navbar from "../../components/Navbar";
 import Footer from "../../components/Footer";
+import WriteWithAIModal from "../../components/WriteWithAIModal";
 
 const LEVELS = ["Beginner", "Intermediate", "Advanced"];
 const SUGGESTED_TOPICS = [
@@ -75,6 +76,19 @@ function EditCourse() {
   const [loading, setLoading] = useState(false);
   const [deleteLoading, setDeleteLoading] = useState(false);
   const [fetching, setFetching] = useState(true);
+
+  // Write With AI Modal State
+  const [showAIModal, setShowAIModal] = useState(false);
+  const [aiFieldTarget, setAiFieldTarget] = useState("all");
+
+  const handleApplyAIGenerated = (fields) => {
+    if (fields.title) setTitle(fields.title);
+    if (fields.subTitle) setSubTitle(fields.subTitle);
+    if (fields.description) setDescription(fields.description);
+    if (fields.category) setCategory(fields.category);
+    if (fields.level) setLevel(fields.level);
+    if (typeof fields.price === "number" && fields.price > 0) setPrice(fields.price);
+  };
 
   const getCourseById = async () => {
     try {
@@ -326,6 +340,18 @@ function EditCourse() {
           <div className="flex items-center gap-2">
             <button
               type="button"
+              onClick={() => {
+                setAiFieldTarget("all");
+                setShowAIModal(true);
+              }}
+              className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl border border-blue-200 bg-blue-50/70 hover:bg-blue-100/80 text-xs font-semibold text-[#1e3a8a] transition cursor-pointer shadow-xs"
+            >
+              <Sparkles size={13} className="text-[#1e3a8a]" />
+              <span>Write with AI</span>
+            </button>
+
+            <button
+              type="button"
               onClick={() => navigate(`/viewcourse/${courseId}`)}
               className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl border border-[#d6d3d1] bg-white hover:bg-[#f1ede4] text-xs font-semibold text-[#44403c] transition cursor-pointer"
             >
@@ -436,9 +462,21 @@ function EditCourse() {
 
               {/* Subtitle */}
               <div>
-                <label className="block text-xs font-semibold uppercase tracking-wider text-[#44403c] mb-1.5">
-                  Headline / Brief Subtitle
-                </label>
+                <div className="flex items-center justify-between mb-1.5">
+                  <label className="block text-xs font-semibold uppercase tracking-wider text-[#44403c]">
+                    Headline / Brief Subtitle
+                  </label>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setAiFieldTarget("subTitle");
+                      setShowAIModal(true);
+                    }}
+                    className="text-[11px] font-semibold text-[#1e3a8a] hover:underline flex items-center gap-1 cursor-pointer"
+                  >
+                    <Sparkles size={11} /> Suggest
+                  </button>
+                </div>
                 <input
                   type="text"
                   value={subTitle}
@@ -495,9 +533,21 @@ function EditCourse() {
 
               {/* Description */}
               <div>
-                <label className="block text-xs font-semibold uppercase tracking-wider text-[#44403c] mb-1.5">
-                  Detailed Course Description
-                </label>
+                <div className="flex items-center justify-between mb-1.5">
+                  <label className="block text-xs font-semibold uppercase tracking-wider text-[#44403c]">
+                    Detailed Course Description
+                  </label>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setAiFieldTarget("description");
+                      setShowAIModal(true);
+                    }}
+                    className="text-[11px] font-semibold text-[#1e3a8a] hover:underline flex items-center gap-1 cursor-pointer"
+                  >
+                    <Sparkles size={11} /> Write with AI
+                  </button>
+                </div>
                 <textarea
                   rows={4}
                   value={description}
@@ -1040,6 +1090,15 @@ function EditCourse() {
           </div>
         )}
       </main>
+
+      {/* Write With AI Modal */}
+      <WriteWithAIModal
+        isOpen={showAIModal}
+        onClose={() => setShowAIModal(false)}
+        onApply={handleApplyAIGenerated}
+        currentFields={{ title, subTitle, description, category, level, price }}
+        initialField={aiFieldTarget}
+      />
 
       <Footer />
     </div>

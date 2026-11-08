@@ -172,6 +172,18 @@ export const TOOL_REGISTRY = {
         throw new Error("Please specify which course you would like to publish or unpublish.");
       }
 
+      // Acceptance check: verify minimum requirements before publishing
+      if (Boolean(args.isPublished)) {
+        const populated = await courseService.getCourse({ tenantId, courseId: course._id });
+        if (!populated.lectures || populated.lectures.length === 0) {
+          return {
+            success: false,
+            message: `Cannot publish "${course.title}". A course must contain at least one lecture before it can be published to students. Please add a lecture first.`,
+            data: { course, missingRequirements: ["at_least_one_lecture"] },
+          };
+        }
+      }
+
       const updated = await courseService.setPublishStatus({
         tenantId,
         userId,
@@ -398,6 +410,29 @@ export const TOOL_REGISTRY = {
         }
       }
 
+      // Positional matching (e.g. "second lecture", 2nd, index 2)
+      if (!targetLecture && (args.lectureIndex || args.lecturePosition || typeof args.lectureTitle === "string")) {
+        const course = await resolveTargetCourse({ tenantId, userId, args, context });
+        if (course) {
+          const populated = await courseService.getCourse({ tenantId, courseId: course._id });
+          let idx = -1;
+          if (args.lectureIndex) idx = Number(args.lectureIndex) - 1;
+          else if (args.lecturePosition) idx = Number(args.lecturePosition) - 1;
+          else if (typeof args.lectureTitle === "string") {
+            const lower = args.lectureTitle.toLowerCase();
+            if (lower.includes("first") || lower.includes("1st") || lower.includes("1")) idx = 0;
+            else if (lower.includes("second") || lower.includes("2nd") || lower.includes("2")) idx = 1;
+            else if (lower.includes("third") || lower.includes("3rd") || lower.includes("3")) idx = 2;
+            else if (lower.includes("fourth") || lower.includes("4th") || lower.includes("4")) idx = 3;
+            else if (lower.includes("fifth") || lower.includes("5th") || lower.includes("5")) idx = 4;
+          }
+
+          if (idx >= 0 && populated?.lectures && populated.lectures[idx]) {
+            targetLecture = populated.lectures[idx];
+          }
+        }
+      }
+
       if (!targetLecture) {
         throw new Error(`Lecture "${args.lectureTitle || ""}" not found.`);
       }
@@ -454,6 +489,29 @@ export const TOOL_REGISTRY = {
             courseId: course._id,
             title: args.lectureTitle,
           });
+        }
+      }
+
+      // Positional matching (e.g. "second lecture", 2nd, index 2)
+      if (!targetLecture && (args.lectureIndex || args.lecturePosition || typeof args.lectureTitle === "string")) {
+        const course = await resolveTargetCourse({ tenantId, userId, args, context });
+        if (course) {
+          const populated = await courseService.getCourse({ tenantId, courseId: course._id });
+          let idx = -1;
+          if (args.lectureIndex) idx = Number(args.lectureIndex) - 1;
+          else if (args.lecturePosition) idx = Number(args.lecturePosition) - 1;
+          else if (typeof args.lectureTitle === "string") {
+            const lower = args.lectureTitle.toLowerCase();
+            if (lower.includes("first") || lower.includes("1st") || lower.includes("1")) idx = 0;
+            else if (lower.includes("second") || lower.includes("2nd") || lower.includes("2")) idx = 1;
+            else if (lower.includes("third") || lower.includes("3rd") || lower.includes("3")) idx = 2;
+            else if (lower.includes("fourth") || lower.includes("4th") || lower.includes("4")) idx = 3;
+            else if (lower.includes("fifth") || lower.includes("5th") || lower.includes("5")) idx = 4;
+          }
+
+          if (idx >= 0 && populated?.lectures && populated.lectures[idx]) {
+            targetLecture = populated.lectures[idx];
+          }
         }
       }
 
@@ -928,6 +986,99 @@ export const TOOL_REGISTRY = {
             lectures,
           },
         },
+      };
+    },
+  },
+
+  // 19. CREATE SECTION
+  createSection: {
+    definition: {
+      type: "function",
+      function: {
+        name: "createSection",
+        description: "Add a curriculum section or chapter header to a course.",
+        parameters: {
+          type: "object",
+          properties: {
+            courseId: { type: "string", description: "Course ID" },
+            courseTitle: { type: "string", description: "Course Title" },
+            sectionTitle: { type: "string", description: "Name of the section (e.g. 'Grammar', 'Speaking Practice')" },
+          },
+          required: ["sectionTitle"],
+        },
+      },
+    },
+    riskLevel: "low",
+    requiresConfirmation: () => false,
+    async execute({ tenantId, userId, userRole, args, context }) {
+      const course = await resolveTargetCourse({ tenantId, userId, args, context });
+      if (!course) throw new Error("Course not found for creating section");
+
+      const result = await lectureService.createLecture({
+        tenantId,
+        userId,
+        userRole,
+        courseId: course._id,
+        lectureTitle: `Section: ${args.sectionTitle}`,
+        isPreviewFree: true,
+      });
+
+      return {
+        success: true,
+        message: `Section "${args.sectionTitle}" added to "${course.title}".`,
+        data: { courseId: course._id, section: result.lecture },
+      };
+    },
+  },
+
+  // 20. ADD LECTURES TO SECTION
+  addLecturesToSection: {
+    definition: {
+      type: "function",
+      function: {
+        name: "addLecturesToSection",
+        description: "Add multiple structured lectures to a specific section in a course.",
+        parameters: {
+          type: "object",
+          properties: {
+            courseId: { type: "string" },
+            courseTitle: { type: "string" },
+            sectionTitle: { type: "string" },
+            lectureCount: { type: "number", description: "Number of lectures to add" },
+            lectureTitles: { type: "array", items: { type: "string" } },
+          },
+        },
+      },
+    },
+    riskLevel: "low",
+    requiresConfirmation: () => false,
+    async execute({ tenantId, userId, userRole, args, context }) {
+      const course = await resolveTargetCourse({ tenantId, userId, args, context });
+      if (!course) throw new Error("Course not found");
+
+      const count = Number(args.lectureCount) || 3;
+      const section = args.sectionTitle || "Module";
+      const created = [];
+      const titles =
+        args.lectureTitles && args.lectureTitles.length > 0
+          ? args.lectureTitles
+          : Array.from({ length: count }, (_, i) => `${section} - Lesson ${i + 1}`);
+
+      for (const t of titles) {
+        const res = await lectureService.createLecture({
+          tenantId,
+          userId,
+          userRole,
+          courseId: course._id,
+          lectureTitle: t,
+        });
+        created.push(res.lecture);
+      }
+
+      return {
+        success: true,
+        message: `Added ${created.length} lectures to section "${section}" in "${course.title}": ${created.map((l) => l.lectureTitle).join(", ")}.`,
+        data: { courseId: course._id, lectures: created },
       };
     },
   },

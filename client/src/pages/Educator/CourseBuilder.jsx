@@ -28,6 +28,7 @@ import { setCourseData, setCreatorCourseData } from "../../redux/courseSlice";
 import Navbar from "../../components/Navbar";
 import Footer from "../../components/Footer";
 import Button from "../../components/common/Button";
+import WriteWithAIModal from "../../components/WriteWithAIModal";
 
 const SUGGESTED_TOPICS = [
   "Spoken English",
@@ -85,6 +86,20 @@ export default function CourseBuilder() {
   const [showAIPlanModal, setShowAIPlanModal] = useState(false);
   const [aiTopic, setAiTopic] = useState("");
   const [aiGenerating, setAiGenerating] = useState(false);
+
+  // Write With AI Modal State
+  const [showWriteAIModal, setShowWriteAIModal] = useState(false);
+  const [aiFieldTarget, setAiFieldTarget] = useState("all");
+
+  const handleApplyAIGenerated = (fields) => {
+    if (fields.title) setTitle(fields.title);
+    if (fields.subTitle) setSubTitle(fields.subTitle);
+    if (fields.description) setDescription(fields.description);
+    if (fields.category) setCategory(fields.category);
+    if (fields.level) setLevel(fields.level);
+    if (typeof fields.price === "number" && fields.price > 0) setPrice(fields.price);
+    setSaveStatus("Unsaved changes");
+  };
 
   // Fetch Course details if editing existing course
   const loadCourse = async (idToLoad) => {
@@ -433,11 +448,14 @@ export default function CourseBuilder() {
           <div className="flex items-center gap-2 shrink-0">
             <button
               type="button"
-              onClick={() => setShowAIPlanModal(true)}
+              onClick={() => {
+                setAiFieldTarget("all");
+                setShowWriteAIModal(true);
+              }}
               className="inline-flex items-center gap-1.5 bg-[#eff6ff] hover:bg-blue-100 text-[#1e3a8a] text-xs font-semibold px-3 py-2 rounded-xl border border-[#bfdbfe] transition cursor-pointer"
             >
               <Sparkles size={14} className="text-[#1e3a8a]" />
-              <span>Generate with AI</span>
+              <span>Write with AI</span>
             </button>
 
             {activeCourseId && (
@@ -559,9 +577,21 @@ export default function CourseBuilder() {
             </div>
 
             <div>
-              <label className="block text-xs font-semibold uppercase tracking-wider text-[#44403c] mb-1.5">
-                Brief Headline (Subtitle)
-              </label>
+              <div className="flex items-center justify-between mb-1.5">
+                <label className="block text-xs font-semibold uppercase tracking-wider text-[#44403c]">
+                  Brief Headline (Subtitle)
+                </label>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setAiFieldTarget("subTitle");
+                    setShowWriteAIModal(true);
+                  }}
+                  className="text-[11px] font-semibold text-[#1e3a8a] hover:underline flex items-center gap-1 cursor-pointer"
+                >
+                  <Sparkles size={11} /> Suggest
+                </button>
+              </div>
               <input
                 type="text"
                 value={subTitle}
@@ -575,9 +605,21 @@ export default function CourseBuilder() {
             </div>
 
             <div>
-              <label className="block text-xs font-semibold uppercase tracking-wider text-[#44403c] mb-1.5">
-                Course Description
-              </label>
+              <div className="flex items-center justify-between mb-1.5">
+                <label className="block text-xs font-semibold uppercase tracking-wider text-[#44403c]">
+                  Course Description
+                </label>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setAiFieldTarget("description");
+                    setShowWriteAIModal(true);
+                  }}
+                  className="text-[11px] font-semibold text-[#1e3a8a] hover:underline flex items-center gap-1 cursor-pointer"
+                >
+                  <Sparkles size={11} /> Write with AI
+                </button>
+              </div>
               <textarea
                 rows={3}
                 value={description}
@@ -1113,6 +1155,15 @@ export default function CourseBuilder() {
           </div>
         </div>
       )}
+
+      {/* Write With AI Modal */}
+      <WriteWithAIModal
+        isOpen={showWriteAIModal}
+        onClose={() => setShowWriteAIModal(false)}
+        onApply={handleApplyAIGenerated}
+        currentFields={{ title, subTitle, description, category, level, price }}
+        initialField={aiFieldTarget}
+      />
 
       <Footer />
     </div>

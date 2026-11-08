@@ -2,6 +2,7 @@ import { Router } from "express";
 import {
   handleAIChat,
   handleGeneratePlan,
+  handleWriteCourse,
   getAILogs,
   handleAIVoice,
   voiceUploadMiddleware,
@@ -18,6 +19,7 @@ aiRouter.use(requireEducator);
 aiRouter.post("/chat", handleAIChat);
 aiRouter.post("/voice", voiceUploadMiddleware, handleAIVoice);
 aiRouter.post("/plan", handleGeneratePlan);
+aiRouter.post("/write-course", handleWriteCourse);
 aiRouter.get("/logs", getAILogs);
 
 export default aiRouter;
