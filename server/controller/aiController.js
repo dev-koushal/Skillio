@@ -183,6 +183,38 @@ export const handleGeneratePlan = async (req, res) => {
 };
 
 /**
+ * Write/Refine Course fields for Educator form ("Write with AI").
+ * Does NOT mutate database. Returns structured JSON.
+ */
+export const handleWriteCourse = async (req, res) => {
+  try {
+    const { topic, prompt, currentFields, fieldToGenerate } = req.body;
+    const tenantId = req.tenantId;
+    const userId = req.userId;
+    const userRole = req.userRole;
+
+    const result = await aiService.generateCourseFields({
+      topic,
+      prompt,
+      currentFields,
+      fieldToGenerate: fieldToGenerate || "all",
+      tenantId,
+      userId,
+      userRole,
+    });
+
+    return res.status(200).json(result);
+  } catch (error) {
+    console.error("[handleWriteCourse Error]", error);
+    const statusCode = error.statusCode || 500;
+    return res.status(statusCode).json({
+      success: false,
+      message: error.message || "Failed to generate course fields",
+    });
+  }
+};
+
+/**
  * Get AI action history logs for educator.
  */
 export const getAILogs = async (req, res) => {

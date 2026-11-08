@@ -6,6 +6,7 @@ import { toast } from "react-toastify";
 import Button from "../../components/common/Button";
 import Navbar from "../../components/Navbar";
 import { useTenant } from "../../context/TenantContext";
+import WriteWithAIModal from "../../components/WriteWithAIModal";
 
 const SUGGESTED_TOPICS = [
   "General",
@@ -25,6 +26,14 @@ function CreateCourses() {
   const [category, setCategory] = useState("");
   const [subTitle, setSubTitle] = useState("");
   const [loading, setLoading] = useState(false);
+  const [showAIModal, setShowAIModal] = useState(false);
+  const [aiFieldTarget, setAiFieldTarget] = useState("all");
+
+  const handleApplyAIGenerated = (fields) => {
+    if (fields.title) setTitle(fields.title);
+    if (fields.subTitle) setSubTitle(fields.subTitle);
+    if (fields.category) setCategory(fields.category);
+  };
 
   const handleCreateCourse = async (e) => {
     e?.preventDefault();
@@ -61,27 +70,42 @@ function CreateCourses() {
       <div className="flex-1 flex items-center justify-center p-4 sm:p-6 my-6">
         <div className="w-full max-w-xl bg-white border border-[#e8e5dc] rounded-2xl shadow-sm p-6 sm:p-10 space-y-6">
           {/* Header */}
-          <div className="flex items-center gap-3 pb-5 border-b border-[#e8e5dc]">
-            <button
-              onClick={() => navigate("/courses")}
-              className="p-2 rounded-lg text-[#78716c] hover:text-[#1c1917] hover:bg-[#f1ede4] transition cursor-pointer"
-              aria-label="Back to courses"
-            >
-              <ArrowLeft size={18} />
-            </button>
-            <div>
-              <div className="flex items-center gap-2">
-                <span className="p-1.5 rounded-lg bg-[#eff6ff] text-[#1e3a8a]">
-                  <BookPlus size={18} />
-                </span>
-                <h1 className="text-xl sm:text-2xl font-bold text-[#1c1917] tracking-tight">
-                  Create New Course
-                </h1>
+          <div className="flex items-center justify-between pb-5 border-b border-[#e8e5dc]">
+            <div className="flex items-center gap-3">
+              <button
+                onClick={() => navigate("/courses")}
+                className="p-2 rounded-lg text-[#78716c] hover:text-[#1c1917] hover:bg-[#f1ede4] transition cursor-pointer"
+                aria-label="Back to courses"
+              >
+                <ArrowLeft size={18} />
+              </button>
+              <div>
+                <div className="flex items-center gap-2">
+                  <span className="p-1.5 rounded-lg bg-[#eff6ff] text-[#1e3a8a]">
+                    <BookPlus size={18} />
+                  </span>
+                  <h1 className="text-xl sm:text-2xl font-bold text-[#1c1917] tracking-tight">
+                    Create New Course
+                  </h1>
+                </div>
+                <p className="text-xs text-[#78716c] mt-0.5">
+                  Set up the foundations for your new course in {tenantName}
+                </p>
               </div>
-              <p className="text-xs text-[#78716c] mt-0.5">
-                Set up the foundations for your new course in {tenantName}
-              </p>
             </div>
+
+            {/* Subtle "Write with AI" Action Button */}
+            <button
+              type="button"
+              onClick={() => {
+                setAiFieldTarget("all");
+                setShowAIModal(true);
+              }}
+              className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-xl bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 text-[#1e3a8a] hover:bg-blue-100/80 transition cursor-pointer shadow-xs"
+            >
+              <Sparkles size={13} className="text-[#1e3a8a]" />
+              <span>Write with AI</span>
+            </button>
           </div>
 
           {/* Form */}
@@ -174,6 +198,15 @@ function CreateCourses() {
           </form>
         </div>
       </div>
+
+      {/* Write With AI Modal */}
+      <WriteWithAIModal
+        isOpen={showAIModal}
+        onClose={() => setShowAIModal(false)}
+        onApply={handleApplyAIGenerated}
+        currentFields={{ title, subTitle, category }}
+        initialField={aiFieldTarget}
+      />
     </div>
   );
 }
