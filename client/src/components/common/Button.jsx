@@ -1,5 +1,5 @@
 import React from "react";
-import { ClipLoader } from "react-spinners";
+import { Loader2 } from "lucide-react";
 
 export default function Button({
   children,
@@ -46,7 +46,7 @@ export default function Button({
       {...props}
     >
       {loading ? (
-        <ClipLoader size={size === "sm" ? 14 : size === "lg" ? 20 : 16} color="currentColor" />
+        <Loader2 size={size === "sm" ? 14 : size === "lg" ? 20 : 16} className="animate-spin" />
       ) : (
         Icon && <Icon size={size === "sm" ? 14 : size === "lg" ? 20 : 16} />
       )}
