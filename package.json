@@ -8,6 +8,7 @@
     "start": "node server/index.js",
     "server": "node server/index.js",
     "client": "cd client && npm run dev",
+    "build": "cd client && npx vite build",
     "build:client": "cd client && npx vite build",
     "test": "node server/tests/multiTenantSecurity.test.js && node server/tests/inProcessRoutes.test.js && node server/tests/courseAccessAndResources.test.js && node server/tests/aiAssistant.test.js && node server/tests/forgotPassword.test.js && node server/tests/institutionStudentManagement.test.js && node server/tests/phoneAuth.test.js",
     "migrate:tenants": "node server/scripts/migrateMultiTenant.js"
