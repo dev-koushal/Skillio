@@ -17,7 +17,6 @@ export default function ForgotPassword() {
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [cooldown, setCooldown] = useState(0);
-  const [devOtpHint, setDevOtpHint] = useState("");
 
   const navigate = useNavigate();
   const { tenant } = useTenant();
@@ -47,9 +46,6 @@ export default function ForgotPassword() {
       const { data } = await api.post("/api/auth/sendotp", { email: email.trim().toLowerCase() });
       setStep(2);
       setCooldown(60);
-      if (data.devOtp) {
-        setDevOtpHint(data.devOtp);
-      }
       toast.success(data.message || "Verification code sent to your email!");
     } catch (error) {
       toast.error(error?.response?.data?.message || "Failed to send verification code");
@@ -219,20 +215,6 @@ export default function ForgotPassword() {
               />
             </div>
 
-            {/* Dev helper chip if provided */}
-            {devOtpHint && (
-              <div className="p-2.5 rounded-xl bg-amber-50 border border-amber-200 text-amber-900 text-xs flex items-center justify-between">
-                <span>Test Code: <strong>{devOtpHint}</strong></span>
-                <button
-                  type="button"
-                  onClick={() => setOtp(devOtpHint)}
-                  className="text-[11px] font-bold text-amber-700 underline cursor-pointer"
-                >
-                  Auto-fill
-                </button>
-              </div>
-            )}
-
             <Button
               type="submit"
               variant="primary"
@@ -259,7 +241,6 @@ export default function ForgotPassword() {
                 type="button"
                 onClick={() => {
                   setStep(1);
-                  setDevOtpHint("");
                 }}
                 className="text-[#78716c] hover:text-[#1c1917] font-medium transition cursor-pointer"
               >

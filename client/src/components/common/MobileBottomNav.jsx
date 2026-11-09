@@ -6,7 +6,8 @@ import {
   GraduationCap,
   User,
   LayoutDashboard,
-  PlusCircle,
+  Users,
+  BarChart3,
   Building2,
 } from "lucide-react";
 import { useSelector } from "react-redux";
@@ -45,7 +46,7 @@ export default function MobileBottomNav({ currentInstitution = null }) {
       isActive: location.pathname === "/allcourses" || location.pathname.startsWith("/viewcourse/"),
     },
     {
-      label: "My Learning",
+      label: "My Courses",
       path: userData ? "/mycourses" : "/login",
       icon: GraduationCap,
       isActive: location.pathname === "/mycourses" || location.pathname.startsWith("/viewlecture/"),
@@ -60,6 +61,12 @@ export default function MobileBottomNav({ currentInstitution = null }) {
 
   const educatorNavItems = [
     {
+      label: "Home",
+      path: "/educator/home",
+      icon: Home,
+      isActive: location.pathname === "/educator/home" || location.pathname === "/educator",
+    },
+    {
       label: "Dashboard",
       path: "/dashboard",
       icon: LayoutDashboard,
@@ -69,25 +76,19 @@ export default function MobileBottomNav({ currentInstitution = null }) {
       label: "Courses",
       path: "/courses",
       icon: BookOpen,
-      isActive: location.pathname === "/courses",
+      isActive: location.pathname === "/courses" || location.pathname.startsWith("/builder"),
     },
     {
-      label: "Create",
-      path: "/builder/new",
-      icon: PlusCircle,
-      isActive: location.pathname.startsWith("/builder") || location.pathname.startsWith("/createcourses"),
+      label: "Students",
+      path: "/students",
+      icon: Users,
+      isActive: location.pathname === "/students" || location.pathname.startsWith("/dashboard/students"),
     },
     {
-      label: "Academy",
-      path: activeInstitution ? `/institution/${activeInstitution.slug}` : "/institutions",
+      label: "Institution",
+      path: "/create-institution",
       icon: Building2,
-      isActive: location.pathname === "/institutions" || location.pathname.startsWith("/institution/"),
-    },
-    {
-      label: "Profile",
-      path: "/profile",
-      icon: User,
-      isActive: location.pathname === "/profile" || location.pathname === "/editprofile",
+      isActive: location.pathname === "/create-institution",
     },
   ];
 

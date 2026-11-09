@@ -1,6 +1,7 @@
 import Tenant from "../models/tenantModel.js";
 import Course from "../models/coursesModel.js";
 import User from "../models/userModel.js";
+import InstitutionMembership from "../models/institutionMembershipModel.js";
 import { genToken } from "../config/token.js";
 import { clearTenantCache } from "../middleware/tenantResolver.js";
 import uploadCloudinary from "../config/cloudinary.js";
@@ -154,6 +155,33 @@ export const createOrganizationByEducator = async (req, res) => {
       return res.status(401).json({ success: false, message: "Authentication required" });
     }
 
+    const user = await User.findById(userId);
+    if (!user) {
+      return res.status(404).json({ success: false, message: "User not found" });
+    }
+
+    // Role check: Students are strictly consumers/members and cannot create institutions
+    if (user.role === "student" || req.userRole === "student") {
+      return res.status(403).json({
+        success: false,
+        message: "Students are consumers of institutions and are not permitted to create organizations.",
+      });
+    }
+
+    // Educator limit rule: Each educator/admin can manage exactly ONE institution
+    const existingOwned = await Tenant.findOne({
+      $or: [
+        { ownerId: userId },
+        ...(user.tenantId ? [{ _id: user.tenantId }] : []),
+      ],
+    });
+    if (existingOwned) {
+      return res.status(400).json({
+        success: false,
+        message: `You already manage '${existingOwned.name}'. Educators are limited to exactly one institution.`,
+      });
+    }
+
     if (!name || !slug) {
       return res.status(400).json({ success: false, message: "Institution name and subdomain slug are required" });
     }
@@ -205,12 +233,18 @@ export const createOrganizationByEducator = async (req, res) => {
     });
 
     // Update user to tenant_admin
-    const user = await User.findById(userId);
-    if (user) {
-      user.role = "tenant_admin";
-      user.tenantId = newTenant._id;
-      await user.save();
-    }
+    user.role = "tenant_admin";
+    user.tenantId = newTenant._id;
+    await user.save();
+
+    // Register institution owner membership
+    await InstitutionMembership.create({
+      userId: user._id,
+      tenantId: newTenant._id,
+      role: "tenant_admin",
+      status: "active",
+      joinedAt: new Date(),
+    });
 
     clearTenantCache();
 
@@ -229,6 +263,122 @@ export const createOrganizationByEducator = async (req, res) => {
     });
   } catch (error) {
     console.error("[CreateOrganizationByEducator Error]", error);
+    return res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+/**
+ * Authenticated: Get the institution managed by or connected to this educator.
+ */
+export const getMyInstitution = async (req, res) => {
+  try {
+    const userId = req.userId;
+    if (!userId) {
+      return res.status(401).json({ success: false, message: "Authentication required" });
+    }
+
+    const user = await User.findById(userId);
+    if (!user) {
+      return res.status(404).json({ success: false, message: "User not found" });
+    }
+
+    // Lookup tenant owned by user or assigned to user
+    let tenant = await Tenant.findOne({ ownerId: userId });
+    if (!tenant && user.tenantId) {
+      tenant = await Tenant.findById(user.tenantId);
+    }
+
+    return res.status(200).json({
+      success: true,
+      hasInstitution: Boolean(tenant),
+      tenant: tenant || null,
+    });
+  } catch (error) {
+    console.error("[GetMyInstitution Error]", error);
+    return res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+/**
+ * Authenticated: Update the institution managed by this educator.
+ */
+export const updateMyInstitution = async (req, res) => {
+  try {
+    const userId = req.userId;
+    if (!userId) {
+      return res.status(401).json({ success: false, message: "Authentication required" });
+    }
+
+    const user = await User.findById(userId);
+    if (!user) {
+      return res.status(404).json({ success: false, message: "User not found" });
+    }
+
+    if (user.role === "student") {
+      return res.status(403).json({ success: false, message: "Students cannot manage institutions" });
+    }
+
+    // Resolve tenant owned by user or assigned to user
+    let tenant = await Tenant.findOne({ ownerId: userId });
+    if (!tenant && user.tenantId) {
+      tenant = await Tenant.findById(user.tenantId);
+    }
+
+    if (!tenant) {
+      return res.status(404).json({
+        success: false,
+        message: "No institution found under your account. Please create one first.",
+      });
+    }
+
+    const {
+      name,
+      institutionType,
+      title,
+      subtitle,
+      description,
+      domainTags,
+      primaryColor,
+      secondaryColor,
+      contactEmail,
+    } = req.body;
+
+    if (name && name.trim()) tenant.name = name.trim();
+    if (institutionType && institutionType.trim()) tenant.institutionType = institutionType.trim();
+    if (title !== undefined) tenant.title = title.trim();
+    if (subtitle !== undefined) tenant.subtitle = subtitle.trim();
+    if (description !== undefined) tenant.description = description.trim();
+    if (primaryColor) tenant.primaryColor = primaryColor;
+    if (secondaryColor) tenant.secondaryColor = secondaryColor;
+
+    if (contactEmail !== undefined) {
+      if (!tenant.settings) tenant.settings = {};
+      tenant.settings.contactEmail = contactEmail.trim();
+    }
+
+    if (domainTags !== undefined) {
+      tenant.domainTags = Array.isArray(domainTags)
+        ? domainTags
+        : domainTags.split(",").map((s) => s.trim()).filter(Boolean);
+    }
+
+    if (req.file) {
+      const upload = await uploadCloudinary(req.file.path);
+      if (upload) tenant.logo = upload;
+    }
+
+    await tenant.save();
+
+    clearTenantCache(tenant.slug);
+    clearTenantCache(tenant._id.toString());
+
+    return res.status(200).json({
+      success: true,
+      message: `Institution '${tenant.name}' updated successfully!`,
+      tenant,
+    });
+  } catch (error) {
+    console.error("[UpdateMyInstitution Error]", error);
     return res.status(500).json({ success: false, message: error.message });
   }
 };

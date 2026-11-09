@@ -32,67 +32,43 @@ export const ensureDefaultTenants = async () => {
       console.log(`[Multi-Tenant] Created default tenant (${defaultTenant.name}, ID: ${defaultTenant._id})`);
     }
 
-    // 2. Ensure Test / Demo Tenants for local & subdomain testing
-    const seedTenants = [
-      {
-        name: "English Academy",
-        slug: "english",
-        title: "Master English with Practical Confidence",
-        subtitle: "Build fluent speaking skills, correct grammar, and ace IELTS or corporate interviews.",
-        primaryColor: "#0f766e",
-        secondaryColor: "#042f2e",
-        organizationName: "English Academy",
-        institutionType: "Language Institute",
-        description: "Specialized language training for spoken fluency, IELTS band 8+, corporate communication, and vocabulary.",
-        domainTags: ["English", "IELTS", "Communication"],
-        status: "active",
-      },
-      {
-        name: "Physics Academy",
-        slug: "physics",
-        title: "Master Physics from Basics to Advanced",
-        subtitle: "Comprehensive physics curricula crafted for school and university students.",
-        primaryColor: "#1e3a8a",
-        secondaryColor: "#0f172a",
-        organizationName: "Physics Academy",
-        institutionType: "Coaching Center",
-        description: "Premier preparation for competitive exams and university physics with in-depth lectures and problem sets.",
-        domainTags: ["Physics", "JEE", "Science"],
-        status: "active",
-      },
-      {
-        name: "Coding Academy",
-        slug: "coding",
-        title: "Master Modern Software Engineering",
-        subtitle: "Full-stack web development, system design, and AI tooling with industry experts.",
-        primaryColor: "#065f46",
-        secondaryColor: "#0f172a",
-        organizationName: "Coding Academy",
-        institutionType: "Bootcamp",
-        description: "Modern software engineering, full-stack development, and algorithms taught by veteran engineers.",
-        domainTags: ["Programming", "Web Dev", "React"],
-        status: "active",
-      },
-      {
-        name: "ABC Academy",
-        slug: "abcacademy",
-        title: "Excellence in Executive Education",
-        subtitle: "Accelerate your career with accredited programs and mentorship.",
-        primaryColor: "#7c2d12",
-        secondaryColor: "#0f172a",
-        organizationName: "ABC Academy",
-        institutionType: "Academy",
-        description: "Executive leadership, business communication, and career acceleration programs.",
-        domainTags: ["Business", "Management", "Career"],
-        status: "active",
-      },
-    ];
+    // 2. Only seed demo tenants if explicitly requested in test environment
+    if (process.env.SEED_TEST_TENANTS === "true" && process.env.NODE_ENV === "test") {
+      const seedTenants = [
+        {
+          name: "English Academy",
+          slug: "english",
+          title: "Master English with Practical Confidence",
+          subtitle: "Build fluent speaking skills, correct grammar, and ace IELTS or corporate interviews.",
+          primaryColor: "#0f766e",
+          secondaryColor: "#042f2e",
+          organizationName: "English Academy",
+          institutionType: "Language Institute",
+          description: "Specialized language training for spoken fluency, IELTS band 8+, corporate communication, and vocabulary.",
+          domainTags: ["English", "IELTS", "Communication"],
+          status: "active",
+        },
+        {
+          name: "Physics Academy",
+          slug: "physics",
+          title: "Master Physics from Basics to Advanced",
+          subtitle: "Comprehensive physics curricula crafted for school and university students.",
+          primaryColor: "#1e3a8a",
+          secondaryColor: "#0f172a",
+          organizationName: "Physics Academy",
+          institutionType: "Coaching Center",
+          description: "Premier preparation for competitive exams and university physics with in-depth lectures and problem sets.",
+          domainTags: ["Physics", "JEE", "Science"],
+          status: "active",
+        },
+      ];
 
-    for (const seed of seedTenants) {
-      const exists = await Tenant.findOne({ slug: seed.slug });
-      if (!exists) {
-        await Tenant.create(seed);
-        console.log(`[Multi-Tenant] Seeded tenant: ${seed.slug} (${seed.name})`);
+      for (const seed of seedTenants) {
+        const exists = await Tenant.findOne({ slug: seed.slug });
+        if (!exists) {
+          await Tenant.create(seed);
+          console.log(`[Multi-Tenant] Seeded test tenant: ${seed.slug} (${seed.name})`);
+        }
       }
     }
 

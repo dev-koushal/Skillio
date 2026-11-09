@@ -5,6 +5,7 @@ import { useSelector } from "react-redux";
 import "react-toastify/dist/ReactToastify.css";
 
 import ScrollToTop from "./components/ScrollToTop";
+import WelcomeModal from "./components/common/WelcomeModal";
 import { TenantProvider } from "./context/TenantContext";
 import { serverURL, getActiveTenantSlug } from "./services/api";
 
@@ -22,6 +23,7 @@ const Profile = lazy(() => import("./pages/Profile"));
 const ForgetPassword = lazy(() => import("./pages/ForgetPassword"));
 const EditProfile = lazy(() => import("./pages/EditProfile"));
 const Dashboard = lazy(() => import("./pages/Educator/Dashboard"));
+const EducatorHome = lazy(() => import("./pages/Educator/EducatorHome"));
 const Courses = lazy(() => import("./pages/Educator/Courses"));
 const CreateCourses = lazy(() => import("./pages/Educator/CreateCourses"));
 const EditCourse = lazy(() => import("./pages/Educator/EditCourse"));
@@ -34,6 +36,8 @@ const ViewLectures = lazy(() => import("./pages/ViewLectures"));
 const MyEnrolledCourses = lazy(() => import("./pages/MyEnrolledCourses"));
 const InstitutionDirectory = lazy(() => import("./pages/InstitutionDirectory"));
 const CreateInstitution = lazy(() => import("./pages/CreateInstitution"));
+const InstitutionStudents = lazy(() => import("./pages/Educator/Students"));
+const AcceptInvite = lazy(() => import("./pages/AcceptInvite"));
 
 // Lazy-loaded AI Assistant button to keep anonymous landing fast
 const AIAssistantButton = lazy(() => import("./components/AIAssistantButton"));
@@ -42,14 +46,41 @@ export { serverURL };
 
 /**
  * Root Route Dispatcher:
- * If an institution subdomain is detected (e.g. physics.mylms.com), displays that institution.
- * Otherwise, renders the Skillio SaaS Platform Homepage.
+ * - If an authenticated educator arrives, route directly to their institution /educator/home.
+ * - If an active institution is detected (e.g. physics.lvh.me or /institution/physics), display that institution.
+ * - Otherwise, display the public Skillio SaaS Platform Homepage.
  */
 function RootRouteDispatcher() {
+  const { userData } = useSelector((store) => store.user);
+  const isEducator =
+    userData?.role === "educator" ||
+    userData?.role === "tenant_admin" ||
+    userData?.role === "platform_admin";
+
+  if (isEducator) {
+    return <Navigate to="/educator/home" replace />;
+  }
+
   const slug = getActiveTenantSlug();
   if (slug && slug !== "platform" && slug !== "default") {
     return <InstitutionHome />;
   }
+
+  if (userData?.role === "student") {
+    const memberships = Array.isArray(userData.memberships) ? userData.memberships : [];
+    const primaryTenantSlug =
+      userData.tenant?.slug ||
+      (typeof userData.tenantId === "object" ? userData.tenantId?.slug : null);
+    const selectedTenantSlug =
+      localStorage.getItem("skillio_active_tenant") ||
+      primaryTenantSlug ||
+      (memberships.length === 1 ? memberships[0].slug : null);
+
+    if (selectedTenantSlug && !["platform", "default"].includes(selectedTenantSlug)) {
+      return <Navigate to={`/institution/${encodeURIComponent(selectedTenantSlug)}`} replace />;
+    }
+  }
+
   return <PlatformHome />;
 }
 
@@ -87,11 +118,32 @@ function AppRoutes() {
           <Route path="/allcourses" element={<AllCourses />} />
           <Route path="/viewcourse/:courseId" element={<ViewCourses />} />
 
+          {/* Course Invitation Acceptance Route */}
+          <Route path="/accept-invite" element={<AcceptInvite />} />
+          <Route path="/invite/:token" element={<AcceptInvite />} />
+
           {/* Auth Routes */}
-          <Route path="/login" element={!userData ? <Login /> : <Navigate to="/" />} />
-          <Route path="/signup" element={!userData ? <Signup /> : <Navigate to="/" />} />
+          <Route
+            path="/login"
+            element={!userData ? <Login /> : isEducator ? <Navigate to="/educator/home" replace /> : <Navigate to="/" replace />}
+          />
+          <Route
+            path="/signup"
+            element={!userData ? <Signup /> : isEducator ? <Navigate to="/educator/home" replace /> : <Navigate to="/" replace />}
+          />
           <Route path="/forget" element={<ForgetPassword />} />
-          <Route path="/create-institution" element={<CreateInstitution />} />
+          <Route
+            path="/create-institution"
+            element={isEducator ? <CreateInstitution /> : <Navigate to="/" replace />}
+          />
+          <Route
+            path="/institution/manage"
+            element={isEducator ? <CreateInstitution /> : <Navigate to="/" replace />}
+          />
+          <Route
+            path="/educator/institution"
+            element={isEducator ? <CreateInstitution /> : <Navigate to="/" replace />}
+          />
 
           {/* Authenticated Student Routes */}
           <Route
@@ -113,8 +165,24 @@ function AppRoutes() {
 
           {/* Educator / Management Routes */}
           <Route
+            path="/educator/home"
+            element={isEducator ? <EducatorHome /> : <Navigate to="/login" replace />}
+          />
+          <Route
+            path="/educator"
+            element={<Navigate to="/educator/home" replace />}
+          />
+          <Route
             path="/dashboard"
             element={isEducator ? <Dashboard /> : <Navigate to="/login" replace />}
+          />
+          <Route
+            path="/students"
+            element={isEducator ? <InstitutionStudents /> : <Navigate to="/login" replace />}
+          />
+          <Route
+            path="/dashboard/students"
+            element={isEducator ? <InstitutionStudents /> : <Navigate to="/login" replace />}
           />
           <Route
             path="/courses"
@@ -156,6 +224,9 @@ function AppRoutes() {
           <AIAssistantButton />
         </Suspense>
       )}
+
+      {/* Entry Modal for first-time visitors */}
+      <WelcomeModal />
 
       <ToastContainer
         position="top-right"

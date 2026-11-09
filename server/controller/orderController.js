@@ -3,6 +3,8 @@ import crypto from "crypto";
 import dotenv from "dotenv";
 import Course from "../models/coursesModel.js";
 import User from "../models/userModel.js";
+import CourseAccess from "../models/courseAccessModel.js";
+import InstitutionMembership from "../models/institutionMembershipModel.js";
 
 dotenv.config();
 
@@ -118,18 +120,31 @@ export const verifyPayment = async (req, res) => {
 
     const instance = getRazorpayInstance();
 
-    // 1. Creator or Free enrollment check
-    if (
-      (userId && course.creator.toString() === userId.toString()) ||
-      (razorpay_order_id && razorpay_order_id.startsWith("creator_")) ||
-      freeEnrollment ||
-      (!course.price || Number(course.price) <= 0)
-    ) {
-      // Free or creator enrollment requires no financial transaction
+    const isFreeCourse = !course.price || Number(course.price) <= 0;
+    const isCreator = userId && course.creator && course.creator.toString() === userId.toString();
+    const isDev = process.env.NODE_ENV !== "production";
+
+    // 1. Creator enrollment requires no payment
+    if (isCreator || (razorpay_order_id && razorpay_order_id.startsWith("creator_"))) {
+      // Creator allowed
     }
-    // 2. Simulated mock order (dev/test mode)
+    // 2. Free enrollment check - STRICTLY only allowed if course.price is 0
+    else if (freeEnrollment || isFreeCourse) {
+      if (!isFreeCourse) {
+        return res.status(400).json({
+          success: false,
+          message: "Free enrollment bypass is not allowed on paid courses. Complete payment to enroll.",
+        });
+      }
+    }
+    // 3. Simulated mock order (dev/test mode strictly)
     else if (razorpay_order_id && razorpay_order_id.startsWith("order_mock_")) {
-      // Mock order allowed in test/demo mode
+      if (!isDev) {
+        return res.status(403).json({
+          success: false,
+          message: "Mock payment orders are strictly forbidden in production mode.",
+        });
+      }
     }
     // 3. Signature verification with Razorpay credentials
     else if (instance && razorpay_signature && razorpay_order_id && razorpay_payment_id) {
@@ -175,6 +190,36 @@ export const verifyPayment = async (req, res) => {
       course.enrolledStudents.push(userId);
       await course.save();
     }
+
+    // Record formal CourseAccess with accurate source tracking
+    const accessSource = (course.price > 0 && !freeEnrollment) ? "PURCHASED" : "FREE";
+    await CourseAccess.findOneAndUpdate(
+      { userId, courseId, tenantId },
+      {
+        userId,
+        courseId,
+        tenantId,
+        source: accessSource,
+        status: "active",
+        grantedAt: new Date(),
+        revokedAt: null,
+        revokedBy: null,
+      },
+      { upsert: true, new: true }
+    );
+
+    // Register or refresh student's InstitutionMembership
+    await InstitutionMembership.findOneAndUpdate(
+      { userId, tenantId },
+      {
+        userId,
+        tenantId,
+        role: "student",
+        status: "active",
+        lastActiveAt: new Date(),
+      },
+      { upsert: true, new: true, setDefaultsOnInsert: true }
+    );
 
     return res.status(200).json({
       success: true,

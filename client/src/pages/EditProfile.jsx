@@ -163,7 +163,7 @@ const EditProfile = () => {
                 loading={loading}
                 className="!bg-[#1e3a8a] hover:!bg-[#172554] text-white font-medium px-6 py-2.5 rounded-xl transition shadow-xs"
               >
-                <Save size={16} /> Save Changes
+                <Save size={16} className="inline-block mr-2" /> Save Changes
               </Button>
             </div>
           </form>

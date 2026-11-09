@@ -13,27 +13,36 @@ export const getCurrentUser = async (req, res) => {
         select: "title thumbnail description subTitle category price creator lectures isPublished",
       });
 
-    // Fallback for platform_admin logging into any tenant
+    // Fallback for students browsing across institutions or platform_admin
     if (!user) {
-      const platformAdmin = await User.findOne({ _id: req.userId, role: "platform_admin" })
+      const globalUser = await User.findById(req.userId)
         .select("-password")
         .populate({
           path: "enrolledCourses",
-          select: "title thumbnail description subTitle category price creator lectures isPublished",
+          select: "title thumbnail description subTitle category price creator lectures isPublished tenantId",
         });
-      if (platformAdmin) {
-        user = platformAdmin;
+      if (globalUser) {
+        user = globalUser;
       }
     }
 
     if (!user) {
       return res.status(404).json({
         success: false,
-        message: "User not found in this organization!",
+        message: "User not found!",
       });
     }
 
-    return res.status(200).json(user);
+    const safeUser = user.toObject ? user.toObject() : { ...user };
+
+    // Tenant Isolation: Enrolled courses must strictly belong to active institution context
+    if (tenantId && safeUser.enrolledCourses && Array.isArray(safeUser.enrolledCourses)) {
+      safeUser.enrolledCourses = safeUser.enrolledCourses.filter(
+        (c) => c && c.tenantId && c.tenantId.toString() === tenantId.toString()
+      );
+    }
+
+    return res.status(200).json(safeUser);
   } catch (error) {
     return res.status(500).json({ success: false, message: "Error in getting currentUser", error: error.message });
   }

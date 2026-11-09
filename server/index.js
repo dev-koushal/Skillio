@@ -17,6 +17,8 @@ import reviewRouter from "./routes/reviewRoute.js";
 import tenantRouter from "./routes/tenantRoute.js";
 import resourceRouter from "./routes/resourceRoute.js";
 import aiRouter from "./routes/aiRoute.js";
+import institutionStudentRouter from "./routes/institutionStudentRoute.js";
+import invitationRouter from "./routes/invitationRoute.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -74,6 +76,8 @@ app.get("/api/health", (req, res) => {
 app.use(tenantResolver);
 
 // API Routes
+app.use("/api/institutions/me", institutionStudentRouter);
+app.use("/api/tenant/me", institutionStudentRouter);
 app.use("/api/tenant", tenantRouter);
 app.use("/api/auth", authRouter);
 app.use("/api/user", userRouter);
@@ -82,6 +86,17 @@ app.use("/api/order", paymentRouter);
 app.use("/api/review", reviewRouter);
 app.use("/api/resource", resourceRouter);
 app.use("/api/ai", aiRouter);
+app.use("/api/invitations", invitationRouter);
+
+// Serve static client assets in production
+if (process.env.NODE_ENV === "production") {
+  const clientDistPath = path.join(__dirname, "../client/dist");
+  app.use(express.static(clientDistPath));
+  app.get("*", (req, res, next) => {
+    if (req.originalUrl.startsWith("/api/")) return next();
+    res.sendFile(path.join(clientDistPath, "index.html"));
+  });
+}
 
 // Centralized Error Handler
 app.use((err, req, res, next) => {

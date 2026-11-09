@@ -167,16 +167,15 @@ function AllCourses() {
         </div>
 
         {/* Filter Toolbar */}
-        <div className="flex flex-wrap items-center justify-between gap-3 bg-white border border-[#e8e5dc] p-3.5 sm:p-4 rounded-2xl shadow-xs">
+        <div className="flex flex-wrap items-center justify-between gap-3 bg-white border border-[#e8e5dc] p-3.5 sm:p-4 rounded-2xl shadow-xs overflow-auto">
           {/* Left: Organization-Specific Categories (if > 1) */}
           <div className="flex items-center gap-2 overflow-x-auto pb-1 sm:pb-0 max-w-full">
             <button
               onClick={() => setSelectedCategory("all")}
-              className={`px-3.5 py-1.5 rounded-xl text-xs font-semibold whitespace-nowrap transition cursor-pointer ${
-                selectedCategory === "all"
-                  ? "bg-[#1e3a8a] text-white"
-                  : "bg-[#f8f7f4] text-[#44403c] hover:bg-[#f1ede4] border border-[#e8e5dc]"
-              }`}
+              className={`px-3.5 py-1.5 rounded-xl text-xs font-semibold whitespace-nowrap transition cursor-pointer ${selectedCategory === "all"
+                ? "bg-[#1e3a8a] text-white"
+                : "bg-[#f8f7f4] text-[#44403c] hover:bg-[#f1ede4] border border-[#e8e5dc]"
+                }`}
             >
               All Topics
             </button>
@@ -184,11 +183,10 @@ function AllCourses() {
               <button
                 key={cat}
                 onClick={() => setSelectedCategory(cat)}
-                className={`px-3.5 py-1.5 rounded-xl text-xs font-semibold whitespace-nowrap transition cursor-pointer ${
-                  selectedCategory.toLowerCase() === cat.toLowerCase()
-                    ? "bg-[#1e3a8a] text-white"
-                    : "bg-[#f8f7f4] text-[#44403c] hover:bg-[#f1ede4] border border-[#e8e5dc]"
-                }`}
+                className={`px-3.5 py-1.5 rounded-xl text-xs font-semibold whitespace-nowrap transition cursor-pointer ${selectedCategory.toLowerCase() === cat.toLowerCase()
+                  ? "bg-[#1e3a8a] text-white"
+                  : "bg-[#f8f7f4] text-[#44403c] hover:bg-[#f1ede4] border border-[#e8e5dc]"
+                  }`}
               >
                 {cat}
               </button>

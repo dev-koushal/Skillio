@@ -1,4 +1,5 @@
 import Course from "../models/coursesModel.js";
+import CourseAccess from "../models/courseAccessModel.js";
 
 /**
  * Verifies whether a given user has full access to view course lectures and protected resources.
@@ -35,7 +36,32 @@ export const verifyCourseAccess = async ({ courseId, userId, userRole, tenantId 
     };
   }
 
-  // Check enrollment
+  // Check formal CourseAccess grant (supports PURCHASED, INSTITUTION_GRANTED, etc.)
+  if (userId) {
+    const grant = await CourseAccess.findOne({ userId, courseId, tenantId });
+    if (grant) {
+      if (grant.status === "active") {
+        return {
+          hasAccess: true,
+          course,
+          isEnrolled: true,
+          isFree: !course.price || Number(course.price) === 0,
+          accessSource: grant.source,
+        };
+      }
+      if (grant.status === "revoked") {
+        return {
+          hasAccess: false,
+          course,
+          isEnrolled: false,
+          isFree: false,
+          reason: "Access to this course was revoked by the institution administrator.",
+        };
+      }
+    }
+  }
+
+  // Check enrollment array
   const isEnrolled =
     Boolean(userId) &&
     Array.isArray(course.enrolledStudents) &&

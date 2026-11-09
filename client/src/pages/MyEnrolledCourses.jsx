@@ -100,7 +100,7 @@ function MyEnrolledCourses() {
                   <GraduationCap size={20} />
                 </span>
                 <h1 className="text-2xl sm:text-3xl font-extrabold text-[#1c1917] tracking-tight">
-                  My Learning Workspace
+                  My Courses
                 </h1>
               </div>
               <p className="text-xs sm:text-sm text-[#78716c] mt-0.5">
@@ -120,7 +120,7 @@ function MyEnrolledCourses() {
                     : "text-[#57534e] hover:bg-[#f8f7f4]"
                 }`}
               >
-                All Enrolled ({coursesList.length})
+                All Courses ({coursesList.length})
               </button>
               <button
                 onClick={() => setFilterTab("in_progress")}
@@ -130,7 +130,7 @@ function MyEnrolledCourses() {
                     : "text-[#57534e] hover:bg-[#f8f7f4]"
                 }`}
               >
-                Active
+                Active Session
               </button>
             </div>
           )}

@@ -1,5 +1,6 @@
 import jwt from "jsonwebtoken";
 import User from "../models/userModel.js";
+import InstitutionMembership from "../models/institutionMembershipModel.js";
 
 const isAuth = async (req, res, next) => {
   try {
@@ -22,13 +23,30 @@ const isAuth = async (req, res, next) => {
     req.userRole = decoded.role;
 
     // Multi-tenant security check:
-    // If the token has a tenantId, verify it matches the current request tenant (unless user is platform_admin)
+    // If the token has a tenantId, verify tenant context matches
     if (decoded.tenantId && req.tenantId) {
       if (decoded.tenantId.toString() !== req.tenantId.toString()) {
-        if (decoded.role !== "platform_admin") {
+        if (decoded.role === "platform_admin") {
+          // Platform admin has global access across tenants
+        } else if (decoded.role === "student") {
+          // Students may belong to multiple institutions: verify active membership in req.tenantId
+          const membership = await InstitutionMembership.findOne({
+            userId: decoded.userId,
+            tenantId: req.tenantId,
+            status: { $in: ["ACTIVE", "ENROLLED"] },
+          });
+          if (!membership) {
+            return res.status(403).json({
+              success: false,
+              message: "Cross-tenant access forbidden. You are not an enrolled member of this institution.",
+              code: "CROSS_TENANT_FORBIDDEN",
+            });
+          }
+        } else {
+          // Educators & admins are strictly bound to their single assigned institution
           return res.status(403).json({
             success: false,
-            message: "Cross-tenant access forbidden. Please sign in to this organization.",
+            message: "Cross-tenant access forbidden. Please sign in to your assigned organization.",
             code: "CROSS_TENANT_FORBIDDEN",
           });
         }

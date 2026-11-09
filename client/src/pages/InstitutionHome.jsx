@@ -1,5 +1,6 @@
 import React, { useEffect, useState, lazy, Suspense } from "react";
 import { useParams, useNavigate, Link } from "react-router-dom";
+import { useSelector } from "react-redux";
 import Navbar from "../components/Navbar";
 import {
   ArrowRight,
@@ -8,9 +9,8 @@ import {
   GraduationCap,
   Award,
   Sparkles,
-  Building2,
   CheckCircle2,
-  ArrowLeft,
+  PlayCircle,
   Loader2,
 } from "lucide-react";
 import { useTenant } from "../context/TenantContext";
@@ -24,6 +24,8 @@ const CardPage = lazy(() => import("../components/CardPage"));
 export default function InstitutionHome() {
   const { slug } = useParams();
   const navigate = useNavigate();
+  const { userData } = useSelector((state) => state.user);
+  const { courseData } = useSelector((state) => state.course);
   const { tenant: contextTenant, reloadTenant } = useTenant();
 
   const [institution, setInstitution] = useState(null);
@@ -90,31 +92,16 @@ export default function InstitutionHome() {
 
   const institutionType = activeTenant?.institutionType || "Academy";
 
+  // Filter enrolled courses belonging to this institution
+  const enrolledCoursesInTenant = (userData?.enrolledCourses || [])
+    .map((item) => (typeof item === "object" ? item : (courseData || []).find((c) => c._id === item)))
+    .filter((c) => c && c.title);
+
+  const activeEnrolledCourse = enrolledCoursesInTenant[0];
+
   return (
     <div className="w-full bg-[#f8f7f4] min-h-screen text-[#1c1917] flex flex-col font-sans pb-20 md:pb-0">
       <Navbar currentInstitution={activeTenant} />
-
-      {/* Breadcrumb / Return to Platform pill */}
-      <div className="bg-white border-b border-[#e8e5dc] py-2 px-4 sm:px-8">
-        <div className="max-w-7xl mx-auto flex items-center justify-between text-xs">
-          <Link
-            to="/"
-            className="inline-flex items-center gap-1.5 text-[#78716c] hover:text-[#1e3a8a] transition font-medium"
-          >
-            <ArrowLeft size={13} />
-            <span>Skillio Platform</span>
-          </Link>
-          <span className="text-[#a8a29e] hidden sm:inline">
-            You are browsing inside <strong>{tenantName}</strong>
-          </span>
-          <Link
-            to="/institutions"
-            className="text-[#1e3a8a] hover:underline font-semibold"
-          >
-            Switch Academy
-          </Link>
-        </div>
-      </div>
 
       {loading ? (
         <div className="flex-1 flex flex-col items-center justify-center py-24 space-y-3">
@@ -155,13 +142,22 @@ export default function InstitutionHome() {
                       Explore Courses <ArrowRight size={18} />
                     </button>
 
-                    <button
-                      onClick={() => navigate("/institutions")}
-                      className="inline-flex items-center justify-center gap-2 border border-[#d6d3d1] bg-white hover:bg-[#f1ede4] text-[#1c1917] font-semibold text-sm sm:text-base px-6 py-3.5 rounded-xl shadow-xs transition-all active:scale-95 cursor-pointer min-h-[46px]"
-                    >
-                      <Building2 size={18} className="text-[#1e3a8a]" />
-                      Find Other Institutions
-                    </button>
+                    {userData ? (
+                      <button
+                        onClick={() => navigate("/mycourses")}
+                        className="inline-flex items-center justify-center gap-2 border border-[#d6d3d1] bg-white hover:bg-[#f1ede4] text-[#1c1917] font-semibold text-sm sm:text-base px-6 py-3.5 rounded-xl shadow-xs transition-all active:scale-95 cursor-pointer min-h-[46px]"
+                      >
+                        <BookOpen size={18} className="text-[#1e3a8a]" />
+                        My Courses
+                      </button>
+                    ) : (
+                      <button
+                        onClick={() => navigate("/login")}
+                        className="inline-flex items-center justify-center gap-2 border border-[#d6d3d1] bg-white hover:bg-[#f1ede4] text-[#1c1917] font-semibold text-sm sm:text-base px-6 py-3.5 rounded-xl shadow-xs transition-all active:scale-95 cursor-pointer min-h-[46px]"
+                      >
+                        Sign In to Learn
+                      </button>
+                    )}
                   </div>
 
                   {/* Trust Indicators */}
@@ -234,6 +230,35 @@ export default function InstitutionHome() {
               </div>
             </div>
           </section>
+
+          {/* Continue Learning in Active Academy (if student is enrolled in courses) */}
+          {activeEnrolledCourse && (
+            <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 -mt-6 relative z-10">
+              <div className="bg-white rounded-2xl border border-[#e8e5dc] p-4 sm:p-5 shadow-md flex flex-col sm:flex-row items-center justify-between gap-4">
+                <div className="flex items-center gap-3.5 min-w-0 w-full sm:w-auto">
+                  <div className="w-10 h-10 rounded-xl bg-[#eff6ff] text-[#1e3a8a] flex items-center justify-center shrink-0 border border-[#bfdbfe]">
+                    <GraduationCap size={20} />
+                  </div>
+                  <div className="min-w-0">
+                    <p className="text-[11px] font-bold text-[#1e3a8a] uppercase tracking-wider">
+                      Continue Learning in {tenantName}
+                    </p>
+                    <p className="text-sm font-bold text-[#1c1917] truncate">
+                      {activeEnrolledCourse.title}
+                    </p>
+                  </div>
+                </div>
+
+                <button
+                  onClick={() => navigate(`/viewlecture/${activeEnrolledCourse._id}`)}
+                  className="w-full sm:w-auto inline-flex items-center justify-center gap-2 bg-[#1e3a8a] hover:bg-[#172554] text-white text-xs font-bold px-5 py-2.5 rounded-xl transition shrink-0 cursor-pointer touch-target pressable"
+                >
+                  <span>Resume Lecture & Notes</span>
+                  <ArrowRight size={14} />
+                </button>
+              </div>
+            </section>
+          )}
 
           {/* Featured Courses for this Organization */}
           <CardPage />

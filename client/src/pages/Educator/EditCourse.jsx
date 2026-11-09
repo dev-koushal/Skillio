@@ -321,11 +321,10 @@ function EditCourse() {
                   {title || "Course Studio"}
                 </h1>
                 <span
-                  className={`text-[11px] font-semibold px-2.5 py-0.5 rounded-full border ${
-                    isPublished
+                  className={`text-[11px] font-semibold px-2.5 py-0.5 rounded-full border ${isPublished
                       ? "bg-emerald-50 text-emerald-700 border-emerald-200"
                       : "bg-amber-50 text-amber-700 border-amber-200"
-                  }`}
+                    }`}
                 >
                   {isPublished ? "Published" : "Draft"}
                 </span>
@@ -366,7 +365,7 @@ function EditCourse() {
               onClick={(e) => handleSaveCourse(e, true)}
               className="!bg-[#1e3a8a] hover:!bg-[#172554] text-white font-semibold px-4 py-2 rounded-xl shadow-xs"
             >
-              <Save size={14} /> Save Changes
+              <Save size={14} className="inline-block mr-2" /> Save Changes
             </Button>
           </div>
         </div>
@@ -375,11 +374,10 @@ function EditCourse() {
         <div className="flex items-center gap-1 border-b border-[#e8e5dc] overflow-x-auto pb-1">
           <button
             onClick={() => setActiveTab("info")}
-            className={`px-4 py-3 text-xs sm:text-sm font-semibold border-b-2 whitespace-nowrap transition cursor-pointer flex items-center gap-2 ${
-              activeTab === "info"
+            className={`px-4 py-3 text-xs sm:text-sm font-semibold border-b-2 whitespace-nowrap transition cursor-pointer flex items-center gap-2 ${activeTab === "info"
                 ? "border-[#1e3a8a] text-[#1e3a8a]"
                 : "border-transparent text-[#78716c] hover:text-[#1c1917]"
-            }`}
+              }`}
           >
             <BookOpen size={15} />
             <span>1. Course Information</span>
@@ -387,11 +385,10 @@ function EditCourse() {
 
           <button
             onClick={() => setActiveTab("curriculum")}
-            className={`px-4 py-3 text-xs sm:text-sm font-semibold border-b-2 whitespace-nowrap transition cursor-pointer flex items-center gap-2 ${
-              activeTab === "curriculum"
+            className={`px-4 py-3 text-xs sm:text-sm font-semibold border-b-2 whitespace-nowrap transition cursor-pointer flex items-center gap-2 ${activeTab === "curriculum"
                 ? "border-[#1e3a8a] text-[#1e3a8a]"
                 : "border-transparent text-[#78716c] hover:text-[#1c1917]"
-            }`}
+              }`}
           >
             <Video size={15} />
             <span>2. Lectures ({courseLectures.length})</span>
@@ -399,11 +396,10 @@ function EditCourse() {
 
           <button
             onClick={() => setActiveTab("resources")}
-            className={`px-4 py-3 text-xs sm:text-sm font-semibold border-b-2 whitespace-nowrap transition cursor-pointer flex items-center gap-2 ${
-              activeTab === "resources"
+            className={`px-4 py-3 text-xs sm:text-sm font-semibold border-b-2 whitespace-nowrap transition cursor-pointer flex items-center gap-2 ${activeTab === "resources"
                 ? "border-[#1e3a8a] text-[#1e3a8a]"
                 : "border-transparent text-[#78716c] hover:text-[#1c1917]"
-            }`}
+              }`}
           >
             <FileText size={15} />
             <span>3. Notes & Resources ({resources.length})</span>
@@ -411,11 +407,10 @@ function EditCourse() {
 
           <button
             onClick={() => setActiveTab("pricing")}
-            className={`px-4 py-3 text-xs sm:text-sm font-semibold border-b-2 whitespace-nowrap transition cursor-pointer flex items-center gap-2 ${
-              activeTab === "pricing"
+            className={`px-4 py-3 text-xs sm:text-sm font-semibold border-b-2 whitespace-nowrap transition cursor-pointer flex items-center gap-2 ${activeTab === "pricing"
                 ? "border-[#1e3a8a] text-[#1e3a8a]"
                 : "border-transparent text-[#78716c] hover:text-[#1c1917]"
-            }`}
+              }`}
           >
             <CreditCard size={15} />
             <span>4. Pricing & Access</span>
@@ -423,11 +418,10 @@ function EditCourse() {
 
           <button
             onClick={() => setActiveTab("publish")}
-            className={`px-4 py-3 text-xs sm:text-sm font-semibold border-b-2 whitespace-nowrap transition cursor-pointer flex items-center gap-2 ${
-              activeTab === "publish"
+            className={`px-4 py-3 text-xs sm:text-sm font-semibold border-b-2 whitespace-nowrap transition cursor-pointer flex items-center gap-2 ${activeTab === "publish"
                 ? "border-[#1e3a8a] text-[#1e3a8a]"
                 : "border-transparent text-[#78716c] hover:text-[#1c1917]"
-            }`}
+              }`}
           >
             <Eye size={15} />
             <span>5. Visibility & Publish</span>
@@ -922,11 +916,10 @@ function EditCourse() {
                 <button
                   type="button"
                   onClick={() => setPrice(0)}
-                  className={`p-4 rounded-xl border text-left transition cursor-pointer ${
-                    !price || Number(price) === 0
+                  className={`p-4 rounded-xl border text-left transition cursor-pointer ${!price || Number(price) === 0
                       ? "bg-[#eff6ff] border-[#1e3a8a] text-[#1e3a8a]"
                       : "bg-[#fcfbf9] border-[#e8e5dc] text-[#57534e] hover:bg-[#f1ede4]"
-                  }`}
+                    }`}
                 >
                   <p className="text-sm font-bold">Free Course</p>
                   <p className="text-xs mt-1 opacity-80">Students enroll instantly with one click</p>
@@ -937,11 +930,10 @@ function EditCourse() {
                   onClick={() => {
                     if (!price || Number(price) === 0) setPrice(499);
                   }}
-                  className={`p-4 rounded-xl border text-left transition cursor-pointer ${
-                    price && Number(price) > 0
+                  className={`p-4 rounded-xl border text-left transition cursor-pointer ${price && Number(price) > 0
                       ? "bg-[#eff6ff] border-[#1e3a8a] text-[#1e3a8a]"
                       : "bg-[#fcfbf9] border-[#e8e5dc] text-[#57534e] hover:bg-[#f1ede4]"
-                  }`}
+                    }`}
                 >
                   <p className="text-sm font-bold">Paid Tuition</p>
                   <p className="text-xs mt-1 opacity-80">Enforces Razorpay payment before video access</p>
@@ -1013,11 +1005,10 @@ function EditCourse() {
                 </span>
                 <div className="flex items-center gap-2">
                   <span
-                    className={`text-sm font-bold px-3 py-1 rounded-full border ${
-                      isPublished
+                    className={`text-sm font-bold px-3 py-1 rounded-full border ${isPublished
                         ? "bg-emerald-50 text-emerald-700 border-emerald-200"
                         : "bg-amber-50 text-amber-800 border-amber-200"
-                    }`}
+                      }`}
                   >
                     {isPublished ? "Published (Live to Students)" : "Draft (Hidden from Catalog)"}
                   </span>
@@ -1032,11 +1023,10 @@ function EditCourse() {
               <button
                 type="button"
                 onClick={togglePublishState}
-                className={`inline-flex items-center gap-1.5 text-xs font-bold px-5 py-2.5 rounded-xl transition cursor-pointer min-h-[42px] ${
-                  isPublished
+                className={`inline-flex items-center gap-1.5 text-xs font-bold px-5 py-2.5 rounded-xl transition cursor-pointer min-h-[42px] ${isPublished
                     ? "bg-amber-50 border border-amber-300 text-amber-800 hover:bg-amber-100"
                     : "bg-emerald-50 border border-emerald-300 text-emerald-800 hover:bg-emerald-100"
-                }`}
+                  }`}
               >
                 {isPublished ? (
                   <>

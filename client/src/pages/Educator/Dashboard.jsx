@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useSelector } from "react-redux";
 import { useNavigate } from "react-router-dom";
 import {
@@ -22,6 +22,7 @@ import Footer from "../../components/Footer";
 import { useTenant } from "../../context/TenantContext";
 import AIAssistantModal from "../../components/AIAssistantModal";
 import { optimizeImage } from "../../utils/imageOptimizer";
+import api from "../../services/api";
 
 export default function Dashboard() {
   const navigate = useNavigate();
@@ -31,6 +32,19 @@ export default function Dashboard() {
 
   const [aiModalOpen, setAiModalOpen] = useState(false);
   const [filterStatus, setFilterStatus] = useState("all"); // "all" | "live" | "draft"
+  const [serverStats, setServerStats] = useState(null);
+
+  useEffect(() => {
+    let mounted = true;
+    api.get("/api/institutions/me/stats")
+      .then(({ data }) => {
+        if (mounted && data?.success && data?.stats) {
+          setServerStats(data.stats);
+        }
+      })
+      .catch(() => { });
+    return () => { mounted = false; };
+  }, []);
 
   const courses = Array.isArray(creatorCourseData)
     ? creatorCourseData
@@ -128,18 +142,27 @@ export default function Dashboard() {
             </div>
           </div>
 
-          <div className="bg-white border border-[#e8e5dc] rounded-2xl p-5 shadow-xs flex items-center gap-4">
-            <div className="w-12 h-12 rounded-xl bg-blue-50 text-[#1e3a8a] flex items-center justify-center shrink-0">
-              <Users size={22} />
+          <div
+            onClick={() => navigate("/students")}
+            className="bg-white border border-[#e8e5dc] hover:border-[#1e3a8a] rounded-2xl p-5 shadow-xs flex items-center justify-between gap-4 cursor-pointer transition pressable group"
+          >
+            <div className="flex items-center gap-4">
+              <div className="w-12 h-12 rounded-xl bg-blue-50 text-[#1e3a8a] flex items-center justify-center shrink-0 group-hover:scale-105 transition-transform">
+                <Users size={22} />
+              </div>
+              <div>
+                <p className="text-xs text-[#78716c] font-semibold uppercase tracking-wider">
+                  Active Enrolled Students
+                </p>
+                <p className="text-xl sm:text-2xl font-extrabold text-[#1c1917] mt-0.5">
+                  {serverStats?.totalStudents ?? totalStudents}{" "}
+                  {(serverStats?.totalStudents ?? totalStudents) === 1 ? "Learner" : "Learners"}
+                </p>
+              </div>
             </div>
-            <div>
-              <p className="text-xs text-[#78716c] font-semibold uppercase tracking-wider">
-                Active Enrolled Students
-              </p>
-              <p className="text-xl sm:text-2xl font-extrabold text-[#1c1917] mt-0.5">
-                {totalStudents} {totalStudents === 1 ? "Learner" : "Learners"}
-              </p>
-            </div>
+            <span className="text-xs font-bold text-[#1e3a8a] group-hover:underline hidden sm:inline">
+              Manage &rarr;
+            </span>
           </div>
 
           <div className="bg-white border border-[#e8e5dc] rounded-2xl p-5 shadow-xs flex items-center gap-4">
@@ -177,31 +200,28 @@ export default function Dashboard() {
               <div className="flex items-center gap-1.5 bg-white border border-[#e8e5dc] p-1 rounded-xl shadow-2xs self-start sm:self-auto">
                 <button
                   onClick={() => setFilterStatus("all")}
-                  className={`text-xs font-semibold px-3 py-1.5 rounded-lg transition cursor-pointer ${
-                    filterStatus === "all"
+                  className={`text-xs font-semibold px-3 py-1.5 rounded-lg transition cursor-pointer ${filterStatus === "all"
                       ? "bg-[#1e3a8a] text-white"
                       : "text-[#57534e] hover:bg-[#f8f7f4]"
-                  }`}
+                    }`}
                 >
                   All ({courses.length})
                 </button>
                 <button
                   onClick={() => setFilterStatus("live")}
-                  className={`text-xs font-semibold px-3 py-1.5 rounded-lg transition cursor-pointer ${
-                    filterStatus === "live"
+                  className={`text-xs font-semibold px-3 py-1.5 rounded-lg transition cursor-pointer ${filterStatus === "live"
                       ? "bg-[#1e3a8a] text-white"
                       : "text-[#57534e] hover:bg-[#f8f7f4]"
-                  }`}
+                    }`}
                 >
                   Live ({publishedCourses.length})
                 </button>
                 <button
                   onClick={() => setFilterStatus("draft")}
-                  className={`text-xs font-semibold px-3 py-1.5 rounded-lg transition cursor-pointer ${
-                    filterStatus === "draft"
+                  className={`text-xs font-semibold px-3 py-1.5 rounded-lg transition cursor-pointer ${filterStatus === "draft"
                       ? "bg-[#1e3a8a] text-white"
                       : "text-[#57534e] hover:bg-[#f8f7f4]"
-                  }`}
+                    }`}
                 >
                   Draft ({draftCourses.length})
                 </button>
@@ -263,9 +283,8 @@ export default function Dashboard() {
 
                     {/* Clean Gradient Fallback */}
                     <div
-                      className={`w-full h-full bg-gradient-to-br from-[#0f172a] via-[#1e3a8a] to-[#0f172a] flex-col items-center justify-center text-white p-4 text-center space-y-1.5 ${
-                        course.thumbnail ? "hidden" : "flex"
-                      }`}
+                      className={`w-full h-full bg-gradient-to-br from-[#0f172a] via-[#1e3a8a] to-[#0f172a] flex-col items-center justify-center text-white p-4 text-center space-y-1.5 ${course.thumbnail ? "hidden" : "flex"
+                        }`}
                     >
                       <div className="w-10 h-10 rounded-xl bg-white/10 border border-white/20 flex items-center justify-center text-amber-300 shadow-xs">
                         <BookOpen size={20} />
@@ -276,11 +295,10 @@ export default function Dashboard() {
                     {/* Floating Status & Category Badges */}
                     <div className="absolute top-2.5 left-2.5 right-2.5 flex items-center justify-between gap-2 pointer-events-none">
                       <span
-                        className={`text-[10px] font-bold px-2.5 py-0.5 rounded-md border shadow-xs backdrop-blur-xs ${
-                          course.isPublished
+                        className={`text-[10px] font-bold px-2.5 py-0.5 rounded-md border shadow-xs backdrop-blur-xs ${course.isPublished
                             ? "bg-emerald-500/90 text-white border-emerald-400"
                             : "bg-amber-500/90 text-white border-amber-400"
-                        }`}
+                          }`}
                       >
                         {course.isPublished ? "Live" : "Draft"}
                       </span>

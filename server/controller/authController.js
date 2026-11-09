@@ -4,6 +4,7 @@ import crypto from "crypto";
 import { genToken } from "../config/token.js";
 import User from "../models/userModel.js";
 import Tenant from "../models/tenantModel.js";
+import InstitutionMembership from "../models/institutionMembershipModel.js";
 import sendMail from "../config/sendMail.js";
 
 const getCookieOptions = () => {
@@ -21,11 +22,29 @@ const getCookieOptions = () => {
 
 export const signUp = async (req, res) => {
   try {
-    let { name, email, password, role } = req.body;
-    const tenantId = req.tenantId;
+    let { name, email, password, role, institutionSlug, institutionId } = req.body;
+    let tenantId = req.tenantId;
+
+    // Allow student to specify selected institution during registration
+    if (institutionSlug && institutionSlug !== "default" && institutionSlug !== "platform") {
+      const selectedTenant = await Tenant.findOne({ slug: institutionSlug, status: "active" });
+      if (selectedTenant) {
+        tenantId = selectedTenant._id;
+      }
+    } else if (institutionId) {
+      const selectedTenant = await Tenant.findOne({ _id: institutionId, status: "active" });
+      if (selectedTenant) {
+        tenantId = selectedTenant._id;
+      }
+    }
 
     if (!tenantId) {
-      return res.status(400).json({ success: false, message: "Organization context is required" });
+      const defaultTenant = await Tenant.findOne({ slug: "default" });
+      if (defaultTenant) {
+        tenantId = defaultTenant._id;
+      } else {
+        return res.status(400).json({ success: false, message: "Organization context is required" });
+      }
     }
 
     if (email) email = email.trim().toLowerCase();
@@ -70,6 +89,18 @@ export const signUp = async (req, res) => {
       role,
     });
 
+    if (role === "student" && tenantId) {
+      try {
+        await InstitutionMembership.create({
+          userId: user._id,
+          tenantId,
+          role: "student",
+          status: "active",
+          joinedAt: new Date(),
+        });
+      } catch (e) {}
+    }
+
     const token = await genToken(user._id, tenantId, user.role);
 
     res.cookie("token", token, getCookieOptions());
@@ -77,10 +108,18 @@ export const signUp = async (req, res) => {
     const safeUser = user.toObject();
     delete safeUser.password;
 
+    const tenantDoc = await Tenant.findById(tenantId)
+      .select("name slug logo institutionType title")
+      .lean();
+    if (tenantDoc) {
+      safeUser.tenant = tenantDoc;
+    }
+
     return res.status(201).json({
       success: true,
       message: "User created successfully!",
       user: safeUser,
+      tenant: tenantDoc,
     });
   } catch (error) {
     console.error("[SignUp Error]", error);
@@ -99,33 +138,42 @@ export const login = async (req, res) => {
       return res.status(400).json({ success: false, message: "Email and password are required!" });
     }
 
-    // Look for user in active tenant
+    // 1. Look for user in active tenant
     let user = await User.findOne({ email, tenantId })
       .select("+password")
       .populate({
         path: "enrolledCourses",
-        select: "title thumbnail description subTitle category price creator lectures isPublished",
+        select: "title thumbnail description subTitle category price creator lectures isPublished tenantId",
       });
 
-    // Platform admin fallback: allow platform admin to log in from any domain
+    // 2. Fallback: Search globally for educators/admins or students
     if (!user) {
-      const platformAdmin = await User.findOne({ email, role: "platform_admin" })
+      const globalUser = await User.findOne({ email })
         .select("+password")
         .populate({
           path: "enrolledCourses",
-          select: "title thumbnail description subTitle category price creator lectures isPublished",
+          select: "title thumbnail description subTitle category price creator lectures isPublished tenantId",
         });
-      if (platformAdmin) {
-        user = platformAdmin;
+
+      if (globalUser) {
+        user = globalUser;
+
+        // For educators, resolve their single institution
+        if (user.role === "educator" || user.role === "tenant_admin") {
+          const ownedTenant = await Tenant.findOne({ ownerId: user._id, status: "active" });
+          if (ownedTenant) {
+            user.tenantId = ownedTenant._id;
+          }
+        }
       }
     }
 
     if (!user) {
-      return res.status(400).json({ success: false, message: "User not registered in this organization!" });
+      return res.status(400).json({ success: false, message: "No account found with this email!" });
     }
 
     if (role && user.role !== role && user.role !== "platform_admin") {
-      return res.status(400).json({ success: false, message: "Role doesn't match registered role!" });
+      return res.status(400).json({ success: false, message: `This account is registered as ${user.role}, not ${role}!` });
     }
 
     const isMatch = await bcrypt.compare(password, user.password);
@@ -140,10 +188,19 @@ export const login = async (req, res) => {
     const safeUser = user.toObject();
     delete safeUser.password;
 
+    // Filter enrolled courses to active tenant context
+    if (tenantId && safeUser.enrolledCourses && Array.isArray(safeUser.enrolledCourses)) {
+      safeUser.enrolledCourses = safeUser.enrolledCourses.filter(
+        (c) => c && c.tenantId && c.tenantId.toString() === tenantId.toString()
+      );
+    }
+
+    // Resolve tenant details
     try {
       const tenantDoc = await Tenant.findById(user.tenantId).select("name slug logo institutionType");
       if (tenantDoc) {
         safeUser.tenant = {
+          id: tenantDoc._id,
           name: tenantDoc.name,
           slug: tenantDoc.slug,
           logo: tenantDoc.logo,
@@ -151,6 +208,22 @@ export const login = async (req, res) => {
         };
       }
     } catch (e) {}
+
+    // For students, fetch their memberships across institutions
+    if (user.role === "student") {
+      try {
+        const memberships = await InstitutionMembership.find({ userId: user._id, status: "active" })
+          .populate("tenantId", "name slug logo institutionType");
+        safeUser.memberships = memberships.map((m) => ({
+          institutionId: m.tenantId?._id,
+          name: m.tenantId?.name,
+          slug: m.tenantId?.slug,
+          logo: m.tenantId?.logo,
+          institutionType: m.tenantId?.institutionType,
+          joinedAt: m.joinedAt,
+        })).filter((m) => m.slug);
+      } catch (e) {}
+    }
 
     return res.status(200).json({
       success: true,
@@ -248,19 +321,14 @@ export const sendOtp = async (req, res) => {
 
     // Dispatch email
     const mailResult = await sendMail(email, otp, institutionName);
-
-    const isDev = process.env.NODE_ENV !== "production";
-    const responsePayload = {
-      success: true,
-      message: "Verification code sent to your email!",
-    };
-
-    // In development or test, include devOtp for easy automated testing or local debugging
-    if (isDev || mailResult?.devFallback) {
-      responsePayload.devOtp = otp;
+    if (!mailResult.success) {
+      console.warn(`[Send OTP Warning] Mail delivery issue for ${email}: ${mailResult.error}`);
     }
 
-    return res.status(200).json(responsePayload);
+    return res.status(200).json({
+      success: true,
+      message: "Verification code sent to your email!",
+    });
   } catch (error) {
     console.error("[Send OTP Error]", error);
     return res.status(500).json({ success: false, message: "Failed to send verification code. Please try again." });

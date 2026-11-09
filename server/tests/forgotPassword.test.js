@@ -50,6 +50,7 @@ class MockUser {
 }
 
 // Emulated controllers for unit testing logic
+let lastDispatchedMail = null;
 const sendOtpHandler = async (req) => {
   let { email } = req.body || {};
   const tenantId = req.tenantId;
@@ -99,12 +100,14 @@ const sendOtpHandler = async (req) => {
 
   await user.save();
 
+  // Production behavior: OTP sent to user email, never returned in response body
+  lastDispatchedMail = { to: email, otp };
+
   return {
     status: 200,
     data: {
       success: true,
       message: "Verification code sent to your email!",
-      devOtp: otp, // For test verification
     },
   };
 };
@@ -302,9 +305,13 @@ async function runTests() {
 
     assert.strictEqual(res.status, 200);
     assert.strictEqual(res.data.success, true);
-    assert.strictEqual(typeof res.data.devOtp, "string");
-    assert.strictEqual(res.data.devOtp.length, 6);
-    generatedOtp = res.data.devOtp;
+    // Security: devOtp is never leaked in the API response
+    assert.strictEqual(res.data.devOtp, undefined);
+    assert.ok(lastDispatchedMail);
+    assert.strictEqual(lastDispatchedMail.to, "student@example.com");
+    assert.strictEqual(typeof lastDispatchedMail.otp, "string");
+    assert.strictEqual(lastDispatchedMail.otp.length, 6);
+    generatedOtp = lastDispatchedMail.otp;
 
     // Check DB record
     const userInDb = await MockUser.findOne({ email: "student@example.com" });
@@ -384,11 +391,11 @@ async function runTests() {
     u.otpExpires = new Date(Date.now() - 1000);
     await u.save();
 
-    const sendRes = await sendOtpHandler({
+    await sendOtpHandler({
       body: { email: "student@example.com" },
       tenantId: "tenant_physics",
     });
-    const freshOtp = sendRes.data.devOtp;
+    const freshOtp = lastDispatchedMail.otp;
 
     const verifyRes = await verifyOtpHandler({
       body: { email: "student@example.com", otp: freshOtp },
@@ -471,8 +478,8 @@ async function runTests() {
     u.otpExpires = new Date(Date.now() - 1000);
     await u.save();
 
-    const sendRes = await sendOtpHandler({ body: { email: "student@example.com" } });
-    const verifyRes = await verifyOtpHandler({ body: { email: "student@example.com", otp: sendRes.data.devOtp } });
+    await sendOtpHandler({ body: { email: "student@example.com" } });
+    const verifyRes = await verifyOtpHandler({ body: { email: "student@example.com", otp: lastDispatchedMail.otp } });
 
     const res = await resetPasswordHandler({
       body: {
@@ -498,3 +505,4 @@ async function runTests() {
 }
 
 runTests();
+

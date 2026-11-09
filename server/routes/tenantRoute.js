@@ -4,6 +4,8 @@ import {
   getTenantBySlug,
   getInstitutionDirectory,
   createOrganizationByEducator,
+  getMyInstitution,
+  updateMyInstitution,
   getAllTenants,
   createTenant,
   updateTenantBranding,
@@ -20,7 +22,11 @@ tenantRouter.get("/current", getCurrentTenant);
 tenantRouter.get("/directory", getInstitutionDirectory);
 tenantRouter.get("/by-slug/:slug", getTenantBySlug);
 
-// Educator endpoint: Create a new institution
+// Educator endpoints: Manage institution
+tenantRouter.get("/my-institution", isAuth, requireEducator, getMyInstitution);
+tenantRouter.put("/my-institution", isAuth, requireEducator, upload.single("logo"), updateMyInstitution);
+
+// Educator endpoint: Create a new institution (Allowed ONLY if educator has 0 institutions)
 tenantRouter.post(
   "/create-institution",
   isAuth,
