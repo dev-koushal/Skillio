@@ -106,3 +106,4 @@ export default function InstitutionCard({ institution, className = "" }) {
     </div>
   );
 }
+
