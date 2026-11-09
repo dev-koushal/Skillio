@@ -5,6 +5,9 @@ import cors from "cors";
 import path from "path";
 import { fileURLToPath } from "url";
 
+// Pre-register all Mongoose schemas
+import "./models/index.js";
+
 import { connectDB } from "./config/connectDB.js";
 import { ensureDefaultTenants } from "./config/initTenants.js";
 import { tenantResolver } from "./middleware/tenantResolver.js";

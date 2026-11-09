@@ -170,3 +170,4 @@ export default function SecureVideoPlayer({ lectureId, lectureTitle = "Lecture V
     </div>
   );
 }
+

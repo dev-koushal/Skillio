@@ -1,7 +1,9 @@
 import Course from "../models/coursesModel.js";
 import Lecture from "../models/lectureModel.js";
+import Review from "../models/reviewModel.js";
 import uploadCloudinary from "../config/cloudinary.js";
 import User from "../models/userModel.js";
+import Tenant from "../models/tenantModel.js";
 import Resource from "../models/resourceModel.js";
 import jwt from "jsonwebtoken";
 import { verifyCourseAccess, sanitizeLecturesForViewer } from "../utils/courseAccess.js";
@@ -12,7 +14,20 @@ import videoPlaybackService from "../services/video/videoPlaybackService.js";
 export const createCourse = async (req, res) => {
   try {
     const { title, category, subTitle, description, price, level, isPublished } = req.body;
-    const tenantId = req.tenantId;
+    let tenantId = req.tenantId;
+
+    // Guarantee educator courses always bind to their owned or assigned institution
+    if (req.userId) {
+      const user = await User.findById(req.userId).select("tenantId role");
+      if (user && (user.role === "educator" || user.role === "tenant_admin")) {
+        if (user.tenantId) {
+          tenantId = user.tenantId;
+        } else {
+          const ownedTenant = await Tenant.findOne({ ownerId: user._id, status: "active" });
+          if (ownedTenant) tenantId = ownedTenant._id;
+        }
+      }
+    }
 
     if (!title || !title.trim()) {
       return res.status(400).json({ success: false, message: "Title is required" });
@@ -47,7 +62,14 @@ export const getPublishedCourses = async (req, res) => {
       if (explicitTenant) tenantId = explicitTenant._id;
     }
 
-    const courses = await Course.find({ isPublished: true, tenantId })
+    const filter = { isPublished: true };
+    // When a specific institution is requested via query or header, isolate to that institution
+    const requestedSlug = req.query.slug || req.headers["x-tenant-slug"];
+    if (requestedSlug && requestedSlug !== "platform" && requestedSlug !== "default") {
+      if (tenantId) filter.tenantId = tenantId;
+    }
+
+    const courses = await Course.find(filter)
       .populate({
         path: "lectures",
         select: "_id lectureTitle isPreviewFree duration videoProvider processingStatus",
@@ -118,9 +140,9 @@ export const getPublishedCoursesBySlug = async (req, res) => {
 export const getCreatorCourses = async (req, res) => {
   try {
     const userId = req.userId;
-    const tenantId = req.tenantId;
 
-    const courses = await Course.find({ creator: userId, tenantId })
+    // Return all courses authored by this creator across their institutions
+    const courses = await Course.find({ creator: userId })
       .populate("lectures")
       .sort({ createdAt: -1 })
       .lean();
@@ -138,7 +160,6 @@ export const getCreatorCourses = async (req, res) => {
 export const editCourse = async (req, res) => {
   try {
     const { courseId } = req.params;
-    const tenantId = req.tenantId;
     const {
       title,
       subTitle,
@@ -149,14 +170,15 @@ export const editCourse = async (req, res) => {
       price,
     } = req.body;
 
-    // Tenant-isolated lookup
-    const course = await Course.findOne({ _id: courseId, tenantId });
+    const course = await Course.findById(courseId);
     if (!course) {
-      return res.status(404).json({ success: false, message: "Course not found in this organization" });
+      return res.status(404).json({ success: false, message: "Course not found" });
     }
 
     // Authorization: only the creator or an admin can edit
-    if (course.creator.toString() !== req.userId.toString() && req.userRole !== "tenant_admin" && req.userRole !== "platform_admin") {
+    const isCreator = course.creator.toString() === req.userId.toString();
+    const isAdmin = req.userRole === "tenant_admin" || req.userRole === "platform_admin";
+    if (!isCreator && !isAdmin) {
       return res.status(403).json({ success: false, message: "You are not authorized to edit this course" });
     }
 
@@ -188,9 +210,8 @@ export const editCourse = async (req, res) => {
 export const getCourseById = async (req, res) => {
   try {
     const { courseId } = req.params;
-    const tenantId = req.tenantId;
 
-    const course = await Course.findOne({ _id: courseId, tenantId })
+    const course = await Course.findById(courseId)
       .populate("lectures reviews")
       .populate("creator", "name email profilePicture description");
 

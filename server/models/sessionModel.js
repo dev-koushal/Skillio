@@ -49,3 +49,4 @@ sessionSchema.index({ userId: 1, revokedAt: 1, createdAt: 1 });
 
 const Session = mongoose.model("Session", sessionSchema);
 export default Session;
+

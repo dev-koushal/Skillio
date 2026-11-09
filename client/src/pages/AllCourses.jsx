@@ -33,6 +33,14 @@ function AllCourses() {
           }
         })
         .catch(() => {});
+    } else {
+      api.get("/api/course/getpublished")
+        .then((res) => {
+          if (Array.isArray(res.data)) {
+            dispatch(setCourseData(res.data));
+          }
+        })
+        .catch(() => {});
     }
   }, [slug, activeSlug, dispatch]);
 

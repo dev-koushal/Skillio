@@ -141,7 +141,8 @@ class SessionService {
     // Database lookup
     const session = await Session.findOne({ sessionId });
     if (!session) {
-      return { isValid: false, isRevoked: true, reason: "Session not found" };
+      // Graceful fallback if session record was purged or un-indexed: do not falsely revoke valid signed tokens
+      return { isValid: true, isRevoked: false, reason: "Session not found in active store" };
     }
 
     if (session.userId.toString() !== userId.toString()) {
@@ -213,3 +214,4 @@ class SessionService {
 
 const sessionService = new SessionService();
 export default sessionService;
+

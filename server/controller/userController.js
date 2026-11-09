@@ -1,6 +1,7 @@
 import bcrypt from "bcryptjs";
 import User from "../models/userModel.js";
 import Tenant from "../models/tenantModel.js";
+import Course from "../models/coursesModel.js";
 import InstitutionMembership from "../models/institutionMembershipModel.js";
 import uploadCloudinary from "../config/cloudinary.js";
 
@@ -8,26 +9,13 @@ export const getCurrentUser = async (req, res) => {
   try {
     const tenantId = req.tenantId;
 
-    // Tenant-isolated current user lookup
-    let user = await User.findOne({ _id: req.userId, tenantId })
+    // Resilient current user lookup
+    let user = await User.findById(req.userId)
       .select("-password")
       .populate({
         path: "enrolledCourses",
-        select: "title thumbnail description subTitle category price creator lectures isPublished",
+        select: "title thumbnail description subTitle category price creator lectures isPublished tenantId",
       });
-
-    // Fallback for students browsing across institutions or platform_admin
-    if (!user) {
-      const globalUser = await User.findById(req.userId)
-        .select("-password")
-        .populate({
-          path: "enrolledCourses",
-          select: "title thumbnail description subTitle category price creator lectures isPublished tenantId",
-        });
-      if (globalUser) {
-        user = globalUser;
-      }
-    }
 
     if (!user) {
       return res.status(404).json({
@@ -38,40 +26,58 @@ export const getCurrentUser = async (req, res) => {
 
     const safeUser = user.toObject ? user.toObject() : { ...user };
 
-    // Tenant Isolation: Enrolled courses must strictly belong to active institution context
+    // Filter enrolled courses if in explicit institution context
     if (tenantId && safeUser.enrolledCourses && Array.isArray(safeUser.enrolledCourses)) {
       safeUser.enrolledCourses = safeUser.enrolledCourses.filter(
-        (c) => c && c.tenantId && c.tenantId.toString() === tenantId.toString()
+        (c) => c && (!c.tenantId || c.tenantId.toString() === tenantId.toString())
       );
     }
 
     // Attach student active memberships across institutions
     if (safeUser.role === "student") {
       try {
-        const memberships = await InstitutionMembership.find({ userId: safeUser._id, status: "active" })
-          .populate("tenantId", "name slug logo institutionType title");
-        safeUser.memberships = memberships.map((m) => ({
-          institutionId: m.tenantId?._id,
-          name: m.tenantId?.name,
-          slug: m.tenantId?.slug,
-          logo: m.tenantId?.logo,
-          title: m.tenantId?.title,
-          institutionType: m.tenantId?.institutionType,
-          joinedAt: m.joinedAt,
-        })).filter((m) => m.slug);
+        const memberships = await InstitutionMembership.find({
+          userId: safeUser._id,
+          status: { $in: ["active", "enrolled", "ACTIVE", "ENROLLED"] },
+        }).populate("tenantId", "name slug logo institutionType title");
+
+        safeUser.memberships = memberships
+          .filter((m) => m && m.tenantId)
+          .map((m) => ({
+            institutionId: m.tenantId._id,
+            name: m.tenantId.name,
+            slug: m.tenantId.slug,
+            logo: m.tenantId.logo,
+            title: m.tenantId.title,
+            institutionType: m.tenantId.institutionType,
+            joinedAt: m.joinedAt,
+          }));
       } catch (e) {}
     }
 
-    // Attach tenant doc if tenantId exists
+    // Attach tenant doc if tenantId exists or if owned
     if (safeUser.tenantId) {
       try {
-        const tenantDoc = await Tenant.findById(safeUser.tenantId).select("name slug logo institutionType title").lean();
+        const tenantDoc = await Tenant.findById(safeUser.tenantId)
+          .select("name slug logo institutionType title")
+          .lean();
         if (tenantDoc) safeUser.tenant = tenantDoc;
+      } catch (e) {}
+    } else if (safeUser.role === "educator" || safeUser.role === "tenant_admin") {
+      try {
+        const ownedTenant = await Tenant.findOne({ ownerId: safeUser._id, status: "active" })
+          .select("name slug logo institutionType title")
+          .lean();
+        if (ownedTenant) {
+          safeUser.tenant = ownedTenant;
+          safeUser.tenantId = ownedTenant._id;
+        }
       } catch (e) {}
     }
 
     return res.status(200).json(safeUser);
   } catch (error) {
+    console.error("[GetCurrentUser Error]", error);
     return res.status(500).json({ success: false, message: "Error in getting currentUser", error: error.message });
   }
 };

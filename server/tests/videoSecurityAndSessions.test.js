@@ -318,3 +318,4 @@ runTest("getPublishedCoursesBySlug strictly scopes to target institution without
 console.log("\n=================================================");
 console.log(`   ALL ${passedTests} VIDEO & SESSION SECURITY TESTS PASSED (100%)   `);
 console.log("=================================================\n");
+
