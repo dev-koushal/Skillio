@@ -155,30 +155,61 @@ function ViewLectures() {
   }
 
   const lectures = course?.lectures || [];
+  const currentIdx = lectures.findIndex((l) => l._id === selectedLecture?._id);
+  const progressPercent = lectures.length > 0 ? Math.round(((currentIdx + 1) / lectures.length) * 100) : 0;
+
+  const handleNextLecture = () => {
+    if (currentIdx < lectures.length - 1) {
+      setSelectedLecture(lectures[currentIdx + 1]);
+    }
+  };
+
+  const handlePrevLecture = () => {
+    if (currentIdx > 0) {
+      setSelectedLecture(lectures[currentIdx - 1]);
+    }
+  };
 
   return (
-    <div className="min-h-screen bg-[#f8f7f4] text-[#1c1917] flex flex-col">
+    <div className="min-h-screen bg-[#f8f7f4] text-[#1c1917] flex flex-col font-sans">
       <Navbar />
 
-      <main className="max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6 flex-1">
-        {/* Navigation Header */}
-        <div className="flex items-center justify-between">
-          <button
-            onClick={() => navigate(`/viewcourse/${courseId}`)}
-            className="inline-flex items-center gap-1.5 text-xs sm:text-sm text-[#57534e] hover:text-[#1c1917] transition cursor-pointer font-medium"
-          >
-            <ArrowLeft size={16} /> Back to Course Overview
-          </button>
-          <span className="text-xs font-bold uppercase tracking-wider text-[#1e3a8a] px-3 py-1 rounded-md bg-blue-50 border border-blue-200">
-            {course?.category || "Classroom"}
-          </span>
+      <main className="max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-6 space-y-5 flex-1 pb-28 md:pb-12">
+        {/* Navigation & Progress Header */}
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-[#e8e5dc]">
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => navigate(`/viewcourse/${courseId}`)}
+              className="inline-flex items-center gap-1.5 text-xs text-[#57534e] hover:text-[#1c1917] transition cursor-pointer font-semibold p-1.5 rounded-lg hover:bg-[#f1ede4] pressable"
+            >
+              <ArrowLeft size={16} /> Course Overview
+            </button>
+            <span className="text-[#d6d3c9]">•</span>
+            <span className="text-xs font-bold text-[#1e3a8a] truncate max-w-[200px] sm:max-w-md">
+              {course?.title}
+            </span>
+          </div>
+
+          <div className="flex items-center gap-3">
+            <div className="flex items-center gap-2 text-xs font-semibold text-[#57534e]">
+              <span>Progress:</span>
+              <div className="w-24 sm:w-32 h-2 bg-[#e8e5dc] rounded-full overflow-hidden">
+                <div
+                  className="h-full bg-emerald-600 rounded-full transition-all duration-300"
+                  style={{ width: `${progressPercent}%` }}
+                />
+              </div>
+              <span className="font-mono text-[11px] font-bold text-[#1c1917]">{progressPercent}%</span>
+            </div>
+          </div>
         </div>
 
         {/* Video Player + Playlist Layout */}
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
-          {/* Main Video Player & Lecture Resources */}
-          <div className="lg:col-span-8 space-y-6">
-            <div className="bg-white border border-[#e8e5dc] rounded-3xl p-5 sm:p-6 space-y-4 shadow-xs">
+          {/* Main Video Player & Controls */}
+          <div className="lg:col-span-8 space-y-5">
+            <div className="bg-white border border-[#e8e5dc] rounded-3xl p-4 sm:p-6 space-y-4 shadow-xs">
+              {/* Dominant Video Container */}
               <div className="aspect-video w-full rounded-2xl overflow-hidden bg-black flex items-center justify-center border border-[#e8e5dc] shadow-md">
                 {selectedLecture?.videoUrl ? (
                   <video
@@ -196,9 +227,32 @@ function ViewLectures() {
                 )}
               </div>
 
+              {/* Prev / Next Lecture Tactical Controls */}
+              <div className="flex items-center justify-between pt-1 gap-2">
+                <button
+                  disabled={currentIdx <= 0}
+                  onClick={handlePrevLecture}
+                  className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl border border-[#d6d3c9] text-xs font-bold text-[#1c1917] hover:bg-[#f8f7f4] disabled:opacity-40 disabled:cursor-not-allowed pressable cursor-pointer touch-target"
+                >
+                  ← Previous Lecture
+                </button>
+
+                <span className="text-xs text-[#78716c] font-semibold">
+                  Lesson {currentIdx + 1} of {lectures.length}
+                </span>
+
+                <button
+                  disabled={currentIdx >= lectures.length - 1}
+                  onClick={handleNextLecture}
+                  className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-[#1e3a8a] text-white text-xs font-bold hover:bg-[#172554] disabled:opacity-40 disabled:cursor-not-allowed pressable cursor-pointer shadow-xs touch-target"
+                >
+                  Next Lecture →
+                </button>
+              </div>
+
               {/* Lecture Details */}
-              <div className="space-y-1 pt-1">
-                <h1 className="text-lg sm:text-xl font-extrabold text-[#1c1917]">
+              <div className="space-y-1 pt-2 border-t border-[#f2efe9]">
+                <h1 className="text-lg sm:text-xl font-extrabold text-[#1c1917] tracking-tight">
                   {selectedLecture?.lectureTitle || course?.title}
                 </h1>
                 <p className="text-xs text-[#78716c]">
@@ -208,20 +262,20 @@ function ViewLectures() {
 
               {/* Creator Card */}
               {creatorData && (
-                <div className="pt-4 border-t border-[#f2efe9] flex items-center gap-3">
+                <div className="pt-3 border-t border-[#f2efe9] flex items-center gap-3">
                   {creatorData.profilePicture ? (
                     <img
                       src={creatorData.profilePicture}
                       alt={creatorData.name}
-                      className="w-10 h-10 rounded-full object-cover border border-[#d6d3c9]"
+                      className="w-9 h-9 rounded-full object-cover border border-[#d6d3c9]"
                     />
                   ) : (
-                    <div className="w-10 h-10 rounded-full bg-[#1e3a8a] text-white flex items-center justify-center font-bold text-sm">
+                    <div className="w-9 h-9 rounded-full bg-[#1e3a8a] text-white flex items-center justify-center font-bold text-xs">
                       {creatorData.name?.charAt(0) || "I"}
                     </div>
                   )}
                   <div>
-                    <p className="text-xs text-[#78716c]">Instructor</p>
+                    <p className="text-[11px] text-[#78716c]">Instructor</p>
                     <p className="text-xs sm:text-sm font-bold text-[#1c1917]">
                       {creatorData.name}
                     </p>
@@ -234,14 +288,14 @@ function ViewLectures() {
             <div className="bg-white border border-[#e8e5dc] rounded-3xl p-5 sm:p-6 space-y-4 shadow-xs">
               <div className="flex items-center justify-between pb-3 border-b border-[#f2efe9]">
                 <div className="flex items-center gap-2">
-                  <div className="w-7 h-7 rounded-lg bg-blue-50 text-[#1e3a8a] flex items-center justify-center">
-                    <FileText size={16} />
+                  <div className="w-8 h-8 rounded-xl bg-blue-50 text-[#1e3a8a] flex items-center justify-center">
+                    <FileText size={17} />
                   </div>
                   <h2 className="text-sm sm:text-base font-bold text-[#1c1917]">
                     Lecture Notes & Study Resources
                   </h2>
                 </div>
-                <span className="text-xs text-[#78716c]">
+                <span className="text-xs text-[#78716c] font-semibold">
                   {lectureResources.length} {lectureResources.length === 1 ? "file" : "files"}
                 </span>
               </div>
@@ -253,7 +307,7 @@ function ViewLectures() {
                   {lectureResources.map((res) => (
                     <div
                       key={res._id}
-                      className="p-3.5 rounded-xl bg-[#faf9f6] border border-[#e8e5dc] flex items-center justify-between gap-3 hover:border-[#1e3a8a]/40 transition"
+                      className="p-3.5 rounded-xl bg-[#faf9f6] border border-[#e8e5dc] flex items-center justify-between gap-3 hover:border-[#1e3a8a]/40 transition card-lift"
                     >
                       <div className="space-y-0.5 overflow-hidden">
                         <p className="text-xs font-bold text-[#1c1917] truncate">{res.title}</p>
@@ -270,10 +324,10 @@ function ViewLectures() {
                         target="_blank"
                         rel="noopener noreferrer"
                         download
-                        className="p-2 rounded-lg bg-white border border-[#d6d3c9] text-[#1e3a8a] hover:bg-blue-50 transition shrink-0 cursor-pointer"
+                        className="p-2.5 rounded-xl bg-white border border-[#d6d3c9] text-[#1e3a8a] hover:bg-blue-50 transition shrink-0 cursor-pointer touch-target pressable"
                         title="Download Note"
                       >
-                        <Download size={14} />
+                        <Download size={15} />
                       </a>
                     </div>
                   ))}
@@ -290,7 +344,7 @@ function ViewLectures() {
           <div className="lg:col-span-4 bg-white border border-[#e8e5dc] rounded-3xl p-5 sm:p-6 space-y-4 shadow-xs sticky top-24">
             <div className="flex items-center justify-between pb-3 border-b border-[#f2efe9]">
               <h2 className="text-sm font-bold text-[#1c1917]">Course Playlist</h2>
-              <span className="text-xs text-[#78716c]">{lectures.length} Lectures</span>
+              <span className="text-xs font-semibold text-[#78716c]">{lectures.length} Lectures</span>
             </div>
 
             <div className="space-y-2 max-h-[550px] overflow-y-auto pr-1">
@@ -300,7 +354,7 @@ function ViewLectures() {
                   <button
                     key={lec._id || idx}
                     onClick={() => setSelectedLecture(lec)}
-                    className={`w-full text-left p-3 rounded-xl border transition flex items-center justify-between gap-3 cursor-pointer ${
+                    className={`w-full text-left p-3 rounded-xl border transition flex items-center justify-between gap-3 cursor-pointer touch-target pressable ${
                       isCurrent
                         ? "bg-blue-50/80 border-[#1e3a8a] text-[#1e3a8a] font-bold"
                         : "bg-[#faf9f6] border-[#e8e5dc] text-[#44403c] hover:bg-white"

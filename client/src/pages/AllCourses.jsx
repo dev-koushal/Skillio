@@ -7,6 +7,7 @@ import Navbar from "../components/Navbar";
 import Footer from "../components/Footer";
 import { CourseCardSkeleton } from "../components/common/Skeleton";
 import { useTenant } from "../context/TenantContext";
+import EmptyState from "../components/common/EmptyState";
 
 function AllCourses() {
   const navigate = useNavigate();
@@ -116,7 +117,7 @@ function AllCourses() {
     <div className="flex flex-col min-h-screen bg-[#f8f7f4] text-[#1c1917] font-sans">
       <Navbar />
 
-      <main className="max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-12 flex-1 space-y-6">
+      <main className="max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-10 flex-1 space-y-6 pb-28 md:pb-12">
         {/* Top Header */}
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-4 border-b border-[#e8e5dc]">
           <div>
@@ -254,25 +255,17 @@ function AllCourses() {
               ))}
             </div>
           ) : filteredCourses.length === 0 ? (
-            <div className="text-center py-16 px-6 bg-white rounded-2xl border border-[#e8e5dc] max-w-md mx-auto shadow-xs space-y-3 my-6">
-              <BookOpen size={40} className="mx-auto text-[#a8a29e]" />
-              <h3 className="text-base font-bold text-[#1c1917]">No courses found</h3>
-              <p className="text-xs text-[#78716c]">
-                {hasActiveFilters
-                  ? "No courses match your current filters. Try resetting the search or category."
-                  : `No courses have been published in ${tenantName} yet.`}
-              </p>
-              {hasActiveFilters && (
-                <div className="pt-2">
-                  <button
-                    onClick={clearFilters}
-                    className="bg-[#1e3a8a] hover:bg-[#172554] text-white text-xs font-semibold px-5 py-2.5 rounded-xl transition cursor-pointer shadow-xs"
-                  >
-                    Clear All Filters
-                  </button>
-                </div>
-              )}
-            </div>
+            <EmptyState
+              type={hasActiveFilters ? "search" : "courses"}
+              title={hasActiveFilters ? "No courses match your filters" : `No courses in ${tenantName} yet`}
+              description={
+                hasActiveFilters
+                  ? "Try resetting your search query, level, or pricing filters to explore other courses."
+                  : `This academy has not published any live courses yet. Check back soon!`
+              }
+              actionLabel={hasActiveFilters ? "Reset All Filters" : "Go to Home"}
+              onAction={hasActiveFilters ? clearFilters : () => navigate("/")}
+            />
           ) : (
             <div>
               <div className="flex items-center justify-between mb-4">

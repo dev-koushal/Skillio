@@ -354,41 +354,148 @@ function ViewCourses() {
   }
 
   return (
-    <div className="min-h-screen bg-[#f8f7f4] text-[#1c1917] flex flex-col">
+    <div className="min-h-screen bg-[#f8f7f4] text-[#1c1917] flex flex-col font-sans">
       <Navbar />
 
-      <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8">
+      <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8 space-y-6 sm:space-y-8 pb-36 md:pb-12">
         {/* Back Link */}
         <button
           onClick={() => navigate("/allcourses")}
-          className="inline-flex items-center gap-1.5 text-xs text-[#78716c] hover:text-[#1c1917] transition cursor-pointer font-medium"
+          className="inline-flex items-center gap-1.5 text-xs text-[#78716c] hover:text-[#1c1917] transition cursor-pointer font-medium touch-target pressable"
         >
           <ArrowLeft size={16} /> Back to Course Catalog
         </button>
 
-        {/* Hero Course Header (Light Academic Header) */}
-        <div className="bg-white border border-[#e8e5dc] rounded-3xl p-6 sm:p-8 shadow-xs grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
-          {/* Main Details (Left) */}
-          <div className="lg:col-span-7 space-y-4">
+        {/* Hero Course Header (Mobile First Order: Preview on top, then Details) */}
+        <div className="bg-white border border-[#e8e5dc] rounded-3xl p-5 sm:p-8 shadow-xs grid grid-cols-1 lg:grid-cols-12 gap-6 lg:gap-8 items-start">
+          {/* Video preview / Action Card (Right on desktop, First on mobile) */}
+          <div className="order-1 lg:order-2 lg:col-span-5 bg-[#faf9f6] border border-[#e8e5dc] rounded-2xl p-4 sm:p-6 space-y-4 sm:space-y-5 shadow-xs">
+            {/* Video preview / Thumbnail */}
+            <div className="aspect-video w-full rounded-xl overflow-hidden bg-black relative flex items-center justify-center border border-[#e8e5dc]">
+              {selectedLecture?.videoUrl ? (
+                <video
+                  src={selectedLecture.videoUrl}
+                  controls
+                  className="w-full h-full object-cover"
+                />
+              ) : course?.thumbnail ? (
+                <img
+                  src={optimizeImage(course.thumbnail, 800)}
+                  alt={course.title}
+                  className="w-full h-full object-cover"
+                />
+              ) : (
+                <div className="text-center p-6 text-gray-400 text-xs space-y-1">
+                  <PlayCircle size={32} className="mx-auto text-gray-500" />
+                  <p>Course Preview</p>
+                </div>
+              )}
+            </div>
+
+            {/* Price section */}
+            <div className="flex items-baseline justify-between pt-1">
+              <div>
+                {isFree ? (
+                  <span className="text-2xl sm:text-3xl font-extrabold text-emerald-700">Free</span>
+                ) : (
+                  <span className="text-2xl sm:text-3xl font-extrabold text-[#1c1917]">
+                    ₹{(course?.price || 0).toLocaleString("en-IN")}
+                  </span>
+                )}
+                {!isFree && course?.price > 0 && (
+                  <span className="line-through text-xs text-[#78716c] ml-2">
+                    ₹{Math.round(course.price * 1.4).toLocaleString("en-IN")}
+                  </span>
+                )}
+              </div>
+              <span className="text-[11px] font-semibold text-emerald-700 bg-emerald-50 px-2.5 py-1 rounded-md border border-emerald-200">
+                100% Guaranteed Access
+              </span>
+            </div>
+
+            {/* Desktop / In-card Enrollment CTA */}
+            {isCreator ? (
+              <div className="flex flex-col gap-2.5">
+                <div className="p-3 bg-blue-50 border border-blue-200 rounded-xl text-blue-950 text-xs flex items-center gap-2">
+                  <CheckCircle className="w-4 h-4 text-blue-600 shrink-0" />
+                  <span className="font-semibold">Instructor Access: You own this course</span>
+                </div>
+                <Button
+                  onClick={() => navigate(`/builder/${courseId}`)}
+                  variant="primary"
+                  size="lg"
+                  className="w-full bg-[#1e3a8a] hover:bg-[#172554] text-white font-bold py-3.5 rounded-xl shadow-md cursor-pointer flex items-center justify-center gap-2"
+                >
+                  <SquarePen className="inline-block mr-2" size={17} />
+                  Edit in Course Builder
+                </Button>
+                <Button
+                  onClick={() => navigate(`/viewlecture/${courseId}`)}
+                  variant="secondary"
+                  size="sm"
+                  className="w-full justify-center text-xs text-[#57534e]"
+                >
+                  Watch Course Lectures
+                </Button>
+              </div>
+            ) : !isEnrolled ? (
+              <Button
+                onClick={handleEnroll}
+                loading={enrollLoading}
+                variant="primary"
+                size="lg"
+                className="w-full bg-[#1e3a8a] hover:bg-[#172554] text-white font-bold py-3.5 rounded-xl shadow-md cursor-pointer"
+              >
+                {isFree ? "Enroll Now (Free)" : "Enroll Now"}
+              </Button>
+            ) : (
+              <Button
+                onClick={() => navigate(`/viewlecture/${courseId}`)}
+                variant="primary"
+                size="lg"
+                className="w-full bg-emerald-700 hover:bg-emerald-800 text-white font-bold py-3.5 rounded-xl shadow-md cursor-pointer"
+              >
+                Watch Course Lectures
+              </Button>
+            )}
+
+            <div className="space-y-2 pt-2 border-t border-[#e8e5dc] text-xs text-[#57534e]">
+              <div className="flex items-center gap-2">
+                <CheckCircle2 size={15} className="text-emerald-600 shrink-0" />
+                <span>Immediate access to all video lectures</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <CheckCircle2 size={15} className="text-emerald-600 shrink-0" />
+                <span>Verified study notes and cheat sheets</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <CheckCircle2 size={15} className="text-emerald-600 shrink-0" />
+                <span>Direct classroom AI study assistant</span>
+              </div>
+            </div>
+          </div>
+
+          {/* Main Details (Left on desktop, Second on mobile) */}
+          <div className="order-2 lg:order-1 lg:col-span-7 space-y-4">
             <div className="flex flex-wrap items-center gap-2">
-              <span className="text-xs font-bold uppercase tracking-wider text-[#1e3a8a] bg-[#eff6ff] px-3 py-1 rounded-md border border-[#bfdbfe]">
+              <span className="text-xs font-bold uppercase tracking-wider text-[#1e3a8a] bg-[#eff6ff] px-3 py-1 rounded-lg border border-[#bfdbfe]">
                 {tenant?.name || "Academy"} • {course?.category || "General"}
               </span>
-              <span className="text-xs font-semibold text-[#57534e] bg-[#f8f7f4] px-3 py-1 rounded-md border border-[#e8e5dc]">
+              <span className="text-xs font-semibold text-[#57534e] bg-[#f8f7f4] px-3 py-1 rounded-lg border border-[#e8e5dc]">
                 Level: {course?.level || "All Levels"}
               </span>
               {isFree && (
-                <span className="text-xs font-extrabold text-emerald-800 bg-emerald-50 px-3 py-1 rounded-md border border-emerald-300">
+                <span className="text-xs font-extrabold text-emerald-800 bg-emerald-50 px-3 py-1 rounded-lg border border-emerald-300">
                   Free Enrollment
                 </span>
               )}
             </div>
 
-            <h1 className="text-2xl sm:text-4xl font-extrabold text-[#1c1917] leading-tight">
+            <h1 className="text-2xl sm:text-4xl font-extrabold text-[#1c1917] leading-tight tracking-tight">
               {course?.title}
             </h1>
 
-            <p className="text-sm sm:text-base text-[#57534e] leading-relaxed">
+            <p className="text-xs sm:text-base text-[#57534e] leading-relaxed">
               {course?.subTitle || course?.description}
             </p>
 
@@ -431,113 +538,6 @@ function ViewCourses() {
                 </div>
               </div>
             )}
-          </div>
-
-          {/* Pricing & Enrollment Action Card (Right) */}
-          <div className="lg:col-span-5 bg-[#faf9f6] border border-[#e8e5dc] rounded-2xl p-6 space-y-5 shadow-xs">
-            {/* Video preview / Thumbnail */}
-            <div className="aspect-video w-full rounded-xl overflow-hidden bg-black relative flex items-center justify-center border border-[#e8e5dc]">
-              {selectedLecture?.videoUrl ? (
-                <video
-                  src={selectedLecture.videoUrl}
-                  controls
-                  className="w-full h-full object-cover"
-                />
-              ) : course?.thumbnail ? (
-                <img
-                  src={optimizeImage(course.thumbnail, 800)}
-                  alt={course.title}
-                  className="w-full h-full object-cover"
-                />
-              ) : (
-                <div className="text-center p-6 text-gray-400 text-xs space-y-1">
-                  <PlayCircle size={32} className="mx-auto text-gray-500" />
-                  <p>Course Preview</p>
-                </div>
-              )}
-            </div>
-
-            {/* Price section */}
-            <div className="flex items-baseline justify-between pt-1">
-              <div>
-                {isFree ? (
-                  <span className="text-3xl font-extrabold text-emerald-700">Free</span>
-                ) : (
-                  <span className="text-3xl font-extrabold text-[#1c1917]">
-                    ₹{(course?.price || 0).toLocaleString("en-IN")}
-                  </span>
-                )}
-                {!isFree && course?.price > 0 && (
-                  <span className="line-through text-xs text-[#78716c] ml-2">
-                    ₹{Math.round(course.price * 1.4).toLocaleString("en-IN")}
-                  </span>
-                )}
-              </div>
-              <span className="text-[11px] font-semibold text-emerald-700 bg-emerald-50 px-2.5 py-1 rounded-md border border-emerald-200">
-                100% Guaranteed Access
-              </span>
-            </div>
-
-            {/* Main Action Button */}
-            {isCreator ? (
-              <div className="flex flex-col gap-2.5">
-                <div className="p-3 bg-blue-50 border border-blue-200 rounded-xl text-blue-950 text-xs flex items-center gap-2">
-                  <CheckCircle className="w-4 h-4 text-blue-600 shrink-0" />
-                  <span className="font-semibold">Instructor Access: You own this course</span>
-                </div>
-                <Button
-                  onClick={() => navigate(`/builder/${courseId}`)}
-                  variant="primary"
-                  size="lg"
-                  className="w-full bg-[#1e3a8a] hover:bg-[#172554] text-white font-bold py-3.5 rounded-xl shadow-md cursor-pointer flex items-center justify-center gap-2"
-                >
-                  <SquarePen className="inline-block mr-4" size={17} />
-                  Edit in Course Builder
-                </Button>
-                <Button
-                  onClick={() => navigate(`/viewlecture/${courseId}`)}
-                  variant="secondary"
-                  size="sm"
-                  className="w-full justify-center text-xs text-[#57534e]"
-                >
-                  Watch Course Lectures
-                </Button>
-              </div>
-            ) : !isEnrolled ? (
-              <Button
-                onClick={handleEnroll}
-                loading={enrollLoading}
-                variant="primary"
-                size="lg"
-                className="w-full bg-[#1e3a8a] hover:bg-[#172554] text-white font-bold py-3.5 rounded-xl shadow-md cursor-pointer"
-              >
-                {isFree ? "Enroll Now (Free)" : "Enroll Now"}
-              </Button>
-            ) : (
-              <Button
-                onClick={() => navigate(`/viewlecture/${courseId}`)}
-                variant="primary"
-                size="lg"
-                className="w-full bg-emerald-700 hover:bg-emerald-800 text-white font-bold py-3.5 rounded-xl shadow-md cursor-pointer"
-              >
-                Watch Course Lectures
-              </Button>
-            )}
-
-            <div className="space-y-2 pt-2 border-t border-[#e8e5dc] text-xs text-[#57534e]">
-              <div className="flex items-center gap-2">
-                <CheckCircle size={14} className="text-emerald-600 shrink-0" />
-                <span>Full access to all video lectures</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <CheckCircle size={14} className="text-emerald-600 shrink-0" />
-                <span>Lecture notes, formulas & practice PDFs</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <CheckCircle size={14} className="text-emerald-600 shrink-0" />
-                <span>Verified certification upon course completion</span>
-              </div>
-            </div>
           </div>
         </div>
 
@@ -870,6 +870,36 @@ function ViewCourses() {
                 )}
               </div>
             </div>
+          )}
+        </div>
+
+        {/* Sticky Mobile Enrollment Bar (Fixed Above Mobile Bottom Nav) */}
+        <div className="md:hidden fixed bottom-16 left-0 right-0 z-40 bg-white/95 backdrop-blur-md border-t border-[#e8e5dc] p-3 px-4 flex items-center justify-between shadow-lg">
+          <div>
+            <p className="text-[10px] text-[#78716c] font-bold uppercase tracking-wider">Tuition</p>
+            <p className="text-base font-extrabold text-[#1c1917]">
+              {isFree ? "Free" : `₹${(course?.price || 0).toLocaleString("en-IN")}`}
+            </p>
+          </div>
+          {hasFullAccess ? (
+            <Button
+              variant="primary"
+              size="md"
+              onClick={() => navigate(`/viewlecture/${courseId}`)}
+              className="shadow-md pressable font-bold"
+            >
+              Resume Watching
+            </Button>
+          ) : (
+            <Button
+              variant="primary"
+              size="md"
+              loading={enrollLoading}
+              onClick={handleEnroll}
+              className="shadow-md pressable font-bold"
+            >
+              {isFree ? "Enroll for Free" : "Enroll Now"}
+            </Button>
           )}
         </div>
       </main>

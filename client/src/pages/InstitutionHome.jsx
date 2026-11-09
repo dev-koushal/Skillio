@@ -91,7 +91,7 @@ export default function InstitutionHome() {
   const institutionType = activeTenant?.institutionType || "Academy";
 
   return (
-    <div className="w-full bg-[#f8f7f4] min-h-screen text-[#1c1917] flex flex-col font-sans">
+    <div className="w-full bg-[#f8f7f4] min-h-screen text-[#1c1917] flex flex-col font-sans pb-20 md:pb-0">
       <Navbar currentInstitution={activeTenant} />
 
       {/* Breadcrumb / Return to Platform pill */}

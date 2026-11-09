@@ -413,7 +413,7 @@ export default function CourseBuilder() {
     <div className="min-h-screen bg-[#f8f7f4] text-[#1c1917] flex flex-col font-sans">
       <Navbar />
 
-      <main className="max-w-5xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-6 flex-1">
+      <main className="max-w-5xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8 space-y-6 flex-1 pb-28 md:pb-12">
         {/* Workspace Sticky Top Bar */}
         <div className="bg-white border border-[#e8e5dc] rounded-2xl p-4 sm:p-5 shadow-xs flex flex-col sm:flex-row sm:items-center justify-between gap-4 sticky top-20 z-30 backdrop-blur-md">
           <div className="flex items-center gap-3 min-w-0">
