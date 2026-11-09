@@ -54,12 +54,14 @@ const loadRazorpayScript = () => {
 
 function ViewCourses() {
   const navigate = useNavigate();
-  const { courseId } = useParams();
+  const { courseId, slug } = useParams();
   const dispatch = useDispatch();
 
   const { courseData } = useSelector((state) => state.course);
   const { userData } = useSelector((state) => state.user);
   const { tenant } = useTenant();
+
+  const targetSlug = slug || (tenant && !tenant.isPlatform ? tenant.slug : localStorage.getItem("skillio_active_tenant"));
 
   const [course, setCourse] = useState(null);
   const [selectedLecture, setSelectedLecture] = useState(null);
@@ -360,7 +362,7 @@ function ViewCourses() {
       <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8 space-y-6 sm:space-y-8 pb-36 md:pb-12">
         {/* Back Link */}
         <button
-          onClick={() => navigate("/allcourses")}
+          onClick={() => navigate(targetSlug ? `/institution/${targetSlug}/courses` : "/courses")}
           className="inline-flex items-center gap-1.5 text-xs text-[#78716c] hover:text-[#1c1917] transition cursor-pointer font-medium touch-target pressable"
         >
           <ArrowLeft size={16} /> Back to Course Catalog

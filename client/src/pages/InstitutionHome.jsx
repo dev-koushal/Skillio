@@ -136,7 +136,7 @@ export default function InstitutionHome() {
                   {/* Action Buttons */}
                   <div className="pt-2 flex flex-col sm:flex-row gap-3 justify-center lg:justify-start">
                     <button
-                      onClick={() => navigate("/allcourses")}
+                      onClick={() => navigate(activeTenant?.slug ? `/institution/${activeTenant.slug}/courses` : "/courses")}
                       className="inline-flex items-center justify-center gap-2 bg-[#1e3a8a] hover:bg-[#172554] text-white font-semibold text-sm sm:text-base px-7 py-3.5 rounded-xl shadow-xs transition-all active:scale-95 cursor-pointer min-h-[46px]"
                     >
                       Explore Courses <ArrowRight size={18} />
@@ -144,7 +144,7 @@ export default function InstitutionHome() {
 
                     {userData ? (
                       <button
-                        onClick={() => navigate("/mycourses")}
+                        onClick={() => navigate(activeTenant?.slug ? `/institution/${activeTenant.slug}/my-courses` : "/mycourses")}
                         className="inline-flex items-center justify-center gap-2 border border-[#d6d3d1] bg-white hover:bg-[#f1ede4] text-[#1c1917] font-semibold text-sm sm:text-base px-6 py-3.5 rounded-xl shadow-xs transition-all active:scale-95 cursor-pointer min-h-[46px]"
                       >
                         <BookOpen size={18} className="text-[#1e3a8a]" />

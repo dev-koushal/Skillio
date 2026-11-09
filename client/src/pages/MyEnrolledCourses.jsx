@@ -1,18 +1,23 @@
 import React, { useState, useEffect } from "react";
 import { ArrowLeft, BookOpen, PlayCircle, Clock, GraduationCap, Video, ArrowRight, Loader2, Sparkles, CheckCircle2 } from "lucide-react";
 import { useSelector, useDispatch } from "react-redux";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useParams } from "react-router-dom";
 import Navbar from "../components/Navbar";
 import Footer from "../components/Footer";
 import api from "../services/api";
 import { optimizeImage } from "../utils/imageOptimizer";
 import EmptyState from "../components/common/EmptyState";
 import Button from "../components/common/Button";
+import { useTenant } from "../context/TenantContext";
 
 function MyEnrolledCourses() {
   const { userData } = useSelector((state) => state.user);
   const { courseData } = useSelector((state) => state.course);
   const navigate = useNavigate();
+  const { slug } = useParams();
+  const { tenant } = useTenant();
+
+  const activeSlug = slug || (tenant && !tenant.isPlatform ? tenant.slug : localStorage.getItem("skillio_active_tenant"));
 
   const [coursesList, setCoursesList] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -88,7 +93,7 @@ function MyEnrolledCourses() {
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-[#e8e5dc]">
           <div className="flex items-center gap-3">
             <button
-              onClick={() => navigate("/")}
+              onClick={() => navigate(activeSlug ? `/institution/${activeSlug}` : "/")}
               className="p-2 rounded-xl text-[#78716c] hover:text-[#1c1917] hover:bg-[#f1ede4] transition cursor-pointer touch-target pressable"
               aria-label="Back to home"
             >

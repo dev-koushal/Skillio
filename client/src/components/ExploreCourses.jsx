@@ -48,10 +48,10 @@ function ExploreCourses() {
 
           <div>
             <button
-              onClick={() => navigate("/allcourses")}
+              onClick={() => navigate(tenant?.slug ? `/institution/${tenant.slug}/courses` : "/courses")}
               className="inline-flex items-center gap-2 bg-[#1e3a8a] hover:bg-[#172554] text-white text-xs sm:text-sm font-semibold px-5 py-2.5 rounded-xl shadow-xs transition cursor-pointer min-h-[42px]"
             >
-              Browse All Courses <ArrowRight size={15} />
+              Browse Academy Courses <ArrowRight size={15} />
             </button>
           </div>
         </div>
@@ -66,7 +66,13 @@ function ExploreCourses() {
               return (
                 <motion.div
                   key={topic}
-                  onClick={() => navigate(`/allcourses?category=${encodeURIComponent(topic)}`)}
+                  onClick={() =>
+                    navigate(
+                      tenant?.slug
+                        ? `/institution/${tenant.slug}/courses?category=${encodeURIComponent(topic)}`
+                        : `/courses?category=${encodeURIComponent(topic)}`
+                    )
+                  }
                   initial={{ opacity: 0, y: 10 }}
                   whileInView={{ opacity: 1, y: 0 }}
                   viewport={{ once: true }}

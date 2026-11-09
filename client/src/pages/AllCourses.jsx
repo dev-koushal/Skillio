@@ -1,6 +1,6 @@
 import React, { useEffect, useState, useMemo } from "react";
 import { ArrowLeft, Filter, Search, X, BookOpen, Building2, SlidersHorizontal, Check } from "lucide-react";
-import { useNavigate, useSearchParams } from "react-router-dom";
+import { useNavigate, useSearchParams, useParams } from "react-router-dom";
 import CourseCard from "../components/CourseCard";
 import { useSelector } from "react-redux";
 import Navbar from "../components/Navbar";
@@ -11,9 +11,18 @@ import EmptyState from "../components/common/EmptyState";
 
 function AllCourses() {
   const navigate = useNavigate();
+  const { slug } = useParams();
   const [searchParams, setSearchParams] = useSearchParams();
   const { courseData } = useSelector((state) => state.course);
   const { tenant } = useTenant();
+
+  const activeSlug = slug || (tenant && !tenant.isPlatform ? tenant.slug : null);
+
+  useEffect(() => {
+    if (slug && slug !== "platform") {
+      localStorage.setItem("skillio_active_tenant", slug);
+    }
+  }, [slug]);
 
   // Filters state
   const [searchQuery, setSearchQuery] = useState("");
@@ -123,7 +132,7 @@ function AllCourses() {
           <div>
             <div className="flex items-center gap-2 mb-1">
               <button
-                onClick={() => navigate("/")}
+                onClick={() => navigate(activeSlug ? `/institution/${activeSlug}` : "/")}
                 className="p-1.5 rounded-lg text-[#78716c] hover:text-[#1c1917] hover:bg-[#f1ede4] transition cursor-pointer"
                 aria-label="Back to home"
               >

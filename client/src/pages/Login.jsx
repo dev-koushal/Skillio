@@ -100,14 +100,38 @@ export default function Login() {
       }
 
       // 2. Student Flow:
-      // If already browsing a specific institution, proceed directly
+      // If student is browsing a specific institution via URL, enter directly
       if (isDirectInstitution && tenant?.slug) {
+        localStorage.setItem("skillio_active_tenant", tenant.slug);
         toast.success(`Welcome back, ${data.user.name}!`);
         navigate(`/institution/${tenant.slug}`);
         return;
       }
 
-      // Otherwise, show institution selector step with "Select later"
+      // Check if student has an existing valid server-side institution membership or previous active tenant
+      const memberships = Array.isArray(data.user.memberships) ? data.user.memberships : [];
+      const primaryTenantSlug =
+        data.user.tenant?.slug ||
+        (typeof data.user.tenantId === "object" ? data.user.tenantId?.slug : null);
+
+      const storedSlug = localStorage.getItem("skillio_active_tenant");
+      const validStoredSlug = memberships.find((m) => m.slug === storedSlug)?.slug;
+
+      const directSlug =
+        validStoredSlug ||
+        (storedSlug && !["platform", "default"].includes(storedSlug) ? storedSlug : null) ||
+        (memberships.length > 0 ? memberships[0].slug : null) ||
+        (primaryTenantSlug && !["platform", "default"].includes(primaryTenantSlug) ? primaryTenantSlug : null);
+
+      // If returning student has a recognized institution, return directly without showing selector
+      if (directSlug) {
+        localStorage.setItem("skillio_active_tenant", directSlug);
+        toast.success(`Welcome back, ${data.user.name}!`);
+        navigate(`/institution/${directSlug}`);
+        return;
+      }
+
+      // First-time student without active institution -> show selection step
       setStep(2);
       toast.success(`Signed in as ${data.user.name}`);
     } catch (error) {
@@ -126,11 +150,10 @@ export default function Login() {
     navigate(`/institution/${selectedSlug}`);
   };
 
-  // Student selects "Select later"
+  // Student selects "Select later" -> neutral student home without catalog
   const handleSelectLater = () => {
     localStorage.removeItem("skillio_active_tenant");
-    // Direct student to neutral explore state without inventing an institution
-    navigate("/institutions");
+    navigate("/");
   };
 
   const filteredInstitutions = institutions.filter((inst) => {

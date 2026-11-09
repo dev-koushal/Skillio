@@ -196,13 +196,13 @@ function Navbar({ currentInstitution = null }) {
                   Home
                 </Link>
                 <Link
-                  to="/allcourses"
+                  to={activeInstitution ? `/institution/${activeInstitution.slug}/courses` : "/courses"}
                   className="text-xs sm:text-sm font-semibold text-[#44403c] hover:text-[#1e3a8a] px-3 py-2 rounded-xl hover:bg-[#f8f7f4] transition"
                 >
                   Courses
                 </Link>
                 <Link
-                  to="/mycourses"
+                  to={activeInstitution ? `/institution/${activeInstitution.slug}/my-courses` : "/mycourses"}
                   className="text-xs sm:text-sm font-semibold text-[#44403c] hover:text-[#1e3a8a] px-3 py-2 rounded-xl hover:bg-[#f8f7f4] transition"
                 >
                   My Courses
@@ -613,44 +613,67 @@ function Navbar({ currentInstitution = null }) {
                     </button>
                   )}
 
-                  {(!userData || userData.role !== "student") && (
+                  {/* Visitor Nav */}
+                  {!userData && (
                     <>
-                      <Link
-                        to="/"
-                        onClick={() => setMobileMenuOpen(false)}
-                        className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs sm:text-sm font-semibold text-[#44403c] hover:bg-[#f8f7f4] touch-target"
-                      >
-                        Skillio Platform
-                      </Link>
                       <Link
                         to="/institutions"
                         onClick={() => setMobileMenuOpen(false)}
                         className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs sm:text-sm font-semibold text-[#44403c] hover:bg-[#f8f7f4] touch-target"
                       >
                         <Building2 size={16} className="text-[#1e3a8a]" />
-                        Find Institution
+                        Explore Institutions
+                      </Link>
+                      <Link
+                        to="/courses"
+                        onClick={() => setMobileMenuOpen(false)}
+                        className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs sm:text-sm font-semibold text-[#44403c] hover:bg-[#f8f7f4] touch-target"
+                      >
+                        <BookOpen size={16} className="text-[#78716c]" />
+                        Courses
                       </Link>
                     </>
                   )}
 
-                  <Link
-                    to="/allcourses"
-                    onClick={() => setMobileMenuOpen(false)}
-                    className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs sm:text-sm font-semibold text-[#44403c] hover:bg-[#f8f7f4] touch-target"
-                  >
-                    <BookOpen size={16} className="text-[#78716c]" />
-                    All Courses
-                  </Link>
-
-                  {userData && (
-                    <Link
-                      to="/mycourses"
-                      onClick={() => setMobileMenuOpen(false)}
-                      className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs sm:text-sm font-semibold text-[#44403c] hover:bg-[#f8f7f4] touch-target"
-                    >
-                      <GraduationCap size={16} className="text-[#78716c]" />
-                      My Courses
-                    </Link>
+                  {/* Student Nav */}
+                  {userData?.role === "student" && (
+                    <>
+                      <Link
+                        to={activeInstitution ? `/institution/${activeInstitution.slug}` : "/"}
+                        onClick={() => setMobileMenuOpen(false)}
+                        className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs sm:text-sm font-bold text-[#1e3a8a] hover:bg-blue-50/60 touch-target"
+                      >
+                        <Building2 size={16} />
+                        Home
+                      </Link>
+                      <Link
+                        to={activeInstitution ? `/institution/${activeInstitution.slug}/courses` : "/courses"}
+                        onClick={() => setMobileMenuOpen(false)}
+                        className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs sm:text-sm font-semibold text-[#44403c] hover:bg-[#f8f7f4] touch-target"
+                      >
+                        <BookOpen size={16} className="text-[#78716c]" />
+                        Courses
+                      </Link>
+                      <Link
+                        to={activeInstitution ? `/institution/${activeInstitution.slug}/my-courses` : "/mycourses"}
+                        onClick={() => setMobileMenuOpen(false)}
+                        className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs sm:text-sm font-semibold text-[#44403c] hover:bg-[#f8f7f4] touch-target"
+                      >
+                        <GraduationCap size={16} className="text-[#78716c]" />
+                        My Courses
+                      </Link>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          navigate(activeInstitution ? `/institution/${activeInstitution.slug}/profile` : "/profile");
+                          setMobileMenuOpen(false);
+                        }}
+                        className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs sm:text-sm font-semibold text-[#44403c] hover:bg-[#f8f7f4] touch-target text-left cursor-pointer pressable"
+                      >
+                        <User2Icon size={16} className="text-[#78716c]" />
+                        <span>Profile & Settings</span>
+                      </button>
+                    </>
                   )}
 
                   {isEducator && (

@@ -17,6 +17,12 @@ import {
   Sparkles,
   ExternalLink,
   ChevronRight,
+  Lock,
+  Eye,
+  EyeOff,
+  KeyRound,
+  Download,
+  LogOut,
 } from "lucide-react";
 import { useSelector } from "react-redux";
 import { useNavigate } from "react-router-dom";
@@ -35,6 +41,83 @@ function Profile() {
   const [institutions, setInstitutions] = useState([]);
   const [loadingInstitutions, setLoadingInstitutions] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
+
+  // Change Password state
+  const [showPasswordSection, setShowPasswordSection] = useState(false);
+  const [oldPassword, setOldPassword] = useState("");
+  const [newPassword, setNewPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [showOldPass, setShowOldPass] = useState(false);
+  const [showNewPass, setShowNewPass] = useState(false);
+  const [passwordLoading, setPasswordLoading] = useState(false);
+  const [canInstall, setCanInstall] = useState(false);
+  const [deferredPrompt, setDeferredPrompt] = useState(null);
+
+  useEffect(() => {
+    const handleBeforeInstallPrompt = (e) => {
+      e.preventDefault();
+      setDeferredPrompt(e);
+      setCanInstall(true);
+    };
+    window.addEventListener("beforeinstallprompt", handleBeforeInstallPrompt);
+    return () => window.removeEventListener("beforeinstallprompt", handleBeforeInstallPrompt);
+  }, []);
+
+  const handleInstallApp = async () => {
+    if (deferredPrompt) {
+      deferredPrompt.prompt();
+      const choice = await deferredPrompt.userChoice;
+      if (choice.outcome === "accepted") {
+        toast.success("Skillio app installed!");
+      }
+      setDeferredPrompt(null);
+      setCanInstall(false);
+    } else {
+      toast.info("To install on mobile, tap browser menu → Add to Home screen.");
+    }
+  };
+
+  const handleChangePassword = async (e) => {
+    e.preventDefault();
+    if (!oldPassword || !newPassword) {
+      toast.error("Please enter current and new password");
+      return;
+    }
+    if (newPassword.length < 8) {
+      toast.error("New password must be at least 8 characters");
+      return;
+    }
+    if (newPassword !== confirmPassword) {
+      toast.error("Passwords do not match");
+      return;
+    }
+
+    try {
+      setPasswordLoading(true);
+      const { data } = await api.post("/api/user/changepassword", {
+        oldPassword,
+        newPassword,
+      });
+      if (data.success) {
+        toast.success(data.message || "Password updated successfully!");
+        setOldPassword("");
+        setNewPassword("");
+        setConfirmPassword("");
+        setShowPasswordSection(false);
+      }
+    } catch (err) {
+      toast.error(err.response?.data?.message || "Failed to update password");
+    } finally {
+      setPasswordLoading(false);
+    }
+  };
+
+  const handleLogout = () => {
+    localStorage.removeItem("skillio_active_tenant");
+    sessionStorage.clear();
+    toast.success("Logged out successfully");
+    window.location.replace("/");
+  };
 
   const isStudent = userData?.role === "student";
 
@@ -227,21 +310,21 @@ function Profile() {
                 <div className="flex items-center gap-2">
                   <Building2 size={20} className="text-[#1e3a8a]" />
                   <h2 className="text-lg sm:text-xl font-bold text-[#1c1917] tracking-tight">
-                    My Academy & Learning Space
+                    Current Institution
                   </h2>
                 </div>
                 <p className="text-xs sm:text-sm text-[#78716c] mt-0.5">
-                  Your active academy environment. You can switch to another institution anytime.
+                  Your active academy environment. You can change to another institution anytime.
                 </p>
               </div>
 
               <button
                 type="button"
                 onClick={() => setSwitchModalOpen(true)}
-                className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl border border-[#d6d3c9] hover:border-[#1e3a8a] bg-[#faf8f5] hover:bg-[#eff6ff] text-xs sm:text-sm font-semibold text-[#1e3a8a] transition cursor-pointer pressable min-h-[42px] self-start sm:self-auto"
+                className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl border border-[#1e3a8a] bg-[#eff6ff] hover:bg-blue-100/70 text-xs sm:text-sm font-bold text-[#1e3a8a] transition cursor-pointer pressable min-h-[42px] self-start sm:self-auto shadow-2xs"
               >
                 <ArrowRightLeft size={15} />
-                Switch Academy
+                Change Institution
               </button>
             </div>
 
@@ -275,26 +358,142 @@ function Profile() {
               </div>
 
               <div className="flex items-center gap-2 w-full sm:w-auto">
-                {activeAcademySlug ? (
-                  <button
-                    onClick={() => navigate(`/institution/${activeAcademySlug}`)}
-                    className="w-full sm:w-auto inline-flex items-center justify-center gap-1.5 px-4 py-2 rounded-xl bg-[#1e3a8a] hover:bg-[#172554] text-white text-xs font-semibold transition cursor-pointer pressable min-h-[40px] shadow-xs"
-                  >
-                    <span>Enter Academy</span>
-                    <ExternalLink size={13} />
-                  </button>
-                ) : (
-                  <button
-                    onClick={() => setSwitchModalOpen(true)}
-                    className="w-full sm:w-auto inline-flex items-center justify-center gap-1.5 px-4 py-2 rounded-xl bg-[#1e3a8a] hover:bg-[#172554] text-white text-xs font-semibold transition cursor-pointer pressable min-h-[40px]"
-                  >
-                    Select an Academy
-                  </button>
-                )}
+                <button
+                  type="button"
+                  onClick={() => setSwitchModalOpen(true)}
+                  className="w-full sm:w-auto inline-flex items-center justify-center gap-1.5 px-4 py-2 rounded-xl bg-[#1e3a8a] hover:bg-[#172554] text-white text-xs font-semibold transition cursor-pointer pressable min-h-[40px] shadow-xs"
+                >
+                  <ArrowRightLeft size={13} />
+                  <span>Change Institution</span>
+                </button>
               </div>
             </div>
           </div>
         )}
+
+        {/* ================= SECURITY & PASSWORD SECTION ================= */}
+        <div className="bg-white border border-[#e8e5dc] rounded-2xl p-6 sm:p-8 space-y-5 shadow-sm">
+          <div className="flex items-center justify-between pb-3 border-b border-[#e8e5dc]">
+            <div className="flex items-center gap-2">
+              <KeyRound size={20} className="text-[#1e3a8a]" />
+              <div>
+                <h2 className="text-lg font-bold text-[#1c1917] tracking-tight">
+                  Security & Password
+                </h2>
+                <p className="text-xs text-[#78716c]">
+                  Change your password or manage account credentials
+                </p>
+              </div>
+            </div>
+
+            <button
+              type="button"
+              onClick={() => setShowPasswordSection(!showPasswordSection)}
+              className="text-xs font-bold text-[#1e3a8a] hover:underline cursor-pointer"
+            >
+              {showPasswordSection ? "Cancel" : "Change Password"}
+            </button>
+          </div>
+
+          {showPasswordSection ? (
+            <form onSubmit={handleChangePassword} className="space-y-4 max-w-md pt-2">
+              <div className="space-y-1.5">
+                <label className="text-xs font-semibold text-[#44403c]">Current Password</label>
+                <div className="relative">
+                  <input
+                    type={showOldPass ? "text" : "password"}
+                    value={oldPassword}
+                    onChange={(e) => setOldPassword(e.target.value)}
+                    placeholder="Enter your current password"
+                    className="w-full bg-[#fcfbf9] border border-[#d6d3d1] rounded-xl px-3.5 py-2.5 text-xs sm:text-sm text-[#1c1917] focus:outline-none focus:border-[#1e3a8a] pr-10"
+                    required
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowOldPass(!showOldPass)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-[#78716c] hover:text-[#1c1917]"
+                  >
+                    {showOldPass ? <EyeOff size={16} /> : <Eye size={16} />}
+                  </button>
+                </div>
+              </div>
+
+              <div className="space-y-1.5">
+                <label className="text-xs font-semibold text-[#44403c]">New Password (min. 8 characters)</label>
+                <div className="relative">
+                  <input
+                    type={showNewPass ? "text" : "password"}
+                    value={newPassword}
+                    onChange={(e) => setNewPassword(e.target.value)}
+                    placeholder="Enter new secure password"
+                    className="w-full bg-[#fcfbf9] border border-[#d6d3d1] rounded-xl px-3.5 py-2.5 text-xs sm:text-sm text-[#1c1917] focus:outline-none focus:border-[#1e3a8a] pr-10"
+                    required
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowNewPass(!showNewPass)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-[#78716c] hover:text-[#1c1917]"
+                  >
+                    {showNewPass ? <EyeOff size={16} /> : <Eye size={16} />}
+                  </button>
+                </div>
+              </div>
+
+              <div className="space-y-1.5">
+                <label className="text-xs font-semibold text-[#44403c]">Confirm New Password</label>
+                <input
+                  type="password"
+                  value={confirmPassword}
+                  onChange={(e) => setConfirmPassword(e.target.value)}
+                  placeholder="Confirm new password"
+                  className="w-full bg-[#fcfbf9] border border-[#d6d3d1] rounded-xl px-3.5 py-2.5 text-xs sm:text-sm text-[#1c1917] focus:outline-none focus:border-[#1e3a8a]"
+                  required
+                />
+              </div>
+
+              <button
+                type="submit"
+                disabled={passwordLoading}
+                className="inline-flex items-center justify-center gap-2 bg-[#1e3a8a] hover:bg-[#172554] text-white text-xs sm:text-sm font-bold px-5 py-2.5 rounded-xl transition cursor-pointer disabled:opacity-50"
+              >
+                {passwordLoading ? "Updating..." : "Update Password"}
+              </button>
+            </form>
+          ) : (
+            <p className="text-xs text-[#78716c]">
+              Your password is encrypted with cryptographic bcrypt hashing. Click "Change Password" to update it anytime.
+            </p>
+          )}
+        </div>
+
+        {/* ================= APP ACTIONS & LOGOUT ================= */}
+        <div className="bg-white border border-[#e8e5dc] rounded-2xl p-6 sm:p-8 space-y-4 shadow-sm">
+          <h2 className="text-base font-bold text-[#1c1917] pb-2 border-b border-[#e8e5dc]">
+            Account Preferences & Actions
+          </h2>
+
+          <div className="flex flex-col sm:flex-row gap-3 pt-1">
+            {canInstall && (
+              <button
+                type="button"
+                onClick={handleInstallApp}
+                className="inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-300 text-xs sm:text-sm font-bold transition cursor-pointer pressable"
+              >
+                <Download size={16} />
+                Install Progressive Web App
+              </button>
+            )}
+
+            <button
+              type="button"
+              onClick={handleLogout}
+              className="inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl bg-red-50 hover:bg-red-100 text-red-600 border border-red-200 text-xs sm:text-sm font-bold transition cursor-pointer pressable"
+            >
+              <LogOut size={16} />
+              Log Out of Account
+            </button>
+          </div>
+        </div>
       </div>
 
       {/* ================= SWITCH ACADEMY MODAL / BOTTOM SHEET ================= */}

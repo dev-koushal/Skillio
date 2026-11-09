@@ -37,25 +37,34 @@ export default function MobileBottomNav({ currentInstitution = null }) {
       label: "Home",
       path: homePath,
       icon: Home,
-      isActive: location.pathname === "/" || location.pathname.startsWith("/institution/"),
+      isActive:
+        location.pathname === "/" ||
+        location.pathname === homePath ||
+        (activeInstitution && location.pathname === `/institution/${activeInstitution.slug}`),
     },
     {
       label: "Courses",
-      path: "/allcourses",
+      path: activeInstitution ? `/institution/${activeInstitution.slug}/courses` : "/courses",
       icon: BookOpen,
-      isActive: location.pathname === "/allcourses" || location.pathname.startsWith("/viewcourse/"),
+      isActive: location.pathname.includes("/courses") || location.pathname.startsWith("/viewcourse/"),
     },
     {
       label: "My Courses",
-      path: userData ? "/mycourses" : "/login",
+      path: userData ? (activeInstitution ? `/institution/${activeInstitution.slug}/my-courses` : "/mycourses") : "/login",
       icon: GraduationCap,
-      isActive: location.pathname === "/mycourses" || location.pathname.startsWith("/viewlecture/"),
+      isActive:
+        location.pathname.includes("/my-courses") ||
+        location.pathname === "/mycourses" ||
+        location.pathname.startsWith("/viewlecture/"),
     },
     {
       label: userData ? "Profile" : "Sign In",
-      path: userData ? "/profile" : "/login",
+      path: userData ? (activeInstitution ? `/institution/${activeInstitution.slug}/profile` : "/profile") : "/login",
       icon: User,
-      isActive: location.pathname === "/profile" || location.pathname === "/editprofile" || location.pathname === "/login",
+      isActive:
+        location.pathname.includes("/profile") ||
+        location.pathname === "/editprofile" ||
+        location.pathname === "/login",
     },
   ];
 

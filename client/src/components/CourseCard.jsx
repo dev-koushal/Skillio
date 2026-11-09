@@ -40,9 +40,16 @@ function CourseCard({
 
   const hasThumbnail = Boolean(thumbnail);
 
+  const targetSlug =
+    tenant && !tenant.isPlatform && tenant.slug !== "platform" && tenant.slug !== "default"
+      ? tenant.slug
+      : localStorage.getItem("skillio_active_tenant");
+
+  const coursePath = targetSlug ? `/institution/${targetSlug}/course/${id}` : `/viewcourse/${id}`;
+
   return (
     <div
-      onClick={() => navigate(`/viewcourse/${id}`)}
+      onClick={() => navigate(coursePath)}
       className="group w-full flex flex-col rounded-2xl overflow-hidden bg-white border border-[#e8e5dc] hover:border-[#1e3a8a]/40 shadow-xs hover:shadow-lg card-lift cursor-pointer text-[#1c1917] transition-all duration-300 select-none"
     >
       {/* Thumbnail with Zoom on Hover */}

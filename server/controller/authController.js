@@ -172,8 +172,22 @@ export const login = async (req, res) => {
       return res.status(400).json({ success: false, message: "No account found with this email!" });
     }
 
-    if (role && user.role !== role && user.role !== "platform_admin") {
-      return res.status(400).json({ success: false, message: `This account is registered as ${user.role}, not ${role}!` });
+    // Validate target role allowing compatible administrator / educator roles
+    if (role && user.role !== "platform_admin") {
+      const isEducatorTarget = role === "educator" || role === "tenant_admin";
+      const isUserEducator = user.role === "educator" || user.role === "tenant_admin";
+      const isStudentTarget = role === "student";
+      const isUserStudent = user.role === "student";
+
+      if (isEducatorTarget && !isUserEducator) {
+        return res.status(400).json({ success: false, message: `This account is registered as ${user.role}, not an educator!` });
+      }
+      if (isStudentTarget && !isUserStudent) {
+        return res.status(400).json({ success: false, message: `This account is registered as ${user.role}, not a student!` });
+      }
+      if (!isEducatorTarget && !isStudentTarget && user.role !== role) {
+        return res.status(400).json({ success: false, message: `This account is registered as ${user.role}, not ${role}!` });
+      }
     }
 
     const isMatch = await bcrypt.compare(password, user.password);
@@ -328,6 +342,7 @@ export const sendOtp = async (req, res) => {
     return res.status(200).json({
       success: true,
       message: "Verification code sent to your email!",
+      devOtp: process.env.NODE_ENV !== "production" ? otp : undefined,
     });
   } catch (error) {
     console.error("[Send OTP Error]", error);

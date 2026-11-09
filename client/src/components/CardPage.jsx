@@ -40,15 +40,15 @@ function CardPage() {
         ) : popularCourses.length === 0 ? (
           <div className="max-w-md mx-auto text-center py-12 px-6 rounded-2xl bg-white border border-[#e8e5dc] shadow-xs">
             <BookOpen size={40} className="mx-auto text-[#a8a29e] mb-3" />
-            <h3 className="text-base font-bold text-[#1c1917]">No courses published yet</h3>
-            <p className="text-xs text-[#78716c] mt-1.5 mb-5">
-              Courses for this organization are currently being prepared. Explore our complete directory of institutions.
+            <h3 className="text-base font-bold text-[#1c1917]">Courses in Preparation</h3>
+            <p className="text-xs text-[#78716c] mt-1.5 mb-5 leading-relaxed">
+              Curriculum and video lectures for this academy are currently being prepared by the instructors.
             </p>
             <button
-              onClick={() => navigate("/institutions")}
+              onClick={() => navigate("/mycourses")}
               className="bg-[#1e3a8a] hover:bg-[#172554] text-white text-xs sm:text-sm font-bold px-5 py-2.5 rounded-xl transition shadow-xs cursor-pointer"
             >
-              Find Other Institutions
+              View My Courses
             </button>
           </div>
         ) : (

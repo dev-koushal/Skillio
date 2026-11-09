@@ -25,12 +25,17 @@ const createTransporter = () => {
 
   // Fallback to Gmail service if EMAIL_ID and EMAIL_PASSWORD are provided
   if (process.env.EMAIL_ID && process.env.EMAIL_PASSWORD) {
-    const cleanPassword = process.env.EMAIL_PASSWORD.replace(/\s+/g, "");
+    const cleanEmail = (process.env.EMAIL_ID || "").trim().replace(/^["']|["']$/g, "");
+    const cleanPassword = (process.env.EMAIL_PASSWORD || "")
+      .trim()
+      .replace(/^["']|["']$/g, "")
+      .replace(/\s+/g, "");
+
     return nodemailer.createTransport({
       service: "gmail",
       secure: true,
       auth: {
-        user: process.env.EMAIL_ID.trim(),
+        user: cleanEmail,
         pass: cleanPassword,
       },
     });
