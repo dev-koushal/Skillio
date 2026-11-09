@@ -6,12 +6,19 @@ import { CourseCardSkeleton } from "./common/Skeleton";
 import { BookOpen, Sparkles, ArrowRight } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 
-function CardPage() {
+function CardPage({ courses = null, loading = null }) {
   const { courseData } = useSelector((state) => state.course);
   const navigate = useNavigate();
 
-  const popularCourses = Array.isArray(courseData) ? courseData.slice(0, 8) : [];
-  const isLoading = courseData === null;
+  // If explicit courses prop is provided (e.g. from InstitutionHome), use it exclusively
+  const activeCourseList = Array.isArray(courses)
+    ? courses
+    : Array.isArray(courseData)
+    ? courseData
+    : [];
+
+  const popularCourses = activeCourseList.slice(0, 8);
+  const isLoading = loading !== null ? loading : courseData === null;
 
   return (
     <section className="relative w-full bg-[#f8f7f4] py-16 px-4 sm:px-6 lg:px-8 border-t border-[#e8e5dc]">

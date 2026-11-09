@@ -15,6 +15,7 @@ import { useNavigate, useParams, Link } from "react-router-dom";
 import api from "../services/api";
 import Navbar from "../components/Navbar";
 import Footer from "../components/Footer";
+import SecureVideoPlayer from "../components/video/SecureVideoPlayer";
 
 function ViewLectures() {
   const { courseId } = useParams();
@@ -209,20 +210,19 @@ function ViewLectures() {
           {/* Main Video Player & Controls */}
           <div className="lg:col-span-8 space-y-5">
             <div className="bg-white border border-[#e8e5dc] rounded-3xl p-4 sm:p-6 space-y-4 shadow-xs">
-              {/* Dominant Video Container */}
-              <div className="aspect-video w-full rounded-2xl overflow-hidden bg-black flex items-center justify-center border border-[#e8e5dc] shadow-md">
-                {selectedLecture?.videoUrl ? (
-                  <video
+              {/* Dominant Video Container with Secure Authorized Player */}
+              <div className="w-full">
+                {selectedLecture?._id ? (
+                  <SecureVideoPlayer
                     key={selectedLecture._id}
-                    src={selectedLecture.videoUrl}
-                    controls
-                    autoPlay
-                    className="w-full h-full object-cover"
+                    lectureId={selectedLecture._id}
+                    lectureTitle={selectedLecture.lectureTitle}
+                    onEnded={handleNextLecture}
                   />
                 ) : (
-                  <div className="text-center p-6 text-gray-400 text-xs sm:text-sm space-y-2">
+                  <div className="aspect-video w-full rounded-2xl overflow-hidden bg-black flex items-center justify-center border border-[#e8e5dc] text-center p-6 text-gray-400 text-xs sm:text-sm space-y-2">
                     <Video size={36} className="mx-auto text-gray-600" />
-                    <p>No video stream available for this lecture.</p>
+                    <p>Select a lecture from the curriculum to begin learning.</p>
                   </div>
                 )}
               </div>

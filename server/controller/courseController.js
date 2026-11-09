@@ -7,6 +7,7 @@ import jwt from "jsonwebtoken";
 import { verifyCourseAccess, sanitizeLecturesForViewer } from "../utils/courseAccess.js";
 import { courseService } from "../services/courseService.js";
 import { lectureService } from "../services/lectureService.js";
+import videoPlaybackService from "../services/video/videoPlaybackService.js";
 
 export const createCourse = async (req, res) => {
   try {
@@ -38,11 +39,18 @@ export const createCourse = async (req, res) => {
 
 export const getPublishedCourses = async (req, res) => {
   try {
-    const tenantId = req.tenantId;
+    let tenantId = req.tenantId;
+
+    // If query provides explicit tenant slug, respect it
+    if (req.query.slug) {
+      const explicitTenant = await Tenant.findOne({ slug: req.query.slug.toLowerCase().trim() });
+      if (explicitTenant) tenantId = explicitTenant._id;
+    }
+
     const courses = await Course.find({ isPublished: true, tenantId })
       .populate({
         path: "lectures",
-        select: "_id title isPreviewFree duration",
+        select: "_id lectureTitle isPreviewFree duration videoProvider processingStatus",
       })
       .populate({
         path: "reviews",
@@ -61,6 +69,48 @@ export const getPublishedCourses = async (req, res) => {
     return res.status(400).json({
       success: false,
       message: `Failed to get published courses: ${error.message || error}`,
+    });
+  }
+};
+
+/**
+ * Get published courses specifically isolated to a particular institution by its slug.
+ * Ensures zero cross-tenant course leakage.
+ */
+export const getPublishedCoursesBySlug = async (req, res) => {
+  try {
+    const { slug } = req.params;
+    if (!slug || slug === "platform") {
+      return res.status(200).json([]);
+    }
+
+    const tenant = await Tenant.findOne({ slug: slug.toLowerCase().trim(), status: { $ne: "suspended" } });
+    if (!tenant) {
+      return res.status(200).json([]);
+    }
+
+    const courses = await Course.find({ isPublished: true, tenantId: tenant._id })
+      .populate({
+        path: "lectures",
+        select: "_id lectureTitle isPreviewFree duration videoProvider processingStatus",
+      })
+      .populate({
+        path: "reviews",
+        select: "rating",
+      })
+      .populate({
+        path: "creator",
+        select: "name profilePicture",
+      })
+      .select("title subTitle category level price thumbnail creator enrolledStudents isPublished tenantId createdAt")
+      .sort({ createdAt: -1 })
+      .lean();
+
+    return res.status(200).json(courses);
+  } catch (error) {
+    return res.status(500).json({
+      success: false,
+      message: `Failed to get institution courses: ${error.message || error}`,
     });
   }
 };
@@ -299,6 +349,21 @@ export const getCourseLecture = async (req, res) => {
     courseObj.hasAccess = true;
     courseObj.isEnrolled = true;
 
+    // Secure lecture list: strip permanent raw media URLs; playback is authorized on-demand via /playback endpoint
+    if (Array.isArray(courseObj.lectures)) {
+      courseObj.lectures = courseObj.lectures.map((l) => ({
+        _id: l._id,
+        lectureTitle: l.lectureTitle,
+        duration: l.duration || 0,
+        isPreviewFree: Boolean(l.isPreviewFree),
+        videoProvider: l.videoProvider || "cloudinary",
+        processingStatus: l.processingStatus || "ready",
+        isLocked: false,
+        createdAt: l.createdAt,
+        updatedAt: l.updatedAt,
+      }));
+    }
+
     return res.status(200).json(courseObj);
   } catch (error) {
     return res.status(500).json({ success: false, message: `Failed to get lecture: ${error.message}` });
@@ -390,5 +455,62 @@ export const getCreatorById = async (req, res) => {
     return res.status(200).json(user);
   } catch (error) {
     return res.status(500).json({ success: false, message: `Failed to get creator: ${error.message}` });
+  }
+};
+
+/**
+ * Short-lived authorized playback endpoint.
+ * Authenticates user, verifies tenant context & course access, and generates tokenized streaming credentials.
+ */
+export const getLecturePlayback = async (req, res) => {
+  try {
+    const { lectureId } = req.params;
+    const tenantId = req.tenantId;
+
+    let userId = req.userId;
+    let userRole = req.userRole;
+
+    // Optional auth extraction from cookie or Authorization header for free previews
+    if (!userId && (req.cookies?.token || req.headers.authorization)) {
+      try {
+        let rawToken = req.cookies?.token;
+        if (!rawToken && req.headers.authorization?.startsWith("Bearer ")) {
+          rawToken = req.headers.authorization.split(" ")[1];
+        }
+        if (rawToken) {
+          const decoded = jwt.verify(rawToken, process.env.JWT_SECRET);
+          if (decoded && decoded.userId) {
+            userId = decoded.userId;
+            userRole = decoded.role;
+          }
+        }
+      } catch (e) {}
+    }
+
+    const playbackResult = await videoPlaybackService.getLecturePlayback({
+      lectureId,
+      userId,
+      userRole,
+      tenantId,
+    });
+
+    if (!playbackResult.authorized) {
+      return res.status(playbackResult.status || 403).json({
+        success: false,
+        accessDenied: true,
+        message: playbackResult.message || "You do not have authorization to view this lecture.",
+      });
+    }
+
+    return res.status(200).json({
+      success: true,
+      playback: playbackResult,
+    });
+  } catch (error) {
+    console.error("[GetLecturePlayback Error]", error);
+    return res.status(500).json({
+      success: false,
+      message: "An unexpected error occurred verifying video authorization.",
+    });
   }
 };

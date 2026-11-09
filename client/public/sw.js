@@ -32,13 +32,19 @@ self.addEventListener("activate", (event) => {
 self.addEventListener("fetch", (event) => {
   const url = new URL(event.request.url);
 
-  // Security guard: Bypass SW cache completely for sensitive endpoints
+  // Security guard: Bypass SW cache completely for sensitive endpoints, video streams, and tokens
   if (
     url.pathname.startsWith("/api/") ||
     url.pathname.includes("/video/") ||
+    url.pathname.includes("/playback") ||
     url.pathname.includes("/stream") ||
     url.pathname.includes("/orders") ||
     url.pathname.includes("/razorpay") ||
+    url.hostname.includes("mediadelivery.net") ||
+    url.hostname.includes("b-cdn.net") ||
+    url.hostname.includes("bunnycdn.com") ||
+    url.hostname.includes("res.cloudinary.com") ||
+    url.searchParams.has("token") ||
     event.request.method !== "GET"
   ) {
     return;

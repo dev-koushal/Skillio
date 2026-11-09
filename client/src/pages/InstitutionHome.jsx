@@ -1,6 +1,7 @@
 import React, { useEffect, useState, lazy, Suspense } from "react";
 import { useParams, useNavigate, Link } from "react-router-dom";
-import { useSelector } from "react-redux";
+import { useSelector, useDispatch } from "react-redux";
+import { setCourseData } from "../redux/courseSlice";
 import Navbar from "../components/Navbar";
 import {
   ArrowRight,
@@ -28,15 +29,19 @@ export default function InstitutionHome() {
   const { courseData } = useSelector((state) => state.course);
   const { tenant: contextTenant, reloadTenant } = useTenant();
 
+  const dispatch = useDispatch();
   const [institution, setInstitution] = useState(null);
+  const [institutionCourses, setInstitutionCourses] = useState([]);
+  const [loadingCourses, setLoadingCourses] = useState(true);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
   useEffect(() => {
     let isMounted = true;
-    const fetchInstitution = async () => {
+    const fetchInstitutionAndCourses = async () => {
       try {
         setLoading(true);
+        setLoadingCourses(true);
         setError(null);
         const targetSlug = slug || contextTenant?.slug || "default";
 
@@ -45,29 +50,43 @@ export default function InstitutionHome() {
           localStorage.setItem("skillio_active_tenant", targetSlug);
         }
 
-        const res = await api.get(`/api/tenant/by-slug/${targetSlug}`);
-        if (isMounted && res.data?.success && res.data?.tenant) {
-          setInstitution(res.data.tenant);
-          document.title = `${res.data.tenant.name} — ${res.data.tenant.title || "Academy"}`;
-        } else {
-          // If not found by slug, use context tenant
-          if (isMounted && contextTenant) {
-            setInstitution(contextTenant);
-          }
+        // Parallel fetch for institution details and institution courses
+        const [tenantRes, coursesRes] = await Promise.allSettled([
+          api.get(`/api/tenant/by-slug/${targetSlug}`),
+          api.get(`/api/course/by-institution/${targetSlug}`),
+        ]);
+
+        if (isMounted && tenantRes.status === "fulfilled" && tenantRes.value.data?.success && tenantRes.value.data?.tenant) {
+          const t = tenantRes.value.data.tenant;
+          setInstitution(t);
+          document.title = `${t.name} — ${t.title || "Academy"}`;
+        } else if (isMounted && contextTenant) {
+          setInstitution(contextTenant);
+        }
+
+        if (isMounted && coursesRes.status === "fulfilled" && Array.isArray(coursesRes.value.data)) {
+          setInstitutionCourses(coursesRes.value.data);
+          dispatch(setCourseData(coursesRes.value.data));
+        } else if (isMounted) {
+          setInstitutionCourses([]);
+          dispatch(setCourseData([]));
         }
       } catch (err) {
-        console.warn("[InstitutionHome] Could not fetch by slug, falling back to context tenant:", err.message);
+        console.warn("[InstitutionHome] Could not fetch institution:", err.message);
         if (isMounted && contextTenant) {
           setInstitution(contextTenant);
         } else if (isMounted) {
           setError("Institution not found");
         }
       } finally {
-        if (isMounted) setLoading(false);
+        if (isMounted) {
+          setLoading(false);
+          setLoadingCourses(false);
+        }
       }
     };
 
-    fetchInstitution();
+    fetchInstitutionAndCourses();
     return () => {
       isMounted = false;
     };
@@ -261,7 +280,7 @@ export default function InstitutionHome() {
           )}
 
           {/* Featured Courses for this Organization */}
-          <CardPage />
+          <CardPage courses={institutionCourses} loading={loadingCourses} />
 
           {/* Organization Curriculum Tracks or Educational Values */}
           <ExploreCourses />

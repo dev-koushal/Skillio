@@ -2,6 +2,7 @@ import Course from "../models/coursesModel.js";
 import Lecture from "../models/lectureModel.js";
 import Resource from "../models/resourceModel.js";
 import uploadCloudinary from "../config/cloudinary.js";
+import bunnyVideoService from "./video/bunnyVideoService.js";
 
 /**
  * Service to manage lecture business logic.
@@ -44,9 +45,29 @@ export const lectureService = {
     }
 
     let finalVideoUrl = videoUrl || "";
+    let videoProvider = "cloudinary";
+    let bunnyVideoId = "";
+    let bunnyLibraryId = "";
+    let processingStatus = "ready";
+
     if (videoFile) {
-      const uploaded = await uploadCloudinary(videoFile.path);
-      if (uploaded) finalVideoUrl = uploaded;
+      if (bunnyVideoService.isConfigured()) {
+        try {
+          const bunnyRes = await bunnyVideoService.createVideo(lectureTitle.trim());
+          await bunnyVideoService.uploadVideo(bunnyRes.videoId, videoFile.path);
+          videoProvider = "bunny";
+          bunnyVideoId = bunnyRes.videoId;
+          bunnyLibraryId = bunnyRes.libraryId;
+          processingStatus = "processing";
+        } catch (bErr) {
+          console.warn("[Bunny Upload Failed, fallback to Cloudinary]", bErr.message);
+          const uploaded = await uploadCloudinary(videoFile.path);
+          if (uploaded) finalVideoUrl = uploaded;
+        }
+      } else {
+        const uploaded = await uploadCloudinary(videoFile.path);
+        if (uploaded) finalVideoUrl = uploaded;
+      }
     }
 
     const lecture = await Lecture.create({
@@ -55,6 +76,10 @@ export const lectureService = {
       lectureTitle: lectureTitle.trim(),
       isPreviewFree: Boolean(isPreviewFree),
       videoUrl: finalVideoUrl,
+      videoProvider,
+      bunnyVideoId,
+      bunnyLibraryId,
+      processingStatus,
     });
 
     course.lectures.push(lecture._id);
@@ -102,8 +127,31 @@ export const lectureService = {
     }
 
     if (videoFile) {
-      const uploaded = await uploadCloudinary(videoFile.path);
-      if (uploaded) lecture.videoUrl = uploaded;
+      if (bunnyVideoService.isConfigured()) {
+        try {
+          const title = lectureTitle ? lectureTitle.trim() : lecture.lectureTitle;
+          const bunnyRes = await bunnyVideoService.createVideo(title);
+          await bunnyVideoService.uploadVideo(bunnyRes.videoId, videoFile.path);
+          lecture.videoProvider = "bunny";
+          lecture.bunnyVideoId = bunnyRes.videoId;
+          lecture.bunnyLibraryId = bunnyRes.libraryId;
+          lecture.processingStatus = "processing";
+        } catch (bErr) {
+          const uploaded = await uploadCloudinary(videoFile.path);
+          if (uploaded) {
+            lecture.videoUrl = uploaded;
+            lecture.videoProvider = "cloudinary";
+            lecture.processingStatus = "ready";
+          }
+        }
+      } else {
+        const uploaded = await uploadCloudinary(videoFile.path);
+        if (uploaded) {
+          lecture.videoUrl = uploaded;
+          lecture.videoProvider = "cloudinary";
+          lecture.processingStatus = "ready";
+        }
+      }
     } else if (typeof videoUrl !== "undefined" && videoUrl !== null) {
       lecture.videoUrl = videoUrl;
     }

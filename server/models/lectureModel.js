@@ -25,6 +25,40 @@ const lectureSchema = new mongoose.Schema(
       type: Boolean,
       default: false,
     },
+    videoProvider: {
+      type: String,
+      enum: ["bunny", "cloudinary"],
+      default: "cloudinary",
+    },
+    bunnyVideoId: {
+      type: String,
+      default: "",
+    },
+    bunnyLibraryId: {
+      type: String,
+      default: "",
+    },
+    bunnyDirectUrl: {
+      type: String,
+      default: "",
+    },
+    processingStatus: {
+      type: String,
+      enum: ["uploading", "processing", "ready", "failed"],
+      default: "ready",
+    },
+    duration: {
+      type: Number,
+      default: 0,
+    },
+    thumbnailUrl: {
+      type: String,
+      default: "",
+    },
+    publicId: {
+      type: String,
+      default: "",
+    },
   },
   { timestamps: true }
 );

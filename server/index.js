@@ -19,6 +19,7 @@ import resourceRouter from "./routes/resourceRoute.js";
 import aiRouter from "./routes/aiRoute.js";
 import institutionStudentRouter from "./routes/institutionStudentRoute.js";
 import invitationRouter from "./routes/invitationRoute.js";
+import { getLecturePlayback } from "./controller/courseController.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -74,6 +75,9 @@ app.get("/api/health", (req, res) => {
 
 // Centralized Multi-Tenant Resolution Middleware
 app.use(tenantResolver);
+
+// Playback Authorization Route (Primary)
+app.get("/api/lectures/:lectureId/playback", getLecturePlayback);
 
 // API Routes
 app.use("/api/institutions/me", institutionStudentRouter);

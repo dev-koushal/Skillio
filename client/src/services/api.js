@@ -69,14 +69,10 @@ export const getActiveTenantSlug = () => {
     if (sub && sub !== "www" && sub !== "app") return sub;
   }
 
-  // 4. Stored tenant only when inside specific course views or educator workflows,
-  // NOT on root platform "/" or general platform pages
-  const isPlatformRoot = window.location.pathname === "/" || window.location.pathname === "/institutions";
-  if (!isPlatformRoot) {
-    const storedTenant = localStorage.getItem("skillio_active_tenant");
-    if (storedTenant) {
-      return storedTenant.toLowerCase().trim();
-    }
+  // 4. Stored active institution (persists active academy across pages)
+  const storedTenant = localStorage.getItem("skillio_active_tenant");
+  if (storedTenant && storedTenant !== "platform" && storedTenant !== "default") {
+    return storedTenant.toLowerCase().trim();
   }
 
   return null;
@@ -103,13 +99,18 @@ api.interceptors.request.use(
   (error) => Promise.reject(error)
 );
 
-// Interceptor to handle cross-tenant 403 or 401 cleanly
+// Interceptor to handle cross-tenant 403 or 401 cleanly, and session revocation
 api.interceptors.response.use(
   (response) => response,
   (error) => {
+    if (error.response?.data?.code === "SESSION_REVOKED") {
+      console.warn("[API] Session revoked by another device login.");
+      if (typeof window !== "undefined" && !window.location.pathname.includes("/login")) {
+        window.location.href = "/login?revoked=true";
+      }
+    }
     if (error.response?.data?.code === "CROSS_TENANT_FORBIDDEN") {
       console.warn("[API] Cross-tenant token detected. Clearing stale session.");
-      // Optional: clear local session or alert user
     }
     return Promise.reject(error);
   }

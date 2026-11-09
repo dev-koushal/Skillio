@@ -1,6 +1,6 @@
 import jwt from "jsonwebtoken";
 
-export const genToken = async (userId, tenantId = null, role = "student") => {
+export const genToken = async (userId, tenantId = null, role = "student", sessionId = null) => {
   try {
     const payload = { userId };
     if (tenantId) {
@@ -8,6 +8,9 @@ export const genToken = async (userId, tenantId = null, role = "student") => {
     }
     if (role) {
       payload.role = role;
+    }
+    if (sessionId) {
+      payload.sessionId = sessionId;
     }
     const token = await jwt.sign(payload, process.env.JWT_SECRET, { expiresIn: "7d" });
     return token;

@@ -8,7 +8,9 @@ import {
   getCourseLecture,
   getCreatorById,
   getCreatorCourses,
+  getLecturePlayback,
   getPublishedCourses,
+  getPublishedCoursesBySlug,
   removeCourse,
   removeLecture,
 } from "../controller/courseController.js";
@@ -20,11 +22,13 @@ const courseRouter = Router();
 
 // Public / Student Accessible Course Endpoints
 courseRouter.get("/getpublished", getPublishedCourses);
+courseRouter.get("/by-institution/:slug", getPublishedCoursesBySlug);
 courseRouter.get("/getcourse/:courseId", getCourseById);
 courseRouter.post("/creator", getCreatorById);
 
 // Authenticated Student Endpoints
 courseRouter.get("/courselecture/:courseId", isAuth, getCourseLecture);
+courseRouter.get("/lecture/:lectureId/playback", getLecturePlayback);
 
 // Educator / Admin Management Endpoints
 courseRouter.post("/create", isAuth, requireEducator, createCourse);

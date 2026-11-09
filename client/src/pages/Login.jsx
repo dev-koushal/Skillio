@@ -15,7 +15,7 @@ import {
   RotateCcw,
   Edit3,
 } from "lucide-react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { toast } from "react-toastify";
 import { useDispatch } from "react-redux";
 import { setUserData } from "../redux/userSlice";
@@ -51,6 +51,8 @@ export default function Login() {
 
   const dispatch = useDispatch();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const isRevoked = searchParams.get("revoked") === "true";
   const { tenant } = useTenant();
 
   const tenantName = tenant?.name || "Skillio Platform";
@@ -308,6 +310,19 @@ export default function Login() {
                 Choose your preferred sign-in method to access your courses
               </p>
             </div>
+
+            {/* Session Revoked Notice */}
+            {isRevoked && (
+              <div className="p-3.5 bg-amber-50 border border-amber-200 rounded-2xl text-xs text-amber-900 flex items-start gap-2.5">
+                <span className="text-sm shrink-0">⚠️</span>
+                <div>
+                  <p className="font-bold">Signed out from another device</p>
+                  <p className="text-[11px] text-amber-800 mt-0.5">
+                    Your account reached the maximum active devices and was signed in elsewhere. Please log in again to continue on this device.
+                  </p>
+                </div>
+              </div>
+            )}
 
             {/* Role Switcher Tabs (Student vs Educator) */}
             <div className="grid grid-cols-2 p-1 bg-[#f8f7f4] border border-[#e8e5dc] rounded-2xl gap-1">

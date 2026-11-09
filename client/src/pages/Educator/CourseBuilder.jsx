@@ -832,10 +832,20 @@ export default function CourseBuilder() {
                     </div>
 
                     <div className="flex flex-wrap items-center gap-2 text-[11px] text-[#78716c] pl-8">
-                      {lec.videoUrl ? (
-                        <span className="inline-flex items-center gap-1 text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200 font-medium">
-                          <CheckCircle2 size={11} /> Video Attached
-                        </span>
+                      {lec.videoUrl || lec.bunnyVideoId ? (
+                        lec.processingStatus === "processing" ? (
+                          <span className="inline-flex items-center gap-1 text-amber-700 bg-amber-50 px-2 py-0.5 rounded border border-amber-200 font-medium">
+                            <Loader2 size={11} className="animate-spin" /> Processing Video
+                          </span>
+                        ) : lec.processingStatus === "failed" ? (
+                          <span className="inline-flex items-center gap-1 text-rose-700 bg-rose-50 px-2 py-0.5 rounded border border-rose-200 font-medium">
+                            Failed — Re-upload
+                          </span>
+                        ) : (
+                          <span className="inline-flex items-center gap-1 text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200 font-medium">
+                            <CheckCircle2 size={11} /> {lec.videoProvider === "bunny" ? "Adaptive Stream Ready" : "Video Attached"}
+                          </span>
+                        )
                       ) : (
                         <span className="text-amber-700 bg-amber-50 px-2 py-0.5 rounded border border-amber-200 font-medium">
                           Pending Video Upload

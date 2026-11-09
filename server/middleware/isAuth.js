@@ -1,6 +1,7 @@
 import jwt from "jsonwebtoken";
 import User from "../models/userModel.js";
 import InstitutionMembership from "../models/institutionMembershipModel.js";
+import sessionService from "../services/session/sessionService.js";
 
 const isAuth = async (req, res, next) => {
   try {
@@ -21,6 +22,19 @@ const isAuth = async (req, res, next) => {
     // Attach decoded user info
     req.userId = decoded.userId;
     req.userRole = decoded.role;
+    req.sessionId = decoded.sessionId;
+
+    // Server-side Session Management: Maximum 2 Active Devices Enforcement
+    if (decoded.sessionId) {
+      const sessionValidation = await sessionService.validateSession(decoded.userId, decoded.sessionId);
+      if (!sessionValidation.isValid || sessionValidation.isRevoked) {
+        return res.status(401).json({
+          success: false,
+          code: "SESSION_REVOKED",
+          message: "Your account was signed in on another device.",
+        });
+      }
+    }
 
     // Multi-tenant security check:
     // If the token has a tenantId, verify tenant context matches

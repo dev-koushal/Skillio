@@ -1,10 +1,12 @@
 import validator from "validator";
 import bcrypt from "bcryptjs";
 import crypto from "crypto";
+import jwt from "jsonwebtoken";
 import { genToken } from "../config/token.js";
 import User from "../models/userModel.js";
 import Tenant from "../models/tenantModel.js";
 import InstitutionMembership from "../models/institutionMembershipModel.js";
+import sessionService from "../services/session/sessionService.js";
 import sendMail from "../config/sendMail.js";
 import { sendOtp as sendSmsOtp } from "../services/sms/smsService.js";
 import { normalizePhoneNumber, isValidE164 } from "../utils/phoneUtils.js";
@@ -120,7 +122,14 @@ export const signUp = async (req, res) => {
       } catch (e) {}
     }
 
-    const token = await genToken(user._id, tenantId, user.role);
+    // Register active device session (enforces maximum 2 active devices)
+    const session = await sessionService.createSession({
+      userId: user._id,
+      userAgent: req.headers["user-agent"] || "",
+      ipAddress: req.ip || "",
+    });
+
+    const token = await genToken(user._id, tenantId, user.role, session.sessionId);
 
     res.cookie("token", token, getCookieOptions());
 
@@ -214,7 +223,14 @@ export const login = async (req, res) => {
       return res.status(400).json({ success: false, message: "Wrong password!" });
     }
 
-    const token = await genToken(user._id, user.tenantId, user.role);
+    // Register active device session (enforces maximum 2 active devices)
+    const session = await sessionService.createSession({
+      userId: user._id,
+      userAgent: req.headers["user-agent"] || "",
+      ipAddress: req.ip || "",
+    });
+
+    const token = await genToken(user._id, user.tenantId, user.role, session.sessionId);
 
     res.cookie("token", token, getCookieOptions());
 
@@ -273,6 +289,20 @@ export const logout = async (req, res) => {
   try {
     const isProduction = process.env.NODE_ENV === "production";
     const cookieDomain = process.env.COOKIE_DOMAIN || undefined;
+
+    // Revoke only the active session on this device (leaves other device active)
+    let rawToken = req.cookies?.token;
+    if (!rawToken && req.headers.authorization?.startsWith("Bearer ")) {
+      rawToken = req.headers.authorization.split(" ")[1];
+    }
+    if (rawToken) {
+      try {
+        const decoded = jwt.verify(rawToken, process.env.JWT_SECRET);
+        if (decoded?.userId && decoded?.sessionId) {
+          await sessionService.revokeSession(decoded.userId, decoded.sessionId);
+        }
+      } catch (e) {}
+    }
 
     res.clearCookie("token", {
       httpOnly: true,
@@ -782,7 +812,14 @@ export const verifyPhoneOtp = async (req, res) => {
     await user.save();
 
     // Issue standard JWT authentication session
-    const token = await genToken(user._id, user.tenantId, user.role);
+    // Register active device session (enforces maximum 2 active devices)
+    const session = await sessionService.createSession({
+      userId: user._id,
+      userAgent: req.headers["user-agent"] || "",
+      ipAddress: req.ip || "",
+    });
+
+    const token = await genToken(user._id, user.tenantId, user.role, session.sessionId);
     res.cookie("token", token, getCookieOptions());
 
     const safeUser = user.toObject();

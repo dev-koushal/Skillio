@@ -2,7 +2,9 @@ import React, { useEffect, useState, useMemo } from "react";
 import { ArrowLeft, Filter, Search, X, BookOpen, Building2, SlidersHorizontal, Check } from "lucide-react";
 import { useNavigate, useSearchParams, useParams } from "react-router-dom";
 import CourseCard from "../components/CourseCard";
-import { useSelector } from "react-redux";
+import { useSelector, useDispatch } from "react-redux";
+import { setCourseData } from "../redux/courseSlice";
+import api from "../services/api";
 import Navbar from "../components/Navbar";
 import Footer from "../components/Footer";
 import { CourseCardSkeleton } from "../components/common/Skeleton";
@@ -16,13 +18,23 @@ function AllCourses() {
   const { courseData } = useSelector((state) => state.course);
   const { tenant } = useTenant();
 
+  const dispatch = useDispatch();
   const activeSlug = slug || (tenant && !tenant.isPlatform ? tenant.slug : null);
 
   useEffect(() => {
     if (slug && slug !== "platform") {
       localStorage.setItem("skillio_active_tenant", slug);
     }
-  }, [slug]);
+    if (activeSlug && activeSlug !== "platform") {
+      api.get(`/api/course/by-institution/${activeSlug}`)
+        .then((res) => {
+          if (Array.isArray(res.data)) {
+            dispatch(setCourseData(res.data));
+          }
+        })
+        .catch(() => {});
+    }
+  }, [slug, activeSlug, dispatch]);
 
   // Filters state
   const [searchQuery, setSearchQuery] = useState("");

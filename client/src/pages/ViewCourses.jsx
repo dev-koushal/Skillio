@@ -29,6 +29,7 @@ import Button from "../components/common/Button";
 import Navbar from "../components/Navbar";
 import Footer from "../components/Footer";
 import { optimizeImage } from "../utils/imageOptimizer";
+import SecureVideoPlayer from "../components/video/SecureVideoPlayer";
 
 // Helper to load Razorpay checkout script dynamically
 const loadRazorpayScript = () => {
@@ -374,11 +375,11 @@ function ViewCourses() {
           <div className="order-1 lg:order-2 lg:col-span-5 bg-[#faf9f6] border border-[#e8e5dc] rounded-2xl p-4 sm:p-6 space-y-4 sm:space-y-5 shadow-xs">
             {/* Video preview / Thumbnail */}
             <div className="aspect-video w-full rounded-xl overflow-hidden bg-black relative flex items-center justify-center border border-[#e8e5dc]">
-              {selectedLecture?.videoUrl ? (
-                <video
-                  src={selectedLecture.videoUrl}
-                  controls
-                  className="w-full h-full object-cover"
+              {selectedLecture?._id ? (
+                <SecureVideoPlayer
+                  key={selectedLecture._id}
+                  lectureId={selectedLecture._id}
+                  lectureTitle={selectedLecture.lectureTitle}
                 />
               ) : course?.thumbnail ? (
                 <img
