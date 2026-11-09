@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import {
   User,
   Mail,
@@ -13,6 +13,10 @@ import {
   Sparkles,
   School,
   ArrowRight,
+  Phone,
+  KeyRound,
+  RotateCcw,
+  Edit3,
 } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
 import { toast } from "react-toastify";
@@ -29,6 +33,18 @@ export default function SignUp() {
   const [password, setPassword] = useState("");
   const [role, setRole] = useState("student"); // 'student' | 'educator'
   const [loading, setLoading] = useState(false);
+
+  // Authentication Method: 'email' | 'phone'
+  const [authMethod, setAuthMethod] = useState("email");
+
+  // Phone OTP Sign-up States
+  const [phoneStep, setPhoneStep] = useState("input"); // 'input' | 'otp'
+  const [phoneNumber, setPhoneNumber] = useState("");
+  const [phoneOtp, setPhoneOtp] = useState("");
+  const [phoneLoading, setPhoneLoading] = useState(false);
+  const [cooldown, setCooldown] = useState(0);
+
+  const otpInputRef = useRef(null);
 
   // Step state: 1 = Credentials, 2 = Institution Selection (Student only)
   const [step, setStep] = useState(1);
@@ -53,6 +69,24 @@ export default function SignUp() {
       setSelectedInstitution(tenant);
     }
   }, [isDirectInstitution, tenant]);
+
+  // Resend OTP cooldown timer
+  useEffect(() => {
+    let timer = null;
+    if (cooldown > 0) {
+      timer = setInterval(() => {
+        setCooldown((prev) => (prev > 0 ? prev - 1 : 0));
+      }, 1000);
+    }
+    return () => clearInterval(timer);
+  }, [cooldown]);
+
+  // Auto-focus OTP input when entering OTP step
+  useEffect(() => {
+    if (phoneStep === "otp" && otpInputRef.current) {
+      otpInputRef.current.focus();
+    }
+  }, [phoneStep]);
 
   // Load institutions list for student step 2
   useEffect(() => {
@@ -79,8 +113,13 @@ export default function SignUp() {
     }
   }, [step]);
 
-  // Step 1: Validate credentials and determine whether to proceed to Step 2
-  const handleProceedFromStep1 = (e) => {
+  // Google Sign-up handler
+  const handleGoogleSignup = () => {
+    toast.info("Google authentication is connecting. Please use Email or Phone OTP in the meantime.");
+  };
+
+  // Step 1: Validate email credentials and determine whether to proceed to Step 2
+  const handleProceedFromStep1Email = (e) => {
     e.preventDefault();
 
     if (!name.trim() || !email.trim() || !password) {
@@ -95,13 +134,13 @@ export default function SignUp() {
 
     // If educator, directly register without institution step
     if (role === "educator") {
-      executeSignup({ chosenSlug: null });
+      executeEmailSignup({ chosenSlug: null });
       return;
     }
 
     // If student is already visiting a direct institution, register directly under it
     if (isDirectInstitution && tenant?.slug) {
-      executeSignup({ chosenSlug: tenant.slug });
+      executeEmailSignup({ chosenSlug: tenant.slug });
       return;
     }
 
@@ -109,8 +148,8 @@ export default function SignUp() {
     setStep(2);
   };
 
-  // Perform actual signup submission
-  const executeSignup = async ({ chosenSlug }) => {
+  // Perform actual email signup submission
+  const executeEmailSignup = async ({ chosenSlug }) => {
     try {
       setLoading(true);
 
@@ -149,9 +188,110 @@ export default function SignUp() {
     }
   };
 
+  // Phone OTP: Step 1 - Send OTP
+  const handleSendPhoneOtp = async (e) => {
+    e?.preventDefault();
+
+    if (!name.trim()) {
+      toast.error("Please enter your full name first");
+      return;
+    }
+
+    const cleanDigits = phoneNumber.replace(/\D/g, "");
+    if (!cleanDigits || cleanDigits.length < 10) {
+      toast.error("Please enter a valid 10-digit mobile number");
+      return;
+    }
+
+    try {
+      setPhoneLoading(true);
+      const { data } = await api.post("/api/auth/phone/send-otp", {
+        phoneNumber: phoneNumber.trim(),
+        role,
+      });
+
+      setPhoneStep("otp");
+      setCooldown(data.cooldown || 45);
+      toast.success(data.message || "OTP sent to your mobile number");
+
+      if (data.devOtp) {
+        console.log("[Dev Mode] Phone OTP:", data.devOtp);
+      }
+    } catch (error) {
+      console.error("[SignUp Phone OTP Error]", error);
+      toast.error(error?.response?.data?.message || "Failed to send OTP. Please try again.");
+    } finally {
+      setPhoneLoading(false);
+    }
+  };
+
+  // Phone OTP: Step 2 - Verify OTP & Register
+  const handleVerifyPhoneOtp = async (e) => {
+    e.preventDefault();
+
+    const cleanOtp = phoneOtp.trim();
+    if (!cleanOtp || cleanOtp.length !== 6) {
+      toast.error("Please enter the 6-digit verification code");
+      return;
+    }
+
+    try {
+      setPhoneLoading(true);
+
+      const payload = {
+        phoneNumber: phoneNumber.trim(),
+        otp: cleanOtp,
+        name: name.trim(),
+        role,
+      };
+
+      if (isDirectInstitution && tenant?.slug) {
+        payload.institutionSlug = tenant.slug;
+      }
+
+      const { data } = await api.post("/api/auth/phone/verify-otp", payload);
+
+      dispatch(setUserData(data.user));
+
+      if (role === "educator") {
+        toast.success(`Welcome to Skillio, ${data.user.name}!`);
+        navigate("/educator/home");
+      } else if (isDirectInstitution && tenant?.slug) {
+        localStorage.setItem("skillio_active_tenant", tenant.slug);
+        toast.success(`Welcome to ${tenantName}, ${data.user.name}!`);
+        navigate(`/institution/${tenant.slug}`);
+      } else {
+        toast.success("Mobile number verified successfully!");
+        // Transition student to Step 2 for institution choice
+        setStep(2);
+      }
+    } catch (error) {
+      console.error("[Verify Phone OTP Error]", error);
+      toast.error(error?.response?.data?.message || "Invalid or expired verification code");
+    } finally {
+      setPhoneLoading(false);
+    }
+  };
+
+  // Student selects an academy at Step 2
+  const handleConfirmAcademyChoice = (chosenSlug) => {
+    if (authMethod === "email") {
+      executeEmailSignup({ chosenSlug });
+    } else {
+      // User is already authenticated via Phone OTP
+      if (chosenSlug && chosenSlug !== "platform" && chosenSlug !== "default") {
+        localStorage.setItem("skillio_active_tenant", chosenSlug);
+        navigate(`/institution/${chosenSlug}`);
+      } else {
+        localStorage.removeItem("skillio_active_tenant");
+        navigate("/allcourses");
+      }
+    }
+  };
+
   // Student selects "Select Later"
   const handleSelectLater = () => {
-    executeSignup({ chosenSlug: null });
+    handleConfirmAcademyChoice(null);
   };
 
   // Filter institutions based on search query
@@ -168,7 +308,7 @@ export default function SignUp() {
 
   return (
     <div className="min-h-screen bg-[#f8f7f4] text-[#1c1917] flex flex-col justify-center items-center px-4 py-8 sm:px-6 font-sans">
-      <div className="w-full max-w-md sm:max-w-lg bg-white border border-[#e8e5dc] rounded-2xl shadow-sm p-6 sm:p-10 space-y-6">
+      <div className="w-full max-w-md sm:max-w-lg bg-white border border-[#e8e5dc] rounded-3xl shadow-sm p-6 sm:p-10 space-y-6">
         {/* Navigation & Header */}
         <div className="flex items-center justify-between">
           <button
@@ -179,7 +319,7 @@ export default function SignUp() {
                 navigate("/");
               }
             }}
-            className="inline-flex items-center gap-1.5 text-xs text-[#78716c] hover:text-[#1c1917] transition cursor-pointer pressable"
+            className="inline-flex items-center gap-1.5 text-xs text-[#78716c] hover:text-[#1c1917] transition cursor-pointer font-medium"
           >
             <ArrowLeft size={14} />
             {step === 2 ? "Back to Account Details" : "Back to Home"}
@@ -209,7 +349,7 @@ export default function SignUp() {
                   e.target.src = "/skillio.png";
                 }}
               />
-              <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-[#1c1917]">
+              <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-[#1c1917]">
                 {isDirectInstitution ? `Join ${tenantName}` : "Create Your Account"}
               </h1>
               <p className="text-xs sm:text-sm text-[#78716c]">
@@ -224,14 +364,15 @@ export default function SignUp() {
               <span className="block text-xs font-semibold text-[#44403c]">
                 Registering As:
               </span>
-              <div className="grid grid-cols-2 gap-2 bg-[#f8f7f4] p-1 rounded-xl border border-[#e8e5dc]">
+              <div className="grid grid-cols-2 gap-2 bg-[#f8f7f4] p-1 rounded-2xl border border-[#e8e5dc]">
                 <button
                   type="button"
                   onClick={() => setRole("student")}
-                  className={`py-2 px-3 rounded-lg text-xs sm:text-sm font-semibold transition cursor-pointer flex items-center justify-center gap-1.5 ${role === "student"
+                  className={`py-2 px-3 rounded-xl text-xs sm:text-sm font-bold transition cursor-pointer flex items-center justify-center gap-1.5 ${
+                    role === "student"
                       ? "bg-white text-[#1e3a8a] shadow-xs border border-[#d6d3c9]"
                       : "text-[#78716c] hover:text-[#1c1917]"
-                    }`}
+                  }`}
                 >
                   <User size={14} />
                   Student
@@ -239,10 +380,11 @@ export default function SignUp() {
                 <button
                   type="button"
                   onClick={() => setRole("educator")}
-                  className={`py-2 px-3 rounded-lg text-xs sm:text-sm font-semibold transition cursor-pointer flex items-center justify-center gap-1.5 ${role === "educator"
+                  className={`py-2 px-3 rounded-xl text-xs sm:text-sm font-bold transition cursor-pointer flex items-center justify-center gap-1.5 ${
+                    role === "educator"
                       ? "bg-white text-[#1e3a8a] shadow-xs border border-[#d6d3c9]"
                       : "text-[#78716c] hover:text-[#1c1917]"
-                    }`}
+                  }`}
                 >
                   <School size={14} />
                   Educator
@@ -261,92 +403,303 @@ export default function SignUp() {
               </div>
             )}
 
-            {/* Form */}
-            <form onSubmit={handleProceedFromStep1} className="space-y-4">
-              {/* Full Name */}
-              <div>
-                <label className="block text-xs sm:text-sm font-semibold text-[#44403c] mb-1.5">
-                  Full Name
-                </label>
-                <div className="relative">
-                  <User className="absolute left-3.5 top-1/2 -translate-y-1/2 text-[#a8a29e] w-4 h-4" />
-                  <input
-                    type="text"
-                    required
-                    value={name}
-                    onChange={(e) => setName(e.target.value)}
-                    placeholder="Jane Doe"
-                    className="w-full bg-[#fcfbf9] border border-[#d6d3d1] rounded-xl pl-10 pr-4 py-2.5 sm:py-3 text-[#1c1917] placeholder-[#a8a29e] text-sm focus:outline-none focus:border-[#1e3a8a] focus:ring-1 focus:ring-[#1e3a8a] transition-all min-h-[44px]"
-                  />
-                </div>
-              </div>
+            {/* 1. Continue with Google Button */}
+            <button
+              type="button"
+              onClick={handleGoogleSignup}
+              className="w-full flex items-center justify-center gap-2.5 py-2.5 px-4 rounded-xl border border-[#d6d3c9] bg-white hover:bg-[#fcfbf9] text-xs sm:text-sm font-bold text-[#1c1917] transition shadow-2xs min-h-[44px] cursor-pointer active:scale-98"
+            >
+              <svg className="w-4 h-4 shrink-0" viewBox="0 0 24 24">
+                <path
+                  fill="#4285F4"
+                  d="M23.745 12.27c0-.7-.06-1.4-.19-2.07H12v4.51h6.6c-.29 1.52-1.14 2.82-2.4 3.68v3.05h3.88c2.27-2.09 3.66-5.17 3.66-9.17z"
+                />
+                <path
+                  fill="#34A853"
+                  d="M12 24c3.24 0 5.95-1.08 7.93-2.91l-3.88-3.05c-1.08.72-2.45 1.16-4.05 1.16-3.12 0-5.77-2.1-6.72-4.93H1.25v3.15C3.26 21.36 7.33 24 12 24z"
+                />
+                <path
+                  fill="#FBBC05"
+                  d="M5.28 14.27c-.25-.72-.38-1.49-.38-2.27s.13-1.55.38-2.27V6.58H1.25C.45 8.18 0 9.99 0 12s.45 3.82 1.25 5.42l4.03-3.15z"
+                />
+                <path
+                  fill="#EA4335"
+                  d="M12 4.75c1.77 0 3.35.61 4.6 1.8l3.42-3.42C17.95 1.19 15.24 0 12 0 7.33 0 3.26 2.64 1.25 6.58l4.03 3.15c.95-2.83 3.6-4.98 6.72-4.98z"
+                />
+              </svg>
+              <span>Continue with Google</span>
+            </button>
 
-              {/* Email Address */}
-              <div>
-                <label className="block text-xs sm:text-sm font-semibold text-[#44403c] mb-1.5">
-                  Email Address
-                </label>
-                <div className="relative">
-                  <Mail className="absolute left-3.5 top-1/2 -translate-y-1/2 text-[#a8a29e] w-4 h-4" />
-                  <input
-                    type="email"
-                    required
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    placeholder="you@domain.com"
-                    className="w-full bg-[#fcfbf9] border border-[#d6d3d1] rounded-xl pl-10 pr-4 py-2.5 sm:py-3 text-[#1c1917] placeholder-[#a8a29e] text-sm focus:outline-none focus:border-[#1e3a8a] focus:ring-1 focus:ring-[#1e3a8a] transition-all min-h-[44px]"
-                  />
-                </div>
-              </div>
+            {/* Separator */}
+            <div className="relative flex items-center justify-center my-3">
+              <div className="border-t border-[#e8e5dc] w-full" />
+              <span className="bg-white px-3 text-[11px] font-bold text-[#a8a29e] uppercase tracking-wider absolute">
+                or
+              </span>
+            </div>
 
-              {/* Password */}
-              <div>
-                <label className="block text-xs sm:text-sm font-semibold text-[#44403c] mb-1.5">
-                  Password (min. 8 characters)
-                </label>
-                <div className="relative">
-                  <Lock className="absolute left-3.5 top-1/2 -translate-y-1/2 text-[#a8a29e] w-4 h-4" />
-                  <input
-                    type={showPassword ? "text" : "password"}
-                    required
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    placeholder="••••••••"
-                    className="w-full bg-[#fcfbf9] border border-[#d6d3d1] rounded-xl pl-10 pr-10 py-2.5 sm:py-3 text-[#1c1917] placeholder-[#a8a29e] text-sm focus:outline-none focus:border-[#1e3a8a] focus:ring-1 focus:ring-[#1e3a8a] transition-all min-h-[44px]"
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setShowPassword(!showPassword)}
-                    className="absolute right-3.5 top-1/2 -translate-y-1/2 text-[#a8a29e] hover:text-[#1c1917] cursor-pointer"
-                    aria-label="Toggle password visibility"
+            {/* Segmented Auth Method Selector: [ Email ] [ Phone ] */}
+            <div className="grid grid-cols-2 p-1 bg-[#f8f7f4] border border-[#e8e5dc] rounded-2xl gap-1">
+              <button
+                type="button"
+                onClick={() => setAuthMethod("email")}
+                className={`py-2 px-3 text-xs sm:text-sm font-bold rounded-xl transition cursor-pointer flex items-center justify-center gap-1.5 ${
+                  authMethod === "email"
+                    ? "bg-white text-[#1e3a8a] shadow-xs border border-[#d6d3c9]"
+                    : "text-[#78716c] hover:text-[#1c1917]"
+                }`}
+              >
+                <Mail size={14} />
+                <span>Email</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setAuthMethod("phone")}
+                className={`py-2 px-3 text-xs sm:text-sm font-bold rounded-xl transition cursor-pointer flex items-center justify-center gap-1.5 ${
+                  authMethod === "phone"
+                    ? "bg-white text-[#1e3a8a] shadow-xs border border-[#d6d3c9]"
+                    : "text-[#78716c] hover:text-[#1c1917]"
+                }`}
+              >
+                <Phone size={14} />
+                <span>Phone</span>
+              </button>
+            </div>
+
+            {/* ================= EMAIL METHOD FORM ================= */}
+            {authMethod === "email" && (
+              <form onSubmit={handleProceedFromStep1Email} className="space-y-4">
+                {/* Full Name */}
+                <div>
+                  <label className="block text-xs sm:text-sm font-semibold text-[#44403c] mb-1.5">
+                    Full Name
+                  </label>
+                  <div className="relative">
+                    <User className="absolute left-3.5 top-1/2 -translate-y-1/2 text-[#a8a29e] w-4 h-4" />
+                    <input
+                      type="text"
+                      required
+                      value={name}
+                      onChange={(e) => setName(e.target.value)}
+                      placeholder="Jane Doe"
+                      className="w-full bg-[#fcfbf9] border border-[#d6d3d1] rounded-xl pl-10 pr-4 py-2.5 sm:py-3 text-[#1c1917] placeholder-[#a8a29e] text-sm focus:outline-none focus:border-[#1e3a8a] focus:ring-1 focus:ring-[#1e3a8a] transition-all min-h-[44px]"
+                    />
+                  </div>
+                </div>
+
+                {/* Email Address */}
+                <div>
+                  <label className="block text-xs sm:text-sm font-semibold text-[#44403c] mb-1.5">
+                    Email Address
+                  </label>
+                  <div className="relative">
+                    <Mail className="absolute left-3.5 top-1/2 -translate-y-1/2 text-[#a8a29e] w-4 h-4" />
+                    <input
+                      type="email"
+                      required
+                      value={email}
+                      onChange={(e) => setEmail(e.target.value)}
+                      placeholder="you@domain.com"
+                      className="w-full bg-[#fcfbf9] border border-[#d6d3d1] rounded-xl pl-10 pr-4 py-2.5 sm:py-3 text-[#1c1917] placeholder-[#a8a29e] text-sm focus:outline-none focus:border-[#1e3a8a] focus:ring-1 focus:ring-[#1e3a8a] transition-all min-h-[44px]"
+                    />
+                  </div>
+                </div>
+
+                {/* Password */}
+                <div>
+                  <label className="block text-xs sm:text-sm font-semibold text-[#44403c] mb-1.5">
+                    Password (min. 8 characters)
+                  </label>
+                  <div className="relative">
+                    <Lock className="absolute left-3.5 top-1/2 -translate-y-1/2 text-[#a8a29e] w-4 h-4" />
+                    <input
+                      type={showPassword ? "text" : "password"}
+                      required
+                      value={password}
+                      onChange={(e) => setPassword(e.target.value)}
+                      placeholder="••••••••"
+                      className="w-full bg-[#fcfbf9] border border-[#d6d3d1] rounded-xl pl-10 pr-10 py-2.5 sm:py-3 text-[#1c1917] placeholder-[#a8a29e] text-sm focus:outline-none focus:border-[#1e3a8a] focus:ring-1 focus:ring-[#1e3a8a] transition-all min-h-[44px]"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowPassword(!showPassword)}
+                      className="absolute right-3.5 top-1/2 -translate-y-1/2 text-[#a8a29e] hover:text-[#1c1917] cursor-pointer"
+                      aria-label="Toggle password visibility"
+                    >
+                      {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                    </button>
+                  </div>
+                </div>
+
+                {/* Action Button */}
+                <div className="pt-2">
+                  <Button
+                    type="submit"
+                    variant="primary"
+                    size="lg"
+                    loading={loading}
+                    className="w-full !bg-[#1e3a8a] hover:!bg-[#172554] text-white font-semibold py-3 rounded-xl transition shadow-xs min-h-[46px] flex items-center justify-center gap-2 cursor-pointer"
                   >
-                    {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
-                  </button>
+                    {role === "educator" ? (
+                      "Create Educator Account"
+                    ) : isDirectInstitution ? (
+                      `Complete Sign Up for ${tenantName}`
+                    ) : (
+                      <>
+                        <span>Next: Choose Your Academy</span>
+                        <ArrowRight className="inline-block ml-1" size={16} />
+                      </>
+                    )}
+                  </Button>
                 </div>
-              </div>
+              </form>
+            )}
 
-              {/* Action Button */}
-              <div className="pt-2">
-                <Button
-                  type="submit"
-                  variant="primary"
-                  size="lg"
-                  loading={loading}
-                  className="w-full !bg-[#1e3a8a] hover:!bg-[#172554] text-white font-semibold py-3 rounded-xl transition shadow-xs min-h-[46px] flex items-center justify-center gap-2"
-                >
-                  {role === "educator" ? (
-                    "Create Educator Account"
-                  ) : isDirectInstitution ? (
-                    `Complete Sign Up for ${tenantName}`
-                  ) : (
-                    <>
-                      <span>Next: Choose Your Academy</span>
-                      <ArrowRight className="inline-block mr-2" size={16} />
-                    </>
-                  )}
-                </Button>
+            {/* ================= PHONE OTP METHOD FORM ================= */}
+            {authMethod === "phone" && (
+              <div className="space-y-4">
+                {/* Full Name */}
+                <div>
+                  <label className="block text-xs sm:text-sm font-semibold text-[#44403c] mb-1.5">
+                    Full Name
+                  </label>
+                  <div className="relative">
+                    <User className="absolute left-3.5 top-1/2 -translate-y-1/2 text-[#a8a29e] w-4 h-4" />
+                    <input
+                      type="text"
+                      required
+                      value={name}
+                      onChange={(e) => setName(e.target.value)}
+                      placeholder="Jane Doe"
+                      disabled={phoneStep === "otp"}
+                      className="w-full bg-[#fcfbf9] border border-[#d6d3d1] rounded-xl pl-10 pr-4 py-2.5 sm:py-3 text-[#1c1917] placeholder-[#a8a29e] text-sm focus:outline-none focus:border-[#1e3a8a] focus:ring-1 focus:ring-[#1e3a8a] transition-all min-h-[44px] disabled:opacity-60"
+                    />
+                  </div>
+                </div>
+
+                {phoneStep === "input" ? (
+                  <form onSubmit={handleSendPhoneOtp} className="space-y-4">
+                    <div>
+                      <label className="block text-xs sm:text-sm font-semibold text-[#44403c] mb-1.5">
+                        Mobile Phone Number
+                      </label>
+                      <div className="flex items-center rounded-xl border border-[#d6d3d1] bg-[#fcfbf9] focus-within:border-[#1e3a8a] focus-within:ring-1 focus-within:ring-[#1e3a8a] transition overflow-hidden">
+                        <span className="px-3.5 py-2.5 sm:py-3 bg-[#f5f2ea] text-xs sm:text-sm font-bold text-[#44403c] border-r border-[#d6d3d1] shrink-0 select-none">
+                          🇮🇳 +91
+                        </span>
+                        <input
+                          type="tel"
+                          required
+                          value={phoneNumber}
+                          onChange={(e) => setPhoneNumber(e.target.value)}
+                          placeholder="98765 43210"
+                          maxLength={15}
+                          className="w-full bg-transparent px-3 py-2.5 sm:py-3 text-[#1c1917] placeholder-[#a8a29e] text-sm focus:outline-none min-h-[44px]"
+                        />
+                      </div>
+                      <p className="text-[11px] text-[#78716c] mt-1">
+                        We'll send a 6-digit verification code via SMS
+                      </p>
+                    </div>
+
+                    <Button
+                      type="submit"
+                      variant="primary"
+                      size="lg"
+                      loading={phoneLoading}
+                      className="w-full !bg-[#1e3a8a] hover:!bg-[#172554] text-white font-semibold py-3 rounded-xl transition shadow-xs min-h-[46px] flex items-center justify-center gap-2 cursor-pointer"
+                    >
+                      <Phone size={16} />
+                      <span>Send OTP</span>
+                    </Button>
+                  </form>
+                ) : (
+                  <form onSubmit={handleVerifyPhoneOtp} className="space-y-4">
+                    {/* Number confirmation banner */}
+                    <div className="flex items-center justify-between p-3 bg-[#eff6ff] border border-[#bfdbfe] rounded-xl text-xs text-[#1e3a8a]">
+                      <div className="flex items-center gap-2 min-w-0">
+                        <Phone size={14} className="shrink-0" />
+                        <span className="font-semibold truncate">
+                          Code sent to: {phoneNumber.startsWith("+") ? phoneNumber : `+91 ${phoneNumber}`}
+                        </span>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setPhoneStep("input");
+                          setPhoneOtp("");
+                        }}
+                        className="inline-flex items-center gap-1 font-bold text-[#1e3a8a] hover:underline shrink-0 ml-2 cursor-pointer"
+                      >
+                        <Edit3 size={12} />
+                        <span>Edit</span>
+                      </button>
+                    </div>
+
+                    {/* OTP 6-digit input */}
+                    <div>
+                      <label className="block text-xs sm:text-sm font-semibold text-[#44403c] mb-1.5">
+                        Enter 6-Digit OTP Code
+                      </label>
+                      <div className="relative">
+                        <KeyRound className="absolute left-3.5 top-1/2 -translate-y-1/2 text-[#a8a29e] w-4 h-4" />
+                        <input
+                          ref={otpInputRef}
+                          type="text"
+                          inputMode="numeric"
+                          pattern="[0-9]*"
+                          maxLength={6}
+                          required
+                          value={phoneOtp}
+                          onChange={(e) => setPhoneOtp(e.target.value.replace(/\D/g, ""))}
+                          placeholder="• • • • • •"
+                          className="w-full bg-[#fcfbf9] border border-[#d6d3d1] rounded-xl pl-10 pr-4 py-2.5 sm:py-3 text-[#1c1917] placeholder-[#a8a29e] text-lg font-mono tracking-widest text-center focus:outline-none focus:border-[#1e3a8a] focus:ring-1 focus:ring-[#1e3a8a] transition-all min-h-[44px]"
+                        />
+                      </div>
+                    </div>
+
+                    {/* Resend Cooldown Countdown */}
+                    <div className="flex items-center justify-between text-xs text-[#78716c]">
+                      <span>Didn't receive code?</span>
+                      {cooldown > 0 ? (
+                        <span className="font-semibold text-[#a8a29e]">
+                          Resend in {cooldown}s
+                        </span>
+                      ) : (
+                        <button
+                          type="button"
+                          onClick={handleSendPhoneOtp}
+                          disabled={phoneLoading}
+                          className="inline-flex items-center gap-1 font-bold text-[#1e3a8a] hover:underline cursor-pointer disabled:opacity-50"
+                        >
+                          <RotateCcw size={12} />
+                          <span>Resend OTP</span>
+                        </button>
+                      )}
+                    </div>
+
+                    <Button
+                      type="submit"
+                      variant="primary"
+                      size="lg"
+                      loading={phoneLoading}
+                      className="w-full !bg-[#1e3a8a] hover:!bg-[#172554] text-white font-semibold py-3 rounded-xl transition shadow-xs min-h-[46px] flex items-center justify-center gap-2 cursor-pointer"
+                    >
+                      {role === "educator" ? (
+                        "Verify & Create Educator Account"
+                      ) : isDirectInstitution ? (
+                        `Verify & Join ${tenantName}`
+                      ) : (
+                        <>
+                          <span>Verify & Continue</span>
+                          <ArrowRight className="inline-block ml-1" size={16} />
+                        </>
+                      )}
+                    </Button>
+                  </form>
+                )}
               </div>
-            </form>
+            )}
           </>
         )}
 
@@ -394,10 +747,11 @@ export default function SignUp() {
                     <div
                       key={inst._id || inst.slug}
                       onClick={() => setSelectedInstitution(inst)}
-                      className={`pt-2 first:pt-0 pb-2 px-3 rounded-xl border transition cursor-pointer flex items-center justify-between gap-3 ${isSelected
+                      className={`pt-2 first:pt-0 pb-2 px-3 rounded-xl border transition cursor-pointer flex items-center justify-between gap-3 ${
+                        isSelected
                           ? "bg-[#eff6ff] border-[#1e3a8a] shadow-xs"
                           : "bg-white border-transparent hover:border-[#e8e5dc] hover:bg-[#faf8f5]"
-                        }`}
+                      }`}
                     >
                       <div className="flex items-center gap-3 min-w-0">
                         <div className="w-9 h-9 rounded-lg bg-[#f8f7f4] border border-[#e8e5dc] flex items-center justify-center shrink-0 overflow-hidden">
@@ -450,18 +804,16 @@ export default function SignUp() {
               <Button
                 type="button"
                 onClick={() =>
-                  executeSignup({
-                    chosenSlug: selectedInstitution?.slug || null,
-                  })
+                  handleConfirmAcademyChoice(selectedInstitution?.slug || null)
                 }
                 variant="primary"
                 size="lg"
                 loading={loading}
                 disabled={!selectedInstitution}
-                className="w-full !bg-[#1e3a8a] hover:!bg-[#172554] text-white font-semibold py-3 rounded-xl transition shadow-xs min-h-[46px] disabled:opacity-50"
+                className="w-full !bg-[#1e3a8a] hover:!bg-[#172554] text-white font-semibold py-3 rounded-xl transition shadow-xs min-h-[46px] disabled:opacity-50 cursor-pointer"
               >
                 {selectedInstitution
-                  ? `Join ${selectedInstitution.name} & Sign Up`
+                  ? `Join ${selectedInstitution.name} & Complete Sign Up`
                   : "Select an Academy"}
               </Button>
 

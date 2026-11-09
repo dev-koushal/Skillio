@@ -6,6 +6,25 @@ import User from "../models/userModel.js";
 import Tenant from "../models/tenantModel.js";
 import InstitutionMembership from "../models/institutionMembershipModel.js";
 import sendMail from "../config/sendMail.js";
+import { sendOtp as sendSmsOtp } from "../services/sms/smsService.js";
+import { normalizePhoneNumber, isValidE164 } from "../utils/phoneUtils.js";
+
+// In-memory rate limiter for SMS OTP requests
+const phoneOtpRateLimits = new Map();
+
+const checkRateLimit = (key, maxRequests = 5, windowMs = 60 * 60 * 1000) => {
+  const now = Date.now();
+  const records = phoneOtpRateLimits.get(key) || [];
+  const validRecords = records.filter((timestamp) => now - timestamp < windowMs);
+
+  if (validRecords.length >= maxRequests) {
+    return false;
+  }
+
+  validRecords.push(now);
+  phoneOtpRateLimits.set(key, validRecords);
+  return true;
+};
 
 const getCookieOptions = () => {
   const isProduction = process.env.NODE_ENV === "production";
@@ -517,5 +536,502 @@ export const resetPassword = async (req, res) => {
   } catch (error) {
     console.error("[Reset Password Error]", error);
     return res.status(500).json({ success: false, message: `Failed to reset password: ${error.message || error}` });
+  }
+};
+
+/**
+ * Send SMS OTP for Phone Authentication (Login or Signup).
+ */
+export const sendPhoneOtp = async (req, res) => {
+  try {
+    const { phoneNumber, role } = req.body;
+    let tenantId = req.tenantId;
+    const clientIp = req.ip || req.headers["x-forwarded-for"] || "127.0.0.1";
+
+    if (!phoneNumber) {
+      return res.status(400).json({ success: false, message: "Phone number is required" });
+    }
+
+    // 1. Normalize phone to E.164
+    let normalizedPhone;
+    try {
+      normalizedPhone = normalizePhoneNumber(phoneNumber);
+    } catch (err) {
+      return res.status(400).json({ success: false, message: err.message || "Invalid phone number format" });
+    }
+
+    if (!isValidE164(normalizedPhone)) {
+      return res.status(400).json({ success: false, message: "Please provide a valid mobile number with country code" });
+    }
+
+    // 2. IP Rate Limiting (max 15 requests/hr per IP)
+    if (!checkRateLimit(`ip_${clientIp}`, 15, 60 * 60 * 1000)) {
+      return res.status(429).json({
+        success: false,
+        message: "Too many OTP requests from your network. Please try again later.",
+      });
+    }
+
+    // 3. Phone Number Rate Limiting (max 5 requests/hr per phone)
+    if (!checkRateLimit(`phone_${normalizedPhone}`, 5, 60 * 60 * 1000)) {
+      return res.status(429).json({
+        success: false,
+        message: "Too many OTP requests for this number. Please wait an hour before trying again.",
+      });
+    }
+
+    // 4. Find or prepare User record
+    let user = await User.findOne({ phoneNumber: normalizedPhone });
+
+    // Enforce 45s resend cooldown if code was recently generated
+    if (user && user.phoneOtpLastSent) {
+      const elapsed = Date.now() - new Date(user.phoneOtpLastSent).getTime();
+      if (elapsed < 45000) {
+        const remaining = Math.ceil((45000 - elapsed) / 1000);
+        return res.status(429).json({
+          success: false,
+          message: `Please wait ${remaining} seconds before requesting another code.`,
+          cooldown: remaining,
+        });
+      }
+    }
+
+    // 5. Generate cryptographically secure 6-digit random OTP
+    const otp = crypto.randomInt(100000, 1000000).toString();
+    const hashedOtp = crypto.createHash("sha256").update(otp).digest("hex");
+    const expiresAt = new Date(Date.now() + 5 * 60 * 1000); // 5 minutes
+
+    if (!tenantId) {
+      const defaultTenant = await Tenant.findOne({ slug: "default" });
+      if (defaultTenant) tenantId = defaultTenant._id;
+    }
+
+    if (user) {
+      user.phoneOtp = hashedOtp;
+      user.phoneOtpExpires = expiresAt;
+      user.phoneOtpAttempts = 0;
+      user.phoneOtpLastSent = new Date();
+      await user.save();
+    } else {
+      // Create provisional record for phone registration
+      user = await User.create({
+        name: "Learner",
+        phoneNumber: normalizedPhone,
+        phoneVerified: false,
+        role: role === "educator" ? "educator" : "student",
+        tenantId,
+        phoneOtp: hashedOtp,
+        phoneOtpExpires: expiresAt,
+        phoneOtpAttempts: 0,
+        phoneOtpLastSent: new Date(),
+      });
+    }
+
+    // Resolve institution name for branded SMS message
+    let institutionName = "Skillio Academy";
+    if (user.tenantId) {
+      const tenantDoc = await Tenant.findById(user.tenantId).select("name");
+      if (tenantDoc?.name) institutionName = tenantDoc.name;
+    }
+
+    // 6. Dispatch SMS
+    const smsResult = await sendSmsOtp(normalizedPhone, otp, institutionName);
+    if (!smsResult.success) {
+      console.warn(`[SMS Warning] Could not deliver to ${normalizedPhone}: ${smsResult.error}`);
+    }
+
+    return res.status(200).json({
+      success: true,
+      message: "Verification code sent to your mobile number!",
+      cooldown: 45,
+      devOtp: process.env.NODE_ENV !== "production" ? otp : undefined,
+    });
+  } catch (error) {
+    console.error("[Send Phone OTP Error]", error);
+    return res.status(500).json({ success: false, message: `Failed to send SMS OTP: ${error.message || error}` });
+  }
+};
+
+/**
+ * Verify SMS OTP and authenticate (Login or Complete Signup).
+ */
+export const verifyPhoneOtp = async (req, res) => {
+  try {
+    const { phoneNumber, otp, name, role, institutionSlug } = req.body;
+    let tenantId = req.tenantId;
+
+    if (!phoneNumber || !otp) {
+      return res.status(400).json({ success: false, message: "Phone number and verification code are required" });
+    }
+
+    let normalizedPhone;
+    try {
+      normalizedPhone = normalizePhoneNumber(phoneNumber);
+    } catch (err) {
+      return res.status(400).json({ success: false, message: "Invalid phone number format" });
+    }
+
+    const cleanOtp = otp.toString().trim();
+    if (!/^\d{6}$/.test(cleanOtp)) {
+      return res.status(400).json({ success: false, message: "Verification code must be exactly 6 digits" });
+    }
+
+    // Look up user with +phoneOtp select
+    const user = await User.findOne({ phoneNumber: normalizedPhone })
+      .select("+phoneOtp")
+      .populate({
+        path: "enrolledCourses",
+        select: "title thumbnail description subTitle category price creator lectures isPublished tenantId",
+      });
+
+    if (!user || !user.phoneOtp || !user.phoneOtpExpires) {
+      return res.status(400).json({
+        success: false,
+        message: "No active verification code found for this phone number. Please request a code first.",
+      });
+    }
+
+    // Check expiry
+    if (Date.now() > new Date(user.phoneOtpExpires).getTime()) {
+      user.phoneOtp = undefined;
+      user.phoneOtpExpires = undefined;
+      await user.save();
+      return res.status(400).json({
+        success: false,
+        message: "Verification code has expired. Please request a new code.",
+      });
+    }
+
+    // Check brute-force attempts lockout (max 5)
+    if ((user.phoneOtpAttempts || 0) >= 5) {
+      user.phoneOtp = undefined;
+      user.phoneOtpExpires = undefined;
+      await user.save();
+      return res.status(400).json({
+        success: false,
+        message: "Too many failed attempts. This code has been invalidated. Please request a new one.",
+      });
+    }
+
+    // Compare hashed OTP using timing-safe buffer comparison
+    const suppliedHash = crypto.createHash("sha256").update(cleanOtp).digest("hex");
+    const storedHash = user.phoneOtp;
+
+    let isMatch = false;
+    try {
+      isMatch = crypto.timingSafeEqual(Buffer.from(suppliedHash), Buffer.from(storedHash));
+    } catch (e) {
+      isMatch = false;
+    }
+
+    if (!isMatch) {
+      user.phoneOtpAttempts = (user.phoneOtpAttempts || 0) + 1;
+      await user.save();
+      const remaining = 5 - user.phoneOtpAttempts;
+      return res.status(400).json({
+        success: false,
+        message: remaining > 0
+          ? `Incorrect verification code. ${remaining} attempt${remaining === 1 ? "" : "s"} remaining.`
+          : "Incorrect verification code. Maximum attempts exceeded.",
+      });
+    }
+
+    // Success: Mark phone verified and clear OTP
+    user.phoneVerified = true;
+    user.phoneOtp = undefined;
+    user.phoneOtpExpires = undefined;
+    user.phoneOtpAttempts = 0;
+
+    // If new user name provided, update name
+    if (name && name.trim()) {
+      user.name = name.trim();
+    }
+
+    // If role provided on new signup, update role
+    if (role && (role === "educator" || role === "student") && !user.phoneVerified) {
+      user.role = role;
+    }
+
+    // Allow student to bind to an institution during phone registration
+    if (institutionSlug && institutionSlug !== "default" && institutionSlug !== "platform") {
+      const selectedTenant = await Tenant.findOne({ slug: institutionSlug, status: "active" });
+      if (selectedTenant) {
+        user.tenantId = selectedTenant._id;
+      }
+    }
+
+    // For students, ensure institution membership is recorded
+    if (user.role === "student" && user.tenantId) {
+      try {
+        const existingMembership = await InstitutionMembership.findOne({
+          userId: user._id,
+          tenantId: user.tenantId,
+        });
+        if (!existingMembership) {
+          await InstitutionMembership.create({
+            userId: user._id,
+            tenantId: user.tenantId,
+            role: "student",
+            status: "active",
+            joinedAt: new Date(),
+          });
+        }
+      } catch (e) {}
+    }
+
+    await user.save();
+
+    // Issue standard JWT authentication session
+    const token = await genToken(user._id, user.tenantId, user.role);
+    res.cookie("token", token, getCookieOptions());
+
+    const safeUser = user.toObject();
+    delete safeUser.password;
+    delete safeUser.phoneOtp;
+
+    // Attach student memberships across institutions
+    if (user.role === "student") {
+      try {
+        const memberships = await InstitutionMembership.find({ userId: user._id, status: "active" })
+          .populate("tenantId", "name slug logo institutionType");
+        safeUser.memberships = memberships.map((m) => ({
+          institutionId: m.tenantId?._id,
+          name: m.tenantId?.name,
+          slug: m.tenantId?.slug,
+          logo: m.tenantId?.logo,
+          institutionType: m.tenantId?.institutionType,
+          joinedAt: m.joinedAt,
+        })).filter((m) => m.slug);
+      } catch (e) {}
+    }
+
+    // Resolve tenant doc
+    let tenantDoc = null;
+    try {
+      tenantDoc = await Tenant.findById(user.tenantId).select("name slug logo institutionType title").lean();
+      if (tenantDoc) safeUser.tenant = tenantDoc;
+    } catch (e) {}
+
+    return res.status(200).json({
+      success: true,
+      message: "Phone verified and signed in successfully!",
+      user: safeUser,
+      tenant: tenantDoc,
+    });
+  } catch (error) {
+    console.error("[Verify Phone OTP Error]", error);
+    return res.status(500).json({ success: false, message: `Verification failed: ${error.message || error}` });
+  }
+};
+
+/**
+ * Send OTP to link a new phone number to an existing authenticated user.
+ */
+export const sendLinkPhoneOtp = async (req, res) => {
+  try {
+    const userId = req.userId;
+    const { phoneNumber } = req.body;
+
+    if (!phoneNumber) {
+      return res.status(400).json({ success: false, message: "Phone number is required" });
+    }
+
+    let normalizedPhone;
+    try {
+      normalizedPhone = normalizePhoneNumber(phoneNumber);
+    } catch (err) {
+      return res.status(400).json({ success: false, message: err.message || "Invalid phone number format" });
+    }
+
+    // Safe Account-Linking Rule: Ensure phone is not already verified on another account
+    const existingOther = await User.findOne({
+      phoneNumber: normalizedPhone,
+      phoneVerified: true,
+      _id: { $ne: userId },
+    });
+
+    if (existingOther) {
+      return res.status(400).json({
+        success: false,
+        message: "This phone number is already verified on another account.",
+      });
+    }
+
+    const user = await User.findById(userId);
+    if (!user) {
+      return res.status(404).json({ success: false, message: "User not found" });
+    }
+
+    // Cooldown check
+    if (user.phoneOtpLastSent) {
+      const elapsed = Date.now() - new Date(user.phoneOtpLastSent).getTime();
+      if (elapsed < 45000) {
+        const remaining = Math.ceil((45000 - elapsed) / 1000);
+        return res.status(429).json({
+          success: false,
+          message: `Please wait ${remaining} seconds before requesting another code.`,
+          cooldown: remaining,
+        });
+      }
+    }
+
+    const otp = crypto.randomInt(100000, 1000000).toString();
+    const hashedOtp = crypto.createHash("sha256").update(otp).digest("hex");
+
+    user.phoneOtp = hashedOtp;
+    user.phoneOtpExpires = new Date(Date.now() + 5 * 60 * 1000);
+    user.phoneOtpAttempts = 0;
+    user.phoneOtpLastSent = new Date();
+    await user.save();
+
+    await sendSmsOtp(normalizedPhone, otp, "Skillio Security");
+
+    return res.status(200).json({
+      success: true,
+      message: "Verification code sent to your phone number!",
+      cooldown: 45,
+      devOtp: process.env.NODE_ENV !== "production" ? otp : undefined,
+    });
+  } catch (error) {
+    console.error("[Send Link Phone OTP Error]", error);
+    return res.status(500).json({ success: false, message: `Failed to send code: ${error.message || error}` });
+  }
+};
+
+/**
+ * Verify OTP and link verified phone number to authenticated account.
+ */
+export const verifyLinkPhoneOtp = async (req, res) => {
+  try {
+    const userId = req.userId;
+    const { phoneNumber, otp } = req.body;
+
+    if (!phoneNumber || !otp) {
+      return res.status(400).json({ success: false, message: "Phone number and verification code are required" });
+    }
+
+    const normalizedPhone = normalizePhoneNumber(phoneNumber);
+    const cleanOtp = otp.toString().trim();
+
+    // Check conflict again
+    const existingOther = await User.findOne({
+      phoneNumber: normalizedPhone,
+      phoneVerified: true,
+      _id: { $ne: userId },
+    });
+
+    if (existingOther) {
+      return res.status(400).json({
+        success: false,
+        message: "This phone number is already verified on another account.",
+      });
+    }
+
+    const user = await User.findById(userId).select("+phoneOtp");
+    if (!user || !user.phoneOtp || !user.phoneOtpExpires) {
+      return res.status(400).json({ success: false, message: "No active verification code found." });
+    }
+
+    if (Date.now() > new Date(user.phoneOtpExpires).getTime()) {
+      user.phoneOtp = undefined;
+      user.phoneOtpExpires = undefined;
+      await user.save();
+      return res.status(400).json({ success: false, message: "Verification code has expired." });
+    }
+
+    const suppliedHash = crypto.createHash("sha256").update(cleanOtp).digest("hex");
+    let isMatch = false;
+    try {
+      isMatch = crypto.timingSafeEqual(Buffer.from(suppliedHash), Buffer.from(user.phoneOtp));
+    } catch (e) {
+      isMatch = false;
+    }
+
+    if (!isMatch) {
+      user.phoneOtpAttempts = (user.phoneOtpAttempts || 0) + 1;
+      await user.save();
+      return res.status(400).json({ success: false, message: "Incorrect verification code." });
+    }
+
+    // Success: Link phone number
+    user.phoneNumber = normalizedPhone;
+    user.phoneVerified = true;
+    user.phoneOtp = undefined;
+    user.phoneOtpExpires = undefined;
+    user.phoneOtpAttempts = 0;
+    await user.save();
+
+    const safeUser = user.toObject();
+    delete safeUser.password;
+    delete safeUser.phoneOtp;
+
+    return res.status(200).json({
+      success: true,
+      message: "Phone number linked and verified successfully!",
+      user: safeUser,
+    });
+  } catch (error) {
+    console.error("[Verify Link Phone Error]", error);
+    return res.status(500).json({ success: false, message: `Linking failed: ${error.message || error}` });
+  }
+};
+
+/**
+ * Link an Email & Password to an account that signed up via Phone.
+ */
+export const linkEmail = async (req, res) => {
+  try {
+    const userId = req.userId;
+    const { email, password } = req.body;
+
+    if (!email || !password) {
+      return res.status(400).json({ success: false, message: "Email and password are required" });
+    }
+
+    if (!validator.isEmail(email)) {
+      return res.status(400).json({ success: false, message: "Invalid email address format" });
+    }
+
+    if (password.length < 8) {
+      return res.status(400).json({ success: false, message: "Password must be at least 8 characters long" });
+    }
+
+    const normalizedEmail = email.trim().toLowerCase();
+
+    // Check if email is already taken within this tenant
+    const user = await User.findById(userId);
+    if (!user) {
+      return res.status(404).json({ success: false, message: "User not found" });
+    }
+
+    const existingEmailUser = await User.findOne({
+      email: normalizedEmail,
+      tenantId: user.tenantId,
+      _id: { $ne: userId },
+    });
+
+    if (existingEmailUser) {
+      return res.status(400).json({
+        success: false,
+        message: "An account with this email already exists in this institution.",
+      });
+    }
+
+    const hashedPassword = await bcrypt.hash(password, 10);
+    user.email = normalizedEmail;
+    user.password = hashedPassword;
+    await user.save();
+
+    const safeUser = user.toObject();
+    delete safeUser.password;
+
+    return res.status(200).json({
+      success: true,
+      message: "Email and password linked successfully! You can now sign in with either phone or email.",
+      user: safeUser,
+    });
+  } catch (error) {
+    console.error("[Link Email Error]", error);
+    return res.status(500).json({ success: false, message: `Failed to link email: ${error.message || error}` });
   }
 };

@@ -19,9 +19,35 @@ const userSchema = new mongoose.Schema(
     },
     email: {
       type: String,
-      required: true,
+      required: function () {
+        return !this.phoneNumber;
+      },
       lowercase: true,
       trim: true,
+      sparse: true,
+    },
+    phoneNumber: {
+      type: String,
+      trim: true,
+      sparse: true,
+    },
+    phoneVerified: {
+      type: Boolean,
+      default: false,
+    },
+    phoneOtp: {
+      type: String,
+      select: false,
+    },
+    phoneOtpExpires: {
+      type: Date,
+    },
+    phoneOtpAttempts: {
+      type: Number,
+      default: 0,
+    },
+    phoneOtpLastSent: {
+      type: Date,
     },
     password: {
       type: String,
@@ -67,8 +93,10 @@ const userSchema = new mongoose.Schema(
   { timestamps: true }
 );
 
-// Compound index: email must be unique WITHIN a tenant
-userSchema.index({ email: 1, tenantId: 1 }, { unique: true });
+// Compound index: email must be unique WITHIN a tenant when provided
+userSchema.index({ email: 1, tenantId: 1 }, { unique: true, sparse: true });
+// Unique constraint on verified/stored phone number across the system
+userSchema.index({ phoneNumber: 1 }, { unique: true, sparse: true });
 // Compound index for role-based querying within tenant
 userSchema.index({ tenantId: 1, role: 1 });
 

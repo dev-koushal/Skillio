@@ -23,10 +23,13 @@ import {
   KeyRound,
   Download,
   LogOut,
+  Phone,
+  Plus,
 } from "lucide-react";
-import { useSelector } from "react-redux";
+import { useSelector, useDispatch } from "react-redux";
 import { useNavigate } from "react-router-dom";
 import { toast } from "react-toastify";
+import { setUserData } from "../redux/userSlice";
 import Navbar from "../components/Navbar";
 import { useTenant } from "../context/TenantContext";
 import api from "../services/api";
@@ -34,6 +37,7 @@ import api from "../services/api";
 function Profile() {
   const { userData } = useSelector((store) => store.user);
   const navigate = useNavigate();
+  const dispatch = useDispatch();
   const { tenant, switchTenant } = useTenant();
 
   // Switch Academy Modal State
@@ -41,6 +45,112 @@ function Profile() {
   const [institutions, setInstitutions] = useState([]);
   const [loadingInstitutions, setLoadingInstitutions] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
+
+  // Link Phone Modal State
+  const [linkPhoneModalOpen, setLinkPhoneModalOpen] = useState(false);
+  const [linkPhoneStep, setLinkPhoneStep] = useState("input"); // 'input' | 'otp'
+  const [linkPhoneNumber, setLinkPhoneNumber] = useState("");
+  const [linkPhoneOtp, setLinkPhoneOtp] = useState("");
+  const [linkPhoneLoading, setLinkPhoneLoading] = useState(false);
+  const [linkPhoneCooldown, setLinkPhoneCooldown] = useState(0);
+
+  // Link Email Modal State
+  const [linkEmailModalOpen, setLinkEmailModalOpen] = useState(false);
+  const [newEmail, setNewEmail] = useState("");
+  const [newEmailPassword, setNewEmailPassword] = useState("");
+  const [linkEmailLoading, setLinkEmailLoading] = useState(false);
+
+  // Cooldown countdown for Link Phone OTP
+  useEffect(() => {
+    let timer = null;
+    if (linkPhoneCooldown > 0) {
+      timer = setInterval(() => {
+        setLinkPhoneCooldown((prev) => (prev > 0 ? prev - 1 : 0));
+      }, 1000);
+    }
+    return () => clearInterval(timer);
+  }, [linkPhoneCooldown]);
+
+  const handleSendLinkPhoneOtp = async (e) => {
+    e?.preventDefault();
+    if (!linkPhoneNumber.trim()) {
+      toast.error("Please enter a valid phone number");
+      return;
+    }
+
+    try {
+      setLinkPhoneLoading(true);
+      const { data } = await api.post("/api/auth/phone/link/send-otp", {
+        phoneNumber: linkPhoneNumber.trim(),
+      });
+      setLinkPhoneStep("otp");
+      setLinkPhoneCooldown(data.cooldown || 45);
+      toast.success(data.message || "OTP sent to your phone");
+    } catch (err) {
+      toast.error(err.response?.data?.message || "Failed to send code");
+    } finally {
+      setLinkPhoneLoading(false);
+    }
+  };
+
+  const handleVerifyLinkPhoneOtp = async (e) => {
+    e?.preventDefault();
+    if (linkPhoneOtp.trim().length !== 6) {
+      toast.error("Please enter the 6-digit verification code");
+      return;
+    }
+
+    try {
+      setLinkPhoneLoading(true);
+      const { data } = await api.post("/api/auth/phone/link/verify-otp", {
+        phoneNumber: linkPhoneNumber.trim(),
+        otp: linkPhoneOtp.trim(),
+      });
+      if (data.success && data.user) {
+        dispatch(setUserData(data.user));
+        toast.success("Phone number verified and linked!");
+        setLinkPhoneModalOpen(false);
+        setLinkPhoneStep("input");
+        setLinkPhoneNumber("");
+        setLinkPhoneOtp("");
+      }
+    } catch (err) {
+      toast.error(err.response?.data?.message || "Failed to link phone number");
+    } finally {
+      setLinkPhoneLoading(false);
+    }
+  };
+
+  const handleLinkEmail = async (e) => {
+    e?.preventDefault();
+    if (!newEmail.trim() || !newEmailPassword) {
+      toast.error("Email and password are required");
+      return;
+    }
+    if (newEmailPassword.length < 8) {
+      toast.error("Password must be at least 8 characters");
+      return;
+    }
+
+    try {
+      setLinkEmailLoading(true);
+      const { data } = await api.post("/api/auth/email/link", {
+        email: newEmail.trim(),
+        password: newEmailPassword,
+      });
+      if (data.success && data.user) {
+        dispatch(setUserData(data.user));
+        toast.success("Email address linked! You can now log in with email or phone.");
+        setLinkEmailModalOpen(false);
+        setNewEmail("");
+        setNewEmailPassword("");
+      }
+    } catch (err) {
+      toast.error(err.response?.data?.message || "Failed to link email");
+    } finally {
+      setLinkEmailLoading(false);
+    }
+  };
 
   // Change Password state
   const [showPasswordSection, setShowPasswordSection] = useState(false);
@@ -250,18 +360,62 @@ function Profile() {
             </button>
           </div>
 
-          {/* Details Grid */}
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 pt-2">
-            <div className="p-4 rounded-xl bg-[#faf8f5] border border-[#e8e5dc] flex items-center gap-3">
-              <Mail className="text-[#1e3a8a] shrink-0" size={20} />
-              <div className="min-w-0">
-                <span className="text-[11px] text-[#78716c] uppercase font-semibold block">Email</span>
-                <span className="text-sm font-medium text-[#1c1917] truncate block">
-                  {userData.email}
-                </span>
+          {/* Details Grid (Email, Phone, Courses, Joined) */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 pt-2">
+            {/* Email Card */}
+            <div className="p-4 rounded-xl bg-[#faf8f5] border border-[#e8e5dc] flex items-center justify-between gap-3">
+              <div className="flex items-center gap-3 min-w-0">
+                <Mail className="text-[#1e3a8a] shrink-0" size={20} />
+                <div className="min-w-0">
+                  <span className="text-[11px] text-[#78716c] uppercase font-semibold block">Email</span>
+                  {userData.email ? (
+                    <span className="text-xs sm:text-sm font-medium text-[#1c1917] truncate block" title={userData.email}>
+                      {userData.email}
+                    </span>
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={() => setLinkEmailModalOpen(true)}
+                      className="text-xs font-bold text-[#1e3a8a] hover:underline cursor-pointer"
+                    >
+                      + Link Email
+                    </button>
+                  )}
+                </div>
               </div>
             </div>
 
+            {/* Phone Card */}
+            <div className="p-4 rounded-xl bg-[#faf8f5] border border-[#e8e5dc] flex items-center justify-between gap-3">
+              <div className="flex items-center gap-3 min-w-0">
+                <Phone className="text-[#1e3a8a] shrink-0" size={20} />
+                <div className="min-w-0">
+                  <span className="text-[11px] text-[#78716c] uppercase font-semibold block">Phone</span>
+                  {userData.phoneNumber ? (
+                    <div className="flex items-center gap-1.5 flex-wrap">
+                      <span className="text-xs sm:text-sm font-bold text-[#1c1917] font-mono">
+                        {userData.phoneNumber}
+                      </span>
+                      {userData.phoneVerified && (
+                        <span className="text-[10px] bg-emerald-50 text-emerald-800 border border-emerald-300 font-bold px-1.5 py-0.2 rounded-full">
+                          Verified
+                        </span>
+                      )}
+                    </div>
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={() => setLinkPhoneModalOpen(true)}
+                      className="text-xs font-bold text-[#1e3a8a] hover:underline cursor-pointer"
+                    >
+                      + Link Mobile
+                    </button>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            {/* Courses Card */}
             <div className="p-4 rounded-xl bg-[#faf8f5] border border-[#e8e5dc] flex items-center gap-3">
               <BookOpen className="text-[#1e3a8a] shrink-0" size={20} />
               <div>
@@ -274,6 +428,7 @@ function Profile() {
               </div>
             </div>
 
+            {/* Joined Card */}
             <div className="p-4 rounded-xl bg-[#faf8f5] border border-[#e8e5dc] flex items-center gap-3">
               <Calendar className="text-[#1e3a8a] shrink-0" size={20} />
               <div>
@@ -631,6 +786,171 @@ function Profile() {
                 Close
               </button>
             </div>
+          </div>
+        </div>
+      )}
+      {/* ================= LINK PHONE MODAL ================= */}
+      {linkPhoneModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 animate-in fade-in duration-200">
+          <div
+            className="fixed inset-0 bg-black/50 backdrop-blur-xs"
+            onClick={() => {
+              setLinkPhoneModalOpen(false);
+              setLinkPhoneStep("input");
+            }}
+          />
+
+          <div className="relative w-full sm:max-w-md bg-white rounded-t-3xl sm:rounded-2xl border border-[#e8e5dc] shadow-2xl p-6 sm:p-7 space-y-4 z-10 animate-in slide-in-from-bottom-4 duration-200">
+            <div className="flex items-center justify-between pb-3 border-b border-[#e8e5dc]">
+              <div>
+                <h3 className="text-lg font-bold text-[#1c1917]">Link Mobile Number</h3>
+                <p className="text-xs text-[#78716c]">
+                  {linkPhoneStep === "input"
+                    ? "Verify your phone number to enable SMS OTP login"
+                    : "Enter the 6-digit code sent via SMS"}
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setLinkPhoneModalOpen(false)}
+                className="p-1.5 rounded-lg text-[#78716c] hover:bg-[#f2efe9]"
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            {linkPhoneStep === "input" ? (
+              <form onSubmit={handleSendLinkPhoneOtp} className="space-y-4">
+                <div className="space-y-1.5">
+                  <label className="text-xs font-semibold text-[#44403c]">Mobile Number</label>
+                  <div className="relative flex rounded-xl border border-[#d6d3d1] bg-[#fcfbf9] overflow-hidden focus-within:border-[#1e3a8a]">
+                    <span className="px-3 py-2.5 bg-[#f2efe9] text-xs font-bold text-[#44403c] border-r border-[#d6d3d1] flex items-center">
+                      +91
+                    </span>
+                    <input
+                      type="tel"
+                      value={linkPhoneNumber}
+                      onChange={(e) => setLinkPhoneNumber(e.target.value)}
+                      placeholder="98765 43210"
+                      className="flex-1 bg-transparent px-3 py-2.5 text-xs sm:text-sm text-[#1c1917] focus:outline-none"
+                      required
+                      autoFocus
+                    />
+                  </div>
+                </div>
+
+                <button
+                  type="submit"
+                  disabled={linkPhoneLoading}
+                  className="w-full py-2.5 bg-[#1e3a8a] hover:bg-[#172554] text-white text-xs sm:text-sm font-bold rounded-xl transition cursor-pointer disabled:opacity-50 min-h-[42px]"
+                >
+                  {linkPhoneLoading ? "Sending OTP..." : "Send Verification Code"}
+                </button>
+              </form>
+            ) : (
+              <form onSubmit={handleVerifyLinkPhoneOtp} className="space-y-4">
+                <div className="space-y-1.5 text-center">
+                  <label className="text-xs font-semibold text-[#44403c] block">
+                    Verification Code
+                  </label>
+                  <input
+                    type="text"
+                    inputMode="numeric"
+                    maxLength={6}
+                    value={linkPhoneOtp}
+                    onChange={(e) => setLinkPhoneOtp(e.target.value.replace(/\D/g, ""))}
+                    placeholder="••••••"
+                    className="w-full bg-[#fcfbf9] border border-[#d6d3d1] rounded-xl py-2.5 text-center text-lg font-mono font-bold tracking-[0.4em] text-[#1c1917] focus:outline-none focus:border-[#1e3a8a]"
+                    required
+                    autoFocus
+                  />
+                  <div className="flex items-center justify-between mt-2 text-xs">
+                    <span className="text-[#78716c]">{linkPhoneNumber}</span>
+                    {linkPhoneCooldown > 0 ? (
+                      <span className="text-[#a8a29e] font-mono">Resend in {linkPhoneCooldown}s</span>
+                    ) : (
+                      <button
+                        type="button"
+                        onClick={handleSendLinkPhoneOtp}
+                        className="text-[#1e3a8a] font-bold hover:underline"
+                      >
+                        Resend Code
+                      </button>
+                    )}
+                  </div>
+                </div>
+
+                <button
+                  type="submit"
+                  disabled={linkPhoneLoading || linkPhoneOtp.length !== 6}
+                  className="w-full py-2.5 bg-[#1e3a8a] hover:bg-[#172554] text-white text-xs sm:text-sm font-bold rounded-xl transition cursor-pointer disabled:opacity-50 min-h-[42px]"
+                >
+                  {linkPhoneLoading ? "Verifying..." : "Verify & Link Phone"}
+                </button>
+              </form>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* ================= LINK EMAIL MODAL ================= */}
+      {linkEmailModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 animate-in fade-in duration-200">
+          <div
+            className="fixed inset-0 bg-black/50 backdrop-blur-xs"
+            onClick={() => setLinkEmailModalOpen(false)}
+          />
+
+          <div className="relative w-full sm:max-w-md bg-white rounded-t-3xl sm:rounded-2xl border border-[#e8e5dc] shadow-2xl p-6 sm:p-7 space-y-4 z-10 animate-in slide-in-from-bottom-4 duration-200">
+            <div className="flex items-center justify-between pb-3 border-b border-[#e8e5dc]">
+              <div>
+                <h3 className="text-lg font-bold text-[#1c1917]">Link Email Address</h3>
+                <p className="text-xs text-[#78716c]">
+                  Add an email address and password to sign in via email
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setLinkEmailModalOpen(false)}
+                className="p-1.5 rounded-lg text-[#78716c] hover:bg-[#f2efe9]"
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            <form onSubmit={handleLinkEmail} className="space-y-4">
+              <div className="space-y-1.5">
+                <label className="text-xs font-semibold text-[#44403c]">Email Address</label>
+                <input
+                  type="email"
+                  value={newEmail}
+                  onChange={(e) => setNewEmail(e.target.value)}
+                  placeholder="student@example.com"
+                  className="w-full bg-[#fcfbf9] border border-[#d6d3d1] rounded-xl px-3.5 py-2.5 text-xs sm:text-sm text-[#1c1917] focus:outline-none focus:border-[#1e3a8a]"
+                  required
+                />
+              </div>
+
+              <div className="space-y-1.5">
+                <label className="text-xs font-semibold text-[#44403c]">Create Password (min. 8 characters)</label>
+                <input
+                  type="password"
+                  value={newEmailPassword}
+                  onChange={(e) => setNewEmailPassword(e.target.value)}
+                  placeholder="••••••••"
+                  className="w-full bg-[#fcfbf9] border border-[#d6d3d1] rounded-xl px-3.5 py-2.5 text-xs sm:text-sm text-[#1c1917] focus:outline-none focus:border-[#1e3a8a]"
+                  required
+                />
+              </div>
+
+              <button
+                type="submit"
+                disabled={linkEmailLoading}
+                className="w-full py-2.5 bg-[#1e3a8a] hover:bg-[#172554] text-white text-xs sm:text-sm font-bold rounded-xl transition cursor-pointer disabled:opacity-50 min-h-[42px]"
+              >
+                {linkEmailLoading ? "Linking Email..." : "Link Email & Password"}
+              </button>
+            </form>
           </div>
         </div>
       )}
