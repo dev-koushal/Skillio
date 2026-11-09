@@ -31,8 +31,9 @@ class TwilioProvider extends SmsProvider {
 
   async send(phoneNumber, otp, institutionName = "Skillio") {
     try {
-      // Dynamic import to avoid hard dependency crash if twilio isn't installed
-      const twilio = (await import("twilio")).default;
+      // Dynamic import supporting both ESM default and CommonJS module export
+      const twilioMod = await import("twilio");
+      const twilio = twilioMod.default || twilioMod;
       const client = twilio(this.accountSid, this.authToken);
 
       const message = await client.messages.create({

@@ -395,6 +395,25 @@ await runAsyncTest("MockSmsProvider delivers branded OTP messages cleanly", asyn
   assert.strictEqual(result.provider, "mock");
 });
 
+await runAsyncTest("Twilio provider initializes when environment credentials are provided", async () => {
+  const originalSid = process.env.TWILIO_ACCOUNT_SID;
+  const originalToken = process.env.TWILIO_AUTH_TOKEN;
+  const originalFrom = process.env.TWILIO_PHONE_NUMBER;
+
+  process.env.TWILIO_ACCOUNT_SID = "ACtest12345678901234567890123456";
+  process.env.TWILIO_AUTH_TOKEN = "auth_token_test_12345";
+  process.env.TWILIO_PHONE_NUMBER = "+15005550006";
+
+  const provider = smsService.getSmsProvider();
+  assert.strictEqual(provider.constructor.name, "TwilioProvider");
+  assert.strictEqual(provider.accountSid, "ACtest12345678901234567890123456");
+
+  // Restore original environment
+  if (originalSid) process.env.TWILIO_ACCOUNT_SID = originalSid; else delete process.env.TWILIO_ACCOUNT_SID;
+  if (originalToken) process.env.TWILIO_AUTH_TOKEN = originalToken; else delete process.env.TWILIO_AUTH_TOKEN;
+  if (originalFrom) process.env.TWILIO_PHONE_NUMBER = originalFrom; else delete process.env.TWILIO_PHONE_NUMBER;
+});
+
 console.log("\n=================================================");
 console.log(`   ALL ${passedTests} PHONE AUTH TESTS PASSED (100%)   `);
 console.log("=================================================\n");

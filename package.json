@@ -21,6 +21,8 @@
     "education"
   ],
   "author": "Skillio Engineering Team",
-  "license": "ISC"
+  "license": "ISC",
+  "dependencies": {
+    "twilio": "^6.3.0"
+  }
 }
-
