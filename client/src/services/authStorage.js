@@ -53,7 +53,7 @@ export const updateCachedUser = (user) => {
     } else {
       localStorage.removeItem(USER_KEY);
     }
-  } catch (e) {}
+  } catch (e) { }
 };
 
 /**
@@ -65,7 +65,7 @@ export const clearAuthSession = () => {
     localStorage.removeItem(USER_KEY);
     localStorage.removeItem(TENANT_KEY);
     sessionStorage.clear();
-  } catch (e) {}
+  } catch (e) { }
 };
 
 /**

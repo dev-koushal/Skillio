@@ -81,7 +81,7 @@ function Navbar({ currentInstitution = null }) {
     try {
       const { setCreatorCourseData } = await import("../redux/courseSlice");
       dispatch(setCreatorCourseData([]));
-    } catch (e) {}
+    } catch (e) { }
     setDropdownOpen(false);
     setMobileMenuOpen(false);
     setProfileSheetOpen(false);
@@ -308,146 +308,146 @@ function Navbar({ currentInstitution = null }) {
                       aria-hidden="true"
                     />
                     <div className="absolute right-0 mt-2 w-64 max-w-[calc(100vw-32px)] bg-white border border-[#e8e5dc] rounded-2xl shadow-2xl py-2 z-50 animate-in fade-in slide-in-from-top-2 duration-150">
-                    <div className="px-4 py-3 border-b border-[#f2efe9]">
-                      <p className="text-sm font-bold text-[#1c1917] truncate">{userData.name}</p>
-                      <p className="text-xs text-[#78716c] truncate">{userData.email}</p>
-                      <span className="inline-block mt-1 text-[10px] font-mono uppercase px-2 py-0.5 rounded-full bg-[#f2efe9] text-[#451a03] font-bold border border-[#e8e5dc]">
-                        {userData.role}
-                      </span>
-                    </div>
+                      <div className="px-4 py-3 border-b border-[#f2efe9]">
+                        <p className="text-sm font-bold text-[#1c1917] truncate">{userData.name}</p>
+                        <p className="text-xs text-[#78716c] truncate">{userData.email}</p>
+                        <span className="inline-block mt-1 text-[10px] font-mono uppercase px-2 py-0.5 rounded-full bg-[#f2efe9] text-[#451a03] font-bold border border-[#e8e5dc]">
+                          {userData.role}
+                        </span>
+                      </div>
 
-                    <div className="py-1">
-                      <button
-                        onClick={() => {
-                          navigate("/profile");
-                          setDropdownOpen(false);
-                        }}
-                        className="w-full flex items-center gap-2.5 px-4 py-2.5 text-xs sm:text-sm text-[#44403c] hover:bg-[#f8f7f4] transition cursor-pointer text-left font-medium"
-                      >
-                        <User2Icon size={15} className="text-[#78716c]" />
-                        My Profile
-                      </button>
-                      {/* Student Dropdown Items */}
-                      {userData?.role === "student" && (
-                        <>
-                          <button
-                            onClick={() => {
-                              navigate("/mycourses");
-                              setDropdownOpen(false);
-                            }}
-                            className="w-full flex items-center gap-2.5 px-4 py-2.5 text-xs sm:text-sm text-[#44403c] hover:bg-[#f8f7f4] transition cursor-pointer text-left font-medium"
-                          >
-                            <BookCheck size={15} className="text-[#78716c]" />
-                            My Courses
-                          </button>
-                          <button
-                            onClick={() => {
-                              navigate("/profile");
-                              setDropdownOpen(false);
-                            }}
-                            className="w-full flex items-center gap-2.5 px-4 py-2.5 text-xs sm:text-sm text-[#44403c] hover:bg-[#f8f7f4] transition cursor-pointer text-left font-medium"
-                          >
-                            <Building2 size={15} className="text-[#1e3a8a]" />
-                            My Academy & Settings
-                          </button>
-                        </>
-                      )}
+                      <div className="py-1">
+                        <button
+                          onClick={() => {
+                            navigate("/profile");
+                            setDropdownOpen(false);
+                          }}
+                          className="w-full flex items-center gap-2.5 px-4 py-2.5 text-xs sm:text-sm text-[#44403c] hover:bg-[#f8f7f4] transition cursor-pointer text-left font-medium"
+                        >
+                          <User2Icon size={15} className="text-[#78716c]" />
+                          My Profile
+                        </button>
+                        {/* Student Dropdown Items */}
+                        {userData?.role === "student" && (
+                          <>
+                            <button
+                              onClick={() => {
+                                navigate("/mycourses");
+                                setDropdownOpen(false);
+                              }}
+                              className="w-full flex items-center gap-2.5 px-4 py-2.5 text-xs sm:text-sm text-[#44403c] hover:bg-[#f8f7f4] transition cursor-pointer text-left font-medium"
+                            >
+                              <BookCheck size={15} className="text-[#78716c]" />
+                              My Courses
+                            </button>
+                            <button
+                              onClick={() => {
+                                navigate("/profile");
+                                setDropdownOpen(false);
+                              }}
+                              className="w-full flex items-center gap-2.5 px-4 py-2.5 text-xs sm:text-sm text-[#44403c] hover:bg-[#f8f7f4] transition cursor-pointer text-left font-medium"
+                            >
+                              <Building2 size={15} className="text-[#1e3a8a]" />
+                              My Academy & Settings
+                            </button>
+                          </>
+                        )}
 
-                      {/* Educator Dropdown Items */}
-                      {isEducator && (
-                        <>
-                          <button
-                            onClick={() => {
-                              navigate("/educator/home");
-                              setDropdownOpen(false);
-                            }}
-                            className="w-full flex items-center gap-2.5 px-4 py-2.5 text-xs sm:text-sm text-[#44403c] hover:bg-[#f8f7f4] transition cursor-pointer text-left font-medium"
-                          >
-                            <Building2 size={15} className="text-[#1e3a8a]" />
-                            Educator Home
-                          </button>
-                          <button
-                            onClick={() => {
-                              navigate("/dashboard");
-                              setDropdownOpen(false);
-                            }}
-                            className="w-full flex items-center gap-2.5 px-4 py-2.5 text-xs sm:text-sm text-[#44403c] hover:bg-[#f8f7f4] transition cursor-pointer text-left font-medium"
-                          >
-                            <LayoutDashboard size={15} className="text-[#1e3a8a]" />
-                            Educator Dashboard
-                          </button>
-                          <button
-                            onClick={() => {
-                              navigate("/students");
-                              setDropdownOpen(false);
-                            }}
-                            className="w-full flex items-center gap-2.5 px-4 py-2.5 text-xs sm:text-sm text-[#44403c] hover:bg-[#f8f7f4] transition cursor-pointer text-left font-medium"
-                          >
-                            <Users size={15} className="text-[#1e3a8a]" />
-                            Manage Students
-                          </button>
-                          <button
-                            onClick={() => {
-                              navigate("/courses");
-                              setDropdownOpen(false);
-                            }}
-                            className="w-full flex items-center gap-2.5 px-4 py-2.5 text-xs sm:text-sm text-[#44403c] hover:bg-[#f8f7f4] transition cursor-pointer text-left font-medium"
-                          >
-                            <BookOpen size={15} className="text-[#78716c]" />
-                            Course Curriculum
-                          </button>
+                        {/* Educator Dropdown Items */}
+                        {isEducator && (
+                          <>
+                            <button
+                              onClick={() => {
+                                navigate("/educator/home");
+                                setDropdownOpen(false);
+                              }}
+                              className="w-full flex items-center gap-2.5 px-4 py-2.5 text-xs sm:text-sm text-[#44403c] hover:bg-[#f8f7f4] transition cursor-pointer text-left font-medium"
+                            >
+                              <Building2 size={15} className="text-[#1e3a8a]" />
+                              Educator Home
+                            </button>
+                            <button
+                              onClick={() => {
+                                navigate("/dashboard");
+                                setDropdownOpen(false);
+                              }}
+                              className="w-full flex items-center gap-2.5 px-4 py-2.5 text-xs sm:text-sm text-[#44403c] hover:bg-[#f8f7f4] transition cursor-pointer text-left font-medium"
+                            >
+                              <LayoutDashboard size={15} className="text-[#1e3a8a]" />
+                              Educator Dashboard
+                            </button>
+                            <button
+                              onClick={() => {
+                                navigate("/students");
+                                setDropdownOpen(false);
+                              }}
+                              className="w-full flex items-center gap-2.5 px-4 py-2.5 text-xs sm:text-sm text-[#44403c] hover:bg-[#f8f7f4] transition cursor-pointer text-left font-medium"
+                            >
+                              <Users size={15} className="text-[#1e3a8a]" />
+                              Manage Students
+                            </button>
+                            <button
+                              onClick={() => {
+                                navigate("/courses");
+                                setDropdownOpen(false);
+                              }}
+                              className="w-full flex items-center gap-2.5 px-4 py-2.5 text-xs sm:text-sm text-[#44403c] hover:bg-[#f8f7f4] transition cursor-pointer text-left font-medium"
+                            >
+                              <BookOpen size={15} className="text-[#78716c]" />
+                              Course Curriculum
+                            </button>
+                            <button
+                              onClick={() => {
+                                navigate("/create-institution");
+                                setDropdownOpen(false);
+                              }}
+                              className="w-full flex items-center gap-2.5 px-4 py-2.5 text-xs sm:text-sm text-[#44403c] hover:bg-[#f8f7f4] transition cursor-pointer text-left font-medium"
+                            >
+                              <Building2 size={15} className="text-[#1e3a8a]" />
+                              Institution Settings
+                            </button>
+                          </>
+                        )}
+                        {isEducator && !userData?.tenantId && (
                           <button
                             onClick={() => {
                               navigate("/create-institution");
                               setDropdownOpen(false);
                             }}
-                            className="w-full flex items-center gap-2.5 px-4 py-2.5 text-xs sm:text-sm text-[#44403c] hover:bg-[#f8f7f4] transition cursor-pointer text-left font-medium"
+                            className="w-full flex items-center gap-2.5 px-4 py-2.5 text-xs sm:text-sm text-[#78716c] hover:bg-[#f8f7f4] transition cursor-pointer text-left font-medium"
                           >
-                            <Building2 size={15} className="text-[#1e3a8a]" />
-                            Institution Settings
+                            <PlusCircle size={15} />
+                            Create New Academy
                           </button>
-                        </>
-                      )}
-                      {isEducator && !userData?.tenantId && (
-                        <button
-                          onClick={() => {
-                            navigate("/create-institution");
-                            setDropdownOpen(false);
-                          }}
-                          className="w-full flex items-center gap-2.5 px-4 py-2.5 text-xs sm:text-sm text-[#78716c] hover:bg-[#f8f7f4] transition cursor-pointer text-left font-medium"
-                        >
-                          <PlusCircle size={15} />
-                          Create New Academy
-                        </button>
-                      )}
-                      {canInstall && (
-                        <button
-                          onClick={() => {
-                            handleInstallClick();
-                            setDropdownOpen(false);
-                          }}
-                          className="w-full flex items-center gap-2.5 px-4 py-2.5 text-xs sm:text-sm text-emerald-700 hover:bg-emerald-50 transition cursor-pointer text-left font-semibold"
-                        >
-                          <Download size={15} />
-                          Install Progressive App
-                        </button>
-                      )}
-                    </div>
+                        )}
+                        {canInstall && (
+                          <button
+                            onClick={() => {
+                              handleInstallClick();
+                              setDropdownOpen(false);
+                            }}
+                            className="w-full flex items-center gap-2.5 px-4 py-2.5 text-xs sm:text-sm text-emerald-700 hover:bg-emerald-50 transition cursor-pointer text-left font-semibold"
+                          >
+                            <Download size={15} />
+                            Install Progressive App
+                          </button>
+                        )}
+                      </div>
 
-                    <div className="border-t border-[#f2efe9] pt-1">
-                      <button
-                        onClick={handleLogout}
-                        className="w-full flex items-center gap-2.5 px-4 py-2.5 text-xs sm:text-sm text-red-600 hover:bg-red-50 transition cursor-pointer text-left font-medium"
-                      >
-                        <LogOut size={15} />
-                        Log Out
-                      </button>
+                      <div className="border-t border-[#f2efe9] pt-1">
+                        <button
+                          onClick={handleLogout}
+                          className="w-full flex items-center gap-2.5 px-4 py-2.5 text-xs sm:text-sm text-red-600 hover:bg-red-50 transition cursor-pointer text-left font-medium"
+                        >
+                          <LogOut size={15} />
+                          Log Out
+                        </button>
+                      </div>
                     </div>
-                  </div>
-                </>
-              )}
-            </div>
-          )}
+                  </>
+                )}
+              </div>
+            )}
           </div>
 
           {/* Compact Mobile Top Actions (App Style) */}

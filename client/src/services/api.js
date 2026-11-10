@@ -112,20 +112,20 @@ api.interceptors.response.use(
   (error) => {
     if (error.response?.data?.code === "SESSION_REVOKED") {
       console.warn("[API] Session revoked by another device login.");
-      if (typeof window !== "undefined") {
-        localStorage.removeItem("skillio_auth_token");
-        localStorage.removeItem("skillio_user_data");
-        localStorage.removeItem("skillio_active_tenant");
-        if (!window.location.pathname.includes("/login")) {
-          window.location.href = "/login?revoked=true";
+        if (typeof window !== "undefined") {
+          localStorage.removeItem("skillio_auth_token");
+          localStorage.removeItem("skillio_user_data");
+          localStorage.removeItem("skillio_active_tenant");
+          if (!window.location.pathname.includes("/login")) {
+            window.location.href = "/login?revoked=true";
+          }
         }
       }
+      if (error.response?.data?.code === "CROSS_TENANT_FORBIDDEN") {
+        console.warn("[API] Cross-tenant token detected. Clearing stale session.");
+      }
+      return Promise.reject(error);
     }
-    if (error.response?.data?.code === "CROSS_TENANT_FORBIDDEN") {
-      console.warn("[API] Cross-tenant token detected. Clearing stale session.");
-    }
-    return Promise.reject(error);
-  }
 );
 
 export default api;

@@ -371,11 +371,10 @@ export default function SignUp() {
                 <button
                   type="button"
                   onClick={() => setRole("student")}
-                  className={`py-2 px-3 rounded-xl text-xs sm:text-sm font-bold transition cursor-pointer flex items-center justify-center gap-1.5 ${
-                    role === "student"
+                  className={`py-2 px-3 rounded-xl text-xs sm:text-sm font-bold transition cursor-pointer flex items-center justify-center gap-1.5 ${role === "student"
                       ? "bg-white text-[#1e3a8a] shadow-xs border border-[#d6d3c9]"
                       : "text-[#78716c] hover:text-[#1c1917]"
-                  }`}
+                    }`}
                 >
                   <User size={14} />
                   Student
@@ -383,11 +382,10 @@ export default function SignUp() {
                 <button
                   type="button"
                   onClick={() => setRole("educator")}
-                  className={`py-2 px-3 rounded-xl text-xs sm:text-sm font-bold transition cursor-pointer flex items-center justify-center gap-1.5 ${
-                    role === "educator"
+                  className={`py-2 px-3 rounded-xl text-xs sm:text-sm font-bold transition cursor-pointer flex items-center justify-center gap-1.5 ${role === "educator"
                       ? "bg-white text-[#1e3a8a] shadow-xs border border-[#d6d3c9]"
                       : "text-[#78716c] hover:text-[#1c1917]"
-                  }`}
+                    }`}
                 >
                   <School size={14} />
                   Educator
@@ -446,11 +444,10 @@ export default function SignUp() {
               <button
                 type="button"
                 onClick={() => setAuthMethod("email")}
-                className={`py-2 px-3 text-xs sm:text-sm font-bold rounded-xl transition cursor-pointer flex items-center justify-center gap-1.5 ${
-                  authMethod === "email"
+                className={`py-2 px-3 text-xs sm:text-sm font-bold rounded-xl transition cursor-pointer flex items-center justify-center gap-1.5 ${authMethod === "email"
                     ? "bg-white text-[#1e3a8a] shadow-xs border border-[#d6d3c9]"
                     : "text-[#78716c] hover:text-[#1c1917]"
-                }`}
+                  }`}
               >
                 <Mail size={14} />
                 <span>Email</span>
@@ -458,11 +455,10 @@ export default function SignUp() {
               <button
                 type="button"
                 onClick={() => setAuthMethod("phone")}
-                className={`py-2 px-3 text-xs sm:text-sm font-bold rounded-xl transition cursor-pointer flex items-center justify-center gap-1.5 ${
-                  authMethod === "phone"
+                className={`py-2 px-3 text-xs sm:text-sm font-bold rounded-xl transition cursor-pointer flex items-center justify-center gap-1.5 ${authMethod === "phone"
                     ? "bg-white text-[#1e3a8a] shadow-xs border border-[#d6d3c9]"
                     : "text-[#78716c] hover:text-[#1c1917]"
-                }`}
+                  }`}
               >
                 <Phone size={14} />
                 <span>Phone</span>
@@ -750,11 +746,10 @@ export default function SignUp() {
                     <div
                       key={inst._id || inst.slug}
                       onClick={() => setSelectedInstitution(inst)}
-                      className={`pt-2 first:pt-0 pb-2 px-3 rounded-xl border transition cursor-pointer flex items-center justify-between gap-3 ${
-                        isSelected
+                      className={`pt-2 first:pt-0 pb-2 px-3 rounded-xl border transition cursor-pointer flex items-center justify-between gap-3 ${isSelected
                           ? "bg-[#eff6ff] border-[#1e3a8a] shadow-xs"
                           : "bg-white border-transparent hover:border-[#e8e5dc] hover:bg-[#faf8f5]"
-                      }`}
+                        }`}
                     >
                       <div className="flex items-center gap-3 min-w-0">
                         <div className="w-9 h-9 rounded-lg bg-[#f8f7f4] border border-[#e8e5dc] flex items-center justify-center shrink-0 overflow-hidden">

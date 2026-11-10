@@ -223,738 +223,738 @@ function Profile() {
     }
   };
 
-  const handleLogout = async () => {
-    toast.success("Logged out successfully");
-    await performLogout();
-  };
+    const handleLogout = async () => {
+      toast.success("Logged out successfully");
+      await performLogout();
+    };
 
-  const isStudent = userData?.role === "student";
+    const isStudent = userData?.role === "student";
 
-  // Load institutions when modal opens
-  useEffect(() => {
-    if (switchModalOpen) {
-      setLoadingInstitutions(true);
-      api
-        .get("/api/tenant/directory")
-        .then(({ data }) => {
-          if (data.success && Array.isArray(data.institutions)) {
-            setInstitutions(data.institutions);
-          }
-        })
-        .catch((err) => {
-          console.warn("[Profile] Could not load institutions:", err.message);
-        })
-        .finally(() => setLoadingInstitutions(false));
+    // Load institutions when modal opens
+    useEffect(() => {
+      if (switchModalOpen) {
+        setLoadingInstitutions(true);
+        api
+          .get("/api/tenant/directory")
+          .then(({ data }) => {
+            if (data.success && Array.isArray(data.institutions)) {
+              setInstitutions(data.institutions);
+            }
+          })
+          .catch((err) => {
+            console.warn("[Profile] Could not load institutions:", err.message);
+          })
+          .finally(() => setLoadingInstitutions(false));
+      }
+    }, [switchModalOpen]);
+
+    if (!userData) {
+      return (
+        <div className="min-h-screen bg-[#f8f7f4] text-[#1c1917] flex flex-col font-sans">
+          <Navbar />
+          <div className="p-8 text-center text-[#78716c]">Loading user profile...</div>
+        </div>
+      );
     }
-  }, [switchModalOpen]);
 
-  if (!userData) {
+    const enrolledCount = userData.enrolledCourses?.length || 0;
+    const joinedDate = userData.createdAt
+      ? new Date(userData.createdAt).toLocaleDateString("en-US", {
+        month: "short",
+        day: "numeric",
+        year: "numeric",
+      })
+      : "Recently";
+
+    // Determine current active academy info
+    const activeAcademyName = tenant && !tenant.isPlatform ? tenant.name : "Skillio Platform";
+    const activeAcademySlug = tenant && !tenant.isPlatform ? tenant.slug : null;
+    const activeAcademyLogo = tenant?.logo || "/skillio.png";
+    const activeAcademyType = tenant?.institutionType || (tenant?.isPlatform ? "Platform" : "Academy");
+
+    const handleSwitchAcademy = (targetSlug, targetName) => {
+      try {
+        localStorage.setItem("skillio_active_tenant", targetSlug);
+        toast.success(`Switched to ${targetName}!`);
+        setSwitchModalOpen(false);
+        switchTenant(targetSlug);
+      } catch (err) {
+        console.error("[Profile Switch Academy Error]", err);
+        toast.error("Failed to switch academy");
+      }
+    };
+
+    const filteredInstitutions = institutions.filter((inst) => {
+      if (!searchQuery.trim()) return true;
+      const q = searchQuery.toLowerCase().trim();
+      return (
+        inst.name?.toLowerCase().includes(q) ||
+        inst.title?.toLowerCase().includes(q) ||
+        inst.institutionType?.toLowerCase().includes(q) ||
+        inst.slug?.toLowerCase().includes(q)
+      );
+    });
+
     return (
       <div className="min-h-screen bg-[#f8f7f4] text-[#1c1917] flex flex-col font-sans">
         <Navbar />
-        <div className="p-8 text-center text-[#78716c]">Loading user profile...</div>
-      </div>
-    );
-  }
 
-  const enrolledCount = userData.enrolledCourses?.length || 0;
-  const joinedDate = userData.createdAt
-    ? new Date(userData.createdAt).toLocaleDateString("en-US", {
-      month: "short",
-      day: "numeric",
-      year: "numeric",
-    })
-    : "Recently";
+        <div className="max-w-4xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-6 flex-1">
+          {/* Back Link */}
+          <button
+            onClick={() => {
+              if (activeAcademySlug) {
+                navigate(`/institution/${activeAcademySlug}`);
+              } else {
+                navigate("/");
+              }
+            }}
+            className="inline-flex items-center gap-1.5 text-xs text-[#78716c] hover:text-[#1c1917] transition cursor-pointer pressable"
+          >
+            <ArrowLeft size={16} /> Back to Learning Space
+          </button>
 
-  // Determine current active academy info
-  const activeAcademyName = tenant && !tenant.isPlatform ? tenant.name : "Skillio Platform";
-  const activeAcademySlug = tenant && !tenant.isPlatform ? tenant.slug : null;
-  const activeAcademyLogo = tenant?.logo || "/skillio.png";
-  const activeAcademyType = tenant?.institutionType || (tenant?.isPlatform ? "Platform" : "Academy");
-
-  const handleSwitchAcademy = (targetSlug, targetName) => {
-    try {
-      localStorage.setItem("skillio_active_tenant", targetSlug);
-      toast.success(`Switched to ${targetName}!`);
-      setSwitchModalOpen(false);
-      switchTenant(targetSlug);
-    } catch (err) {
-      console.error("[Profile Switch Academy Error]", err);
-      toast.error("Failed to switch academy");
-    }
-  };
-
-  const filteredInstitutions = institutions.filter((inst) => {
-    if (!searchQuery.trim()) return true;
-    const q = searchQuery.toLowerCase().trim();
-    return (
-      inst.name?.toLowerCase().includes(q) ||
-      inst.title?.toLowerCase().includes(q) ||
-      inst.institutionType?.toLowerCase().includes(q) ||
-      inst.slug?.toLowerCase().includes(q)
-    );
-  });
-
-  return (
-    <div className="min-h-screen bg-[#f8f7f4] text-[#1c1917] flex flex-col font-sans">
-      <Navbar />
-
-      <div className="max-w-4xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-6 flex-1">
-        {/* Back Link */}
-        <button
-          onClick={() => {
-            if (activeAcademySlug) {
-              navigate(`/institution/${activeAcademySlug}`);
-            } else {
-              navigate("/");
-            }
-          }}
-          className="inline-flex items-center gap-1.5 text-xs text-[#78716c] hover:text-[#1c1917] transition cursor-pointer pressable"
-        >
-          <ArrowLeft size={16} /> Back to Learning Space
-        </button>
-
-        {/* Profile Info Card */}
-        <div className="bg-white border border-[#e8e5dc] rounded-2xl p-6 sm:p-8 space-y-6 shadow-sm">
-          {/* Avatar and Info Header */}
-          <div className="flex flex-col sm:flex-row items-center sm:items-start justify-between gap-6 pb-6 border-b border-[#e8e5dc] text-center sm:text-left">
-            <div className="flex flex-col sm:flex-row items-center gap-5">
-              <div className="w-24 h-24 rounded-full overflow-hidden bg-[#eff6ff] border-2 border-[#1e3a8a]/30 flex items-center justify-center text-3xl font-bold text-[#1e3a8a] shadow-xs shrink-0">
-                {userData.profilePicture ? (
-                  <img
-                    src={userData.profilePicture}
-                    alt={userData.name}
-                    className="w-full h-full object-cover"
-                  />
-                ) : (
-                  userData.name?.charAt(0)?.toUpperCase() || "U"
-                )}
-              </div>
-
-              <div className="space-y-1">
-                <h1 className="text-2xl sm:text-3xl font-bold text-[#1c1917] tracking-tight">
-                  {userData.name}
-                </h1>
-                <p className="text-xs sm:text-sm text-[#78716c] max-w-md">
-                  {userData.description || (isStudent ? "Student & Lifelong Learner" : "Educator & Instructor")}
-                </p>
-                <div className="pt-1 flex items-center justify-center sm:justify-start gap-2 flex-wrap">
-                  <span className="inline-flex items-center gap-1 text-[11px] font-mono uppercase px-2.5 py-0.5 rounded-full bg-[#eff6ff] text-[#1e3a8a] border border-[#bfdbfe]">
-                    <BadgeCheck size={13} /> {userData.role}
-                  </span>
-                  {activeAcademySlug && (
-                    <span className="inline-flex items-center gap-1 text-[11px] px-2.5 py-0.5 rounded-full bg-[#faf8f5] text-[#57534e] border border-[#e8e5dc]">
-                      <Building2 size={12} /> {activeAcademyName}
-                    </span>
-                  )}
-                </div>
-              </div>
-            </div>
-
-            <button
-              onClick={() => navigate("/editprofile")}
-              className="inline-flex items-center gap-2 bg-[#1e3a8a] hover:bg-[#172554] text-white text-xs sm:text-sm font-semibold px-4 py-2.5 rounded-xl transition shadow-xs cursor-pointer min-h-[40px] pressable"
-            >
-              <Edit size={16} /> Edit Profile
-            </button>
-          </div>
-
-          {/* Details Grid (Email, Phone, Courses, Joined) */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 pt-2">
-            {/* Email Card */}
-            <div className="p-4 rounded-xl bg-[#faf8f5] border border-[#e8e5dc] flex items-center justify-between gap-3">
-              <div className="flex items-center gap-3 min-w-0">
-                <Mail className="text-[#1e3a8a] shrink-0" size={20} />
-                <div className="min-w-0">
-                  <span className="text-[11px] text-[#78716c] uppercase font-semibold block">Email</span>
-                  {userData.email ? (
-                    <span className="text-xs sm:text-sm font-medium text-[#1c1917] truncate block" title={userData.email}>
-                      {userData.email}
-                    </span>
-                  ) : (
-                    <button
-                      type="button"
-                      onClick={() => setLinkEmailModalOpen(true)}
-                      className="text-xs font-bold text-[#1e3a8a] hover:underline cursor-pointer"
-                    >
-                      + Link Email
-                    </button>
-                  )}
-                </div>
-              </div>
-            </div>
-
-            {/* Phone Card */}
-            <div className="p-4 rounded-xl bg-[#faf8f5] border border-[#e8e5dc] flex items-center justify-between gap-3">
-              <div className="flex items-center gap-3 min-w-0">
-                <Phone className="text-[#1e3a8a] shrink-0" size={20} />
-                <div className="min-w-0">
-                  <span className="text-[11px] text-[#78716c] uppercase font-semibold block">Phone</span>
-                  {userData.phoneNumber ? (
-                    <div className="flex items-center gap-1.5 flex-wrap">
-                      <span className="text-xs sm:text-sm font-bold text-[#1c1917] font-mono">
-                        {userData.phoneNumber}
-                      </span>
-                      {userData.phoneVerified && (
-                        <span className="text-[10px] bg-emerald-50 text-emerald-800 border border-emerald-300 font-bold px-1.5 py-0.2 rounded-full">
-                          Verified
-                        </span>
-                      )}
-                    </div>
-                  ) : (
-                    <button
-                      type="button"
-                      onClick={() => setLinkPhoneModalOpen(true)}
-                      className="text-xs font-bold text-[#1e3a8a] hover:underline cursor-pointer"
-                    >
-                      + Link Mobile
-                    </button>
-                  )}
-                </div>
-              </div>
-            </div>
-
-            {/* Courses Card */}
-            <div className="p-4 rounded-xl bg-[#faf8f5] border border-[#e8e5dc] flex items-center gap-3">
-              <BookOpen className="text-[#1e3a8a] shrink-0" size={20} />
-              <div>
-                <span className="text-[11px] text-[#78716c] uppercase font-semibold block">
-                  Enrolled Courses
-                </span>
-                <span className="text-sm font-bold text-[#1c1917]">
-                  {enrolledCount} {enrolledCount === 1 ? "Course" : "Courses"}
-                </span>
-              </div>
-            </div>
-
-            {/* Joined Card */}
-            <div className="p-4 rounded-xl bg-[#faf8f5] border border-[#e8e5dc] flex items-center gap-3">
-              <Calendar className="text-[#1e3a8a] shrink-0" size={20} />
-              <div>
-                <span className="text-[11px] text-[#78716c] uppercase font-semibold block">Joined On</span>
-                <span className="text-sm font-medium text-[#1c1917]">{joinedDate}</span>
-              </div>
-            </div>
-          </div>
-
-          {/* Quick Action Navigation */}
-          <div className="pt-2 flex flex-wrap gap-3">
-            <button
-              onClick={() => navigate("/mycourses")}
-              className="px-4 py-2.5 rounded-xl bg-[#faf8f5] hover:bg-[#f1ede4] border border-[#e8e5dc] text-xs font-semibold text-[#1c1917] transition cursor-pointer pressable min-h-[40px]"
-            >
-              View Enrolled Courses →
-            </button>
-            {userData.role === "educator" && (
-              <button
-                onClick={() => navigate("/dashboard")}
-                className="px-4 py-2.5 rounded-xl bg-[#eff6ff] hover:bg-[#dbeafe] border border-[#bfdbfe] text-xs font-semibold text-[#1e3a8a] transition cursor-pointer pressable min-h-[40px]"
-              >
-                Educator Dashboard →
-              </button>
-            )}
-          </div>
-        </div>
-
-        {/* ================= STUDENT ACADEMY & INSTITUTIONS SECTION ================= */}
-        {isStudent && (
+          {/* Profile Info Card */}
           <div className="bg-white border border-[#e8e5dc] rounded-2xl p-6 sm:p-8 space-y-6 shadow-sm">
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-4 border-b border-[#e8e5dc]">
-              <div>
-                <div className="flex items-center gap-2">
-                  <Building2 size={20} className="text-[#1e3a8a]" />
-                  <h2 className="text-lg sm:text-xl font-bold text-[#1c1917] tracking-tight">
-                    Current Institution
-                  </h2>
+            {/* Avatar and Info Header */}
+            <div className="flex flex-col sm:flex-row items-center sm:items-start justify-between gap-6 pb-6 border-b border-[#e8e5dc] text-center sm:text-left">
+              <div className="flex flex-col sm:flex-row items-center gap-5">
+                <div className="w-24 h-24 rounded-full overflow-hidden bg-[#eff6ff] border-2 border-[#1e3a8a]/30 flex items-center justify-center text-3xl font-bold text-[#1e3a8a] shadow-xs shrink-0">
+                  {userData.profilePicture ? (
+                    <img
+                      src={userData.profilePicture}
+                      alt={userData.name}
+                      className="w-full h-full object-cover"
+                    />
+                  ) : (
+                    userData.name?.charAt(0)?.toUpperCase() || "U"
+                  )}
                 </div>
-                <p className="text-xs sm:text-sm text-[#78716c] mt-0.5">
-                  Your active academy environment. You can change to another institution anytime.
-                </p>
+
+                <div className="space-y-1">
+                  <h1 className="text-2xl sm:text-3xl font-bold text-[#1c1917] tracking-tight">
+                    {userData.name}
+                  </h1>
+                  <p className="text-xs sm:text-sm text-[#78716c] max-w-md">
+                    {userData.description || (isStudent ? "Student & Lifelong Learner" : "Educator & Instructor")}
+                  </p>
+                  <div className="pt-1 flex items-center justify-center sm:justify-start gap-2 flex-wrap">
+                    <span className="inline-flex items-center gap-1 text-[11px] font-mono uppercase px-2.5 py-0.5 rounded-full bg-[#eff6ff] text-[#1e3a8a] border border-[#bfdbfe]">
+                      <BadgeCheck size={13} /> {userData.role}
+                    </span>
+                    {activeAcademySlug && (
+                      <span className="inline-flex items-center gap-1 text-[11px] px-2.5 py-0.5 rounded-full bg-[#faf8f5] text-[#57534e] border border-[#e8e5dc]">
+                        <Building2 size={12} /> {activeAcademyName}
+                      </span>
+                    )}
+                  </div>
+                </div>
               </div>
 
               <button
-                type="button"
-                onClick={() => setSwitchModalOpen(true)}
-                className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl border border-[#1e3a8a] bg-[#eff6ff] hover:bg-blue-100/70 text-xs sm:text-sm font-bold text-[#1e3a8a] transition cursor-pointer pressable min-h-[42px] self-start sm:self-auto shadow-2xs"
+                onClick={() => navigate("/editprofile")}
+                className="inline-flex items-center gap-2 bg-[#1e3a8a] hover:bg-[#172554] text-white text-xs sm:text-sm font-semibold px-4 py-2.5 rounded-xl transition shadow-xs cursor-pointer min-h-[40px] pressable"
               >
-                <ArrowRightLeft size={15} />
-                Change Institution
+                <Edit size={16} /> Edit Profile
               </button>
             </div>
 
-            {/* Current Active Academy Card */}
-            <div className="overflow-auto p-4 sm:p-5 rounded-2xl bg-[#faf8f5] border border-[#e8e5dc] flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-              <div className="flex items-center gap-3.5 min-w-0">
-                <div className="w-12 h-12 rounded-xl bg-white border border-[#e8e5dc] flex items-center justify-center p-1.5 shrink-0 shadow-xs">
-                  <img
-                    src={activeAcademyLogo}
-                    alt={activeAcademyName}
-                    className="w-full h-full object-contain"
-                    onError={(e) => {
-                      e.target.src = "/skillio.png";
-                    }}
-                  />
-                </div>
-                <div className="min-w-0">
-                  <div className="flex items-center gap-2 flex-wrap">
-                    <h3 className="text-base sm:text-lg font-bold text-[#1c1917] truncate">
-                      {activeAcademyName}
-                    </h3>
-                    <span className="inline-flex items-center gap-1 text-[11px] font-semibold px-2.5 py-0.5 rounded-full bg-emerald-50 text-emerald-800 border border-emerald-300">
-                      <span className="w-1.5 h-1.5 rounded-full bg-emerald-600 animate-pulse" />
-                      Active Academy
-                    </span>
+            {/* Details Grid (Email, Phone, Courses, Joined) */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 pt-2">
+              {/* Email Card */}
+              <div className="p-4 rounded-xl bg-[#faf8f5] border border-[#e8e5dc] flex items-center justify-between gap-3">
+                <div className="flex items-center gap-3 min-w-0">
+                  <Mail className="text-[#1e3a8a] shrink-0" size={20} />
+                  <div className="min-w-0">
+                    <span className="text-[11px] text-[#78716c] uppercase font-semibold block">Email</span>
+                    {userData.email ? (
+                      <span className="text-xs sm:text-sm font-medium text-[#1c1917] truncate block" title={userData.email}>
+                        {userData.email}
+                      </span>
+                    ) : (
+                      <button
+                        type="button"
+                        onClick={() => setLinkEmailModalOpen(true)}
+                        className="text-xs font-bold text-[#1e3a8a] hover:underline cursor-pointer"
+                      >
+                        + Link Email
+                      </button>
+                    )}
                   </div>
-                  <p className="text-xs text-[#78716c] truncate mt-0.5">
-                    {activeAcademyType} • {tenant?.title || "Curriculum & courses scoped to this institution"}
+                </div>
+              </div>
+
+              {/* Phone Card */}
+              <div className="p-4 rounded-xl bg-[#faf8f5] border border-[#e8e5dc] flex items-center justify-between gap-3">
+                <div className="flex items-center gap-3 min-w-0">
+                  <Phone className="text-[#1e3a8a] shrink-0" size={20} />
+                  <div className="min-w-0">
+                    <span className="text-[11px] text-[#78716c] uppercase font-semibold block">Phone</span>
+                    {userData.phoneNumber ? (
+                      <div className="flex items-center gap-1.5 flex-wrap">
+                        <span className="text-xs sm:text-sm font-bold text-[#1c1917] font-mono">
+                          {userData.phoneNumber}
+                        </span>
+                        {userData.phoneVerified && (
+                          <span className="text-[10px] bg-emerald-50 text-emerald-800 border border-emerald-300 font-bold px-1.5 py-0.2 rounded-full">
+                            Verified
+                          </span>
+                        )}
+                      </div>
+                    ) : (
+                      <button
+                        type="button"
+                        onClick={() => setLinkPhoneModalOpen(true)}
+                        className="text-xs font-bold text-[#1e3a8a] hover:underline cursor-pointer"
+                      >
+                        + Link Mobile
+                      </button>
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              {/* Courses Card */}
+              <div className="p-4 rounded-xl bg-[#faf8f5] border border-[#e8e5dc] flex items-center gap-3">
+                <BookOpen className="text-[#1e3a8a] shrink-0" size={20} />
+                <div>
+                  <span className="text-[11px] text-[#78716c] uppercase font-semibold block">
+                    Enrolled Courses
+                  </span>
+                  <span className="text-sm font-bold text-[#1c1917]">
+                    {enrolledCount} {enrolledCount === 1 ? "Course" : "Courses"}
+                  </span>
+                </div>
+              </div>
+
+              {/* Joined Card */}
+              <div className="p-4 rounded-xl bg-[#faf8f5] border border-[#e8e5dc] flex items-center gap-3">
+                <Calendar className="text-[#1e3a8a] shrink-0" size={20} />
+                <div>
+                  <span className="text-[11px] text-[#78716c] uppercase font-semibold block">Joined On</span>
+                  <span className="text-sm font-medium text-[#1c1917]">{joinedDate}</span>
+                </div>
+              </div>
+            </div>
+
+            {/* Quick Action Navigation */}
+            <div className="pt-2 flex flex-wrap gap-3">
+              <button
+                onClick={() => navigate("/mycourses")}
+                className="px-4 py-2.5 rounded-xl bg-[#faf8f5] hover:bg-[#f1ede4] border border-[#e8e5dc] text-xs font-semibold text-[#1c1917] transition cursor-pointer pressable min-h-[40px]"
+              >
+                View Enrolled Courses →
+              </button>
+              {userData.role === "educator" && (
+                <button
+                  onClick={() => navigate("/dashboard")}
+                  className="px-4 py-2.5 rounded-xl bg-[#eff6ff] hover:bg-[#dbeafe] border border-[#bfdbfe] text-xs font-semibold text-[#1e3a8a] transition cursor-pointer pressable min-h-[40px]"
+                >
+                  Educator Dashboard →
+                </button>
+              )}
+            </div>
+          </div>
+
+          {/* ================= STUDENT ACADEMY & INSTITUTIONS SECTION ================= */}
+          {isStudent && (
+            <div className="bg-white border border-[#e8e5dc] rounded-2xl p-6 sm:p-8 space-y-6 shadow-sm">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-4 border-b border-[#e8e5dc]">
+                <div>
+                  <div className="flex items-center gap-2">
+                    <Building2 size={20} className="text-[#1e3a8a]" />
+                    <h2 className="text-lg sm:text-xl font-bold text-[#1c1917] tracking-tight">
+                      Current Institution
+                    </h2>
+                  </div>
+                  <p className="text-xs sm:text-sm text-[#78716c] mt-0.5">
+                    Your active academy environment. You can change to another institution anytime.
+                  </p>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={() => setSwitchModalOpen(true)}
+                  className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl border border-[#1e3a8a] bg-[#eff6ff] hover:bg-blue-100/70 text-xs sm:text-sm font-bold text-[#1e3a8a] transition cursor-pointer pressable min-h-[42px] self-start sm:self-auto shadow-2xs"
+                >
+                  <ArrowRightLeft size={15} />
+                  Change Institution
+                </button>
+              </div>
+
+              {/* Current Active Academy Card */}
+              <div className="overflow-auto p-4 sm:p-5 rounded-2xl bg-[#faf8f5] border border-[#e8e5dc] flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+                <div className="flex items-center gap-3.5 min-w-0">
+                  <div className="w-12 h-12 rounded-xl bg-white border border-[#e8e5dc] flex items-center justify-center p-1.5 shrink-0 shadow-xs">
+                    <img
+                      src={activeAcademyLogo}
+                      alt={activeAcademyName}
+                      className="w-full h-full object-contain"
+                      onError={(e) => {
+                        e.target.src = "/skillio.png";
+                      }}
+                    />
+                  </div>
+                  <div className="min-w-0">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <h3 className="text-base sm:text-lg font-bold text-[#1c1917] truncate">
+                        {activeAcademyName}
+                      </h3>
+                      <span className="inline-flex items-center gap-1 text-[11px] font-semibold px-2.5 py-0.5 rounded-full bg-emerald-50 text-emerald-800 border border-emerald-300">
+                        <span className="w-1.5 h-1.5 rounded-full bg-emerald-600 animate-pulse" />
+                        Active Academy
+                      </span>
+                    </div>
+                    <p className="text-xs text-[#78716c] truncate mt-0.5">
+                      {activeAcademyType} • {tenant?.title || "Curriculum & courses scoped to this institution"}
+                    </p>
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-2 w-full sm:w-auto">
+                  <button
+                    type="button"
+                    onClick={() => setSwitchModalOpen(true)}
+                    className="w-full sm:w-auto inline-flex items-center justify-center gap-1.5 px-4 py-2 rounded-xl bg-[#1e3a8a] hover:bg-[#172554] text-white text-xs font-semibold transition cursor-pointer pressable min-h-[40px] shadow-xs"
+                  >
+                    <ArrowRightLeft size={13} />
+                    <span>Change Institution</span>
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* ================= SECURITY & PASSWORD SECTION ================= */}
+          <div className="bg-white border border-[#e8e5dc] rounded-2xl p-6 sm:p-8 space-y-5 shadow-sm">
+            <div className="flex items-center justify-between pb-3 border-b border-[#e8e5dc]">
+              <div className="flex items-center gap-2">
+                <KeyRound size={20} className="text-[#1e3a8a]" />
+                <div>
+                  <h2 className="text-lg font-bold text-[#1c1917] tracking-tight">
+                    Security & Password
+                  </h2>
+                  <p className="text-xs text-[#78716c]">
+                    Change your password or manage account credentials
                   </p>
                 </div>
               </div>
 
-              <div className="flex items-center gap-2 w-full sm:w-auto">
+              <button
+                type="button"
+                onClick={() => setShowPasswordSection(!showPasswordSection)}
+                className="text-xs font-bold text-[#1e3a8a] hover:underline cursor-pointer"
+              >
+                {showPasswordSection ? "Cancel" : "Change Password"}
+              </button>
+            </div>
+
+            {showPasswordSection ? (
+              <form onSubmit={handleChangePassword} className="space-y-4 max-w-md pt-2">
+                <div className="space-y-1.5">
+                  <label className="text-xs font-semibold text-[#44403c]">Current Password</label>
+                  <div className="relative">
+                    <input
+                      type={showOldPass ? "text" : "password"}
+                      value={oldPassword}
+                      onChange={(e) => setOldPassword(e.target.value)}
+                      placeholder="Enter your current password"
+                      className="w-full bg-[#fcfbf9] border border-[#d6d3d1] rounded-xl px-3.5 py-2.5 text-xs sm:text-sm text-[#1c1917] focus:outline-none focus:border-[#1e3a8a] pr-10"
+                      required
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowOldPass(!showOldPass)}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-[#78716c] hover:text-[#1c1917]"
+                    >
+                      {showOldPass ? <EyeOff size={16} /> : <Eye size={16} />}
+                    </button>
+                  </div>
+                </div>
+
+                <div className="space-y-1.5">
+                  <label className="text-xs font-semibold text-[#44403c]">New Password (min. 8 characters)</label>
+                  <div className="relative">
+                    <input
+                      type={showNewPass ? "text" : "password"}
+                      value={newPassword}
+                      onChange={(e) => setNewPassword(e.target.value)}
+                      placeholder="Enter new secure password"
+                      className="w-full bg-[#fcfbf9] border border-[#d6d3d1] rounded-xl px-3.5 py-2.5 text-xs sm:text-sm text-[#1c1917] focus:outline-none focus:border-[#1e3a8a] pr-10"
+                      required
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowNewPass(!showNewPass)}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-[#78716c] hover:text-[#1c1917]"
+                    >
+                      {showNewPass ? <EyeOff size={16} /> : <Eye size={16} />}
+                    </button>
+                  </div>
+                </div>
+
+                <div className="space-y-1.5">
+                  <label className="text-xs font-semibold text-[#44403c]">Confirm New Password</label>
+                  <input
+                    type="password"
+                    value={confirmPassword}
+                    onChange={(e) => setConfirmPassword(e.target.value)}
+                    placeholder="Confirm new password"
+                    className="w-full bg-[#fcfbf9] border border-[#d6d3d1] rounded-xl px-3.5 py-2.5 text-xs sm:text-sm text-[#1c1917] focus:outline-none focus:border-[#1e3a8a]"
+                    required
+                  />
+                </div>
+
+                <button
+                  type="submit"
+                  disabled={passwordLoading}
+                  className="inline-flex items-center justify-center gap-2 bg-[#1e3a8a] hover:bg-[#172554] text-white text-xs sm:text-sm font-bold px-5 py-2.5 rounded-xl transition cursor-pointer disabled:opacity-50"
+                >
+                  {passwordLoading ? "Updating..." : "Update Password"}
+                </button>
+              </form>
+            ) : (
+              <p className="text-xs text-[#78716c]">
+                Your password is encrypted with cryptographic bcrypt hashing. Click "Change Password" to update it anytime.
+              </p>
+            )}
+          </div>
+
+          {/* ================= APP ACTIONS & LOGOUT ================= */}
+          <div className="bg-white border border-[#e8e5dc] rounded-2xl p-6 sm:p-8 space-y-4 shadow-sm">
+            <h2 className="text-base font-bold text-[#1c1917] pb-2 border-b border-[#e8e5dc]">
+              Account Preferences & Actions
+            </h2>
+
+            <div className="flex flex-col sm:flex-row gap-3 pt-1">
+              {canInstall && (
                 <button
                   type="button"
-                  onClick={() => setSwitchModalOpen(true)}
-                  className="w-full sm:w-auto inline-flex items-center justify-center gap-1.5 px-4 py-2 rounded-xl bg-[#1e3a8a] hover:bg-[#172554] text-white text-xs font-semibold transition cursor-pointer pressable min-h-[40px] shadow-xs"
+                  onClick={handleInstallApp}
+                  className="inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-300 text-xs sm:text-sm font-bold transition cursor-pointer pressable"
                 >
-                  <ArrowRightLeft size={13} />
-                  <span>Change Institution</span>
+                  <Download size={16} />
+                  Install Progressive Web App
+                </button>
+              )}
+
+              <button
+                type="button"
+                onClick={handleLogout}
+                className="inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl bg-red-50 hover:bg-red-100 text-red-600 border border-red-200 text-xs sm:text-sm font-bold transition cursor-pointer pressable"
+              >
+                <LogOut size={16} />
+                Log Out of Account
+              </button>
+            </div>
+          </div>
+        </div>
+
+        {/* ================= SWITCH ACADEMY MODAL / BOTTOM SHEET ================= */}
+        {switchModalOpen && (
+          <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 animate-in fade-in duration-200">
+            {/* Backdrop */}
+            <div
+              className="fixed inset-0 bg-black/50 backdrop-blur-xs transition-opacity"
+              onClick={() => setSwitchModalOpen(false)}
+            />
+
+            {/* Sheet / Dialog Surface */}
+            <div className="relative w-full sm:max-w-lg bg-white rounded-t-3xl sm:rounded-2xl border border-[#e8e5dc] shadow-2xl p-6 sm:p-7 space-y-4 max-h-[85vh] flex flex-col z-10 animate-in slide-in-from-bottom-4 duration-200">
+              {/* Sheet Handle for Mobile */}
+              <div className="w-12 h-1.5 bg-[#d6d3d1] rounded-full mx-auto sm:hidden mb-1" />
+
+              {/* Header */}
+              <div className="flex items-center justify-between pb-3 border-b border-[#e8e5dc]">
+                <div>
+                  <h3 className="text-lg sm:text-xl font-bold text-[#1c1917] tracking-tight">
+                    Switch Academy
+                  </h3>
+                  <p className="text-xs text-[#78716c]">
+                    Select an institution to switch your active courses and learning space
+                  </p>
+                </div>
+                <button
+                  onClick={() => setSwitchModalOpen(false)}
+                  className="p-2 rounded-xl text-[#78716c] hover:bg-[#f2efe9] hover:text-[#1c1917] transition cursor-pointer touch-target pressable"
+                  aria-label="Close dialog"
+                >
+                  <X size={18} />
+                </button>
+              </div>
+
+              {/* Search Input */}
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-[#a8a29e] w-4 h-4" />
+                <input
+                  type="text"
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  placeholder="Search academy by name, subject..."
+                  className="w-full bg-[#fcfbf9] border border-[#d6d3d1] rounded-xl pl-9 pr-4 py-2.5 text-xs sm:text-sm text-[#1c1917] placeholder-[#a8a29e] focus:outline-none focus:border-[#1e3a8a] focus:ring-1 focus:ring-[#1e3a8a] transition-all min-h-[42px]"
+                />
+              </div>
+
+              {/* Institution List */}
+              <div className="overflow-y-auto space-y-2.5 pr-1 flex-1 min-h-[220px]">
+                {loadingInstitutions ? (
+                  <div className="py-12 text-center text-xs text-[#78716c]">
+                    Loading academies...
+                  </div>
+                ) : filteredInstitutions.length === 0 ? (
+                  <div className="py-12 text-center text-xs text-[#78716c]">
+                    No academies found matching "{searchQuery}"
+                  </div>
+                ) : (
+                  filteredInstitutions.map((inst) => {
+                    const isActive = activeAcademySlug === inst.slug;
+                    return (
+                      <div
+                        key={inst._id || inst.slug}
+                        className={`p-3.5 rounded-xl border transition flex items-center justify-between gap-3 ${isActive
+                          ? "bg-[#eff6ff] border-[#1e3a8a]"
+                          : "bg-white border-[#e8e5dc] hover:border-[#bfdbfe] hover:bg-[#faf8f5]"
+                          }`}
+                      >
+                        <div className="flex items-center gap-3 min-w-0">
+                          <div className="w-10 h-10 rounded-lg bg-[#f8f7f4] border border-[#e8e5dc] flex items-center justify-center shrink-0 overflow-hidden p-1">
+                            {inst.logo ? (
+                              <img
+                                src={inst.logo}
+                                alt={inst.name}
+                                className="w-full h-full object-contain"
+                                onError={(e) => {
+                                  e.target.src = "/skillio.png";
+                                }}
+                              />
+                            ) : (
+                              <Building2 size={18} className="text-[#1e3a8a]" />
+                            )}
+                          </div>
+
+                          <div className="min-w-0">
+                            <p className="text-xs sm:text-sm font-bold text-[#1c1917] truncate">
+                              {inst.name}
+                            </p>
+                            <div className="flex items-center gap-1.5 text-[11px] text-[#78716c]">
+                              <span className="truncate max-w-[130px]">
+                                {inst.institutionType || "Academy"}
+                              </span>
+                              {inst.courseCount !== undefined && (
+                                <>
+                                  <span>•</span>
+                                  <span>{inst.courseCount} Courses</span>
+                                </>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+
+                        <div className="shrink-0">
+                          {isActive ? (
+                            <span className="inline-flex items-center gap-1 text-[11px] font-bold text-[#1e3a8a] bg-blue-100/60 border border-[#bfdbfe] px-2.5 py-1 rounded-full">
+                              <CheckCircle2 size={12} />
+                              Active
+                            </span>
+                          ) : (
+                            <button
+                              type="button"
+                              onClick={() => handleSwitchAcademy(inst.slug, inst.name)}
+                              className="px-3 py-1.5 rounded-xl bg-[#1e3a8a] hover:bg-[#172554] text-white text-xs font-semibold transition cursor-pointer pressable min-h-[38px] shadow-xs"
+                            >
+                              Switch
+                            </button>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })
+                )}
+              </div>
+
+              {/* Modal Footer */}
+              <div className="pt-2 border-t border-[#e8e5dc] flex items-center justify-between">
+                <span className="text-[11px] text-[#78716c]">
+                  Enrolled progress stays saved
+                </span>
+                <button
+                  type="button"
+                  onClick={() => setSwitchModalOpen(false)}
+                  className="px-3.5 py-1.5 rounded-xl text-xs font-semibold text-[#57534e] hover:bg-[#f2efe9] cursor-pointer min-h-[36px]"
+                >
+                  Close
                 </button>
               </div>
             </div>
           </div>
         )}
+        {/* ================= LINK PHONE MODAL ================= */}
+        {linkPhoneModalOpen && (
+          <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 animate-in fade-in duration-200">
+            <div
+              className="fixed inset-0 bg-black/50 backdrop-blur-xs"
+              onClick={() => {
+                setLinkPhoneModalOpen(false);
+                setLinkPhoneStep("input");
+              }}
+            />
 
-        {/* ================= SECURITY & PASSWORD SECTION ================= */}
-        <div className="bg-white border border-[#e8e5dc] rounded-2xl p-6 sm:p-8 space-y-5 shadow-sm">
-          <div className="flex items-center justify-between pb-3 border-b border-[#e8e5dc]">
-            <div className="flex items-center gap-2">
-              <KeyRound size={20} className="text-[#1e3a8a]" />
-              <div>
-                <h2 className="text-lg font-bold text-[#1c1917] tracking-tight">
-                  Security & Password
-                </h2>
-                <p className="text-xs text-[#78716c]">
-                  Change your password or manage account credentials
-                </p>
-              </div>
-            </div>
-
-            <button
-              type="button"
-              onClick={() => setShowPasswordSection(!showPasswordSection)}
-              className="text-xs font-bold text-[#1e3a8a] hover:underline cursor-pointer"
-            >
-              {showPasswordSection ? "Cancel" : "Change Password"}
-            </button>
-          </div>
-
-          {showPasswordSection ? (
-            <form onSubmit={handleChangePassword} className="space-y-4 max-w-md pt-2">
-              <div className="space-y-1.5">
-                <label className="text-xs font-semibold text-[#44403c]">Current Password</label>
-                <div className="relative">
-                  <input
-                    type={showOldPass ? "text" : "password"}
-                    value={oldPassword}
-                    onChange={(e) => setOldPassword(e.target.value)}
-                    placeholder="Enter your current password"
-                    className="w-full bg-[#fcfbf9] border border-[#d6d3d1] rounded-xl px-3.5 py-2.5 text-xs sm:text-sm text-[#1c1917] focus:outline-none focus:border-[#1e3a8a] pr-10"
-                    required
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setShowOldPass(!showOldPass)}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-[#78716c] hover:text-[#1c1917]"
-                  >
-                    {showOldPass ? <EyeOff size={16} /> : <Eye size={16} />}
-                  </button>
+            <div className="relative w-full sm:max-w-md bg-white rounded-t-3xl sm:rounded-2xl border border-[#e8e5dc] shadow-2xl p-6 sm:p-7 space-y-4 z-10 animate-in slide-in-from-bottom-4 duration-200">
+              <div className="flex items-center justify-between pb-3 border-b border-[#e8e5dc]">
+                <div>
+                  <h3 className="text-lg font-bold text-[#1c1917]">Link Mobile Number</h3>
+                  <p className="text-xs text-[#78716c]">
+                    {linkPhoneStep === "input"
+                      ? "Verify your phone number to enable SMS OTP login"
+                      : "Enter the 6-digit code sent via SMS"}
+                  </p>
                 </div>
+                <button
+                  type="button"
+                  onClick={() => setLinkPhoneModalOpen(false)}
+                  className="p-1.5 rounded-lg text-[#78716c] hover:bg-[#f2efe9]"
+                >
+                  <X size={18} />
+                </button>
               </div>
 
-              <div className="space-y-1.5">
-                <label className="text-xs font-semibold text-[#44403c]">New Password (min. 8 characters)</label>
-                <div className="relative">
-                  <input
-                    type={showNewPass ? "text" : "password"}
-                    value={newPassword}
-                    onChange={(e) => setNewPassword(e.target.value)}
-                    placeholder="Enter new secure password"
-                    className="w-full bg-[#fcfbf9] border border-[#d6d3d1] rounded-xl px-3.5 py-2.5 text-xs sm:text-sm text-[#1c1917] focus:outline-none focus:border-[#1e3a8a] pr-10"
-                    required
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setShowNewPass(!showNewPass)}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-[#78716c] hover:text-[#1c1917]"
-                  >
-                    {showNewPass ? <EyeOff size={16} /> : <Eye size={16} />}
-                  </button>
-                </div>
-              </div>
-
-              <div className="space-y-1.5">
-                <label className="text-xs font-semibold text-[#44403c]">Confirm New Password</label>
-                <input
-                  type="password"
-                  value={confirmPassword}
-                  onChange={(e) => setConfirmPassword(e.target.value)}
-                  placeholder="Confirm new password"
-                  className="w-full bg-[#fcfbf9] border border-[#d6d3d1] rounded-xl px-3.5 py-2.5 text-xs sm:text-sm text-[#1c1917] focus:outline-none focus:border-[#1e3a8a]"
-                  required
-                />
-              </div>
-
-              <button
-                type="submit"
-                disabled={passwordLoading}
-                className="inline-flex items-center justify-center gap-2 bg-[#1e3a8a] hover:bg-[#172554] text-white text-xs sm:text-sm font-bold px-5 py-2.5 rounded-xl transition cursor-pointer disabled:opacity-50"
-              >
-                {passwordLoading ? "Updating..." : "Update Password"}
-              </button>
-            </form>
-          ) : (
-            <p className="text-xs text-[#78716c]">
-              Your password is encrypted with cryptographic bcrypt hashing. Click "Change Password" to update it anytime.
-            </p>
-          )}
-        </div>
-
-        {/* ================= APP ACTIONS & LOGOUT ================= */}
-        <div className="bg-white border border-[#e8e5dc] rounded-2xl p-6 sm:p-8 space-y-4 shadow-sm">
-          <h2 className="text-base font-bold text-[#1c1917] pb-2 border-b border-[#e8e5dc]">
-            Account Preferences & Actions
-          </h2>
-
-          <div className="flex flex-col sm:flex-row gap-3 pt-1">
-            {canInstall && (
-              <button
-                type="button"
-                onClick={handleInstallApp}
-                className="inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-300 text-xs sm:text-sm font-bold transition cursor-pointer pressable"
-              >
-                <Download size={16} />
-                Install Progressive Web App
-              </button>
-            )}
-
-            <button
-              type="button"
-              onClick={handleLogout}
-              className="inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl bg-red-50 hover:bg-red-100 text-red-600 border border-red-200 text-xs sm:text-sm font-bold transition cursor-pointer pressable"
-            >
-              <LogOut size={16} />
-              Log Out of Account
-            </button>
-          </div>
-        </div>
-      </div>
-
-      {/* ================= SWITCH ACADEMY MODAL / BOTTOM SHEET ================= */}
-      {switchModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 animate-in fade-in duration-200">
-          {/* Backdrop */}
-          <div
-            className="fixed inset-0 bg-black/50 backdrop-blur-xs transition-opacity"
-            onClick={() => setSwitchModalOpen(false)}
-          />
-
-          {/* Sheet / Dialog Surface */}
-          <div className="relative w-full sm:max-w-lg bg-white rounded-t-3xl sm:rounded-2xl border border-[#e8e5dc] shadow-2xl p-6 sm:p-7 space-y-4 max-h-[85vh] flex flex-col z-10 animate-in slide-in-from-bottom-4 duration-200">
-            {/* Sheet Handle for Mobile */}
-            <div className="w-12 h-1.5 bg-[#d6d3d1] rounded-full mx-auto sm:hidden mb-1" />
-
-            {/* Header */}
-            <div className="flex items-center justify-between pb-3 border-b border-[#e8e5dc]">
-              <div>
-                <h3 className="text-lg sm:text-xl font-bold text-[#1c1917] tracking-tight">
-                  Switch Academy
-                </h3>
-                <p className="text-xs text-[#78716c]">
-                  Select an institution to switch your active courses and learning space
-                </p>
-              </div>
-              <button
-                onClick={() => setSwitchModalOpen(false)}
-                className="p-2 rounded-xl text-[#78716c] hover:bg-[#f2efe9] hover:text-[#1c1917] transition cursor-pointer touch-target pressable"
-                aria-label="Close dialog"
-              >
-                <X size={18} />
-              </button>
-            </div>
-
-            {/* Search Input */}
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-[#a8a29e] w-4 h-4" />
-              <input
-                type="text"
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder="Search academy by name, subject..."
-                className="w-full bg-[#fcfbf9] border border-[#d6d3d1] rounded-xl pl-9 pr-4 py-2.5 text-xs sm:text-sm text-[#1c1917] placeholder-[#a8a29e] focus:outline-none focus:border-[#1e3a8a] focus:ring-1 focus:ring-[#1e3a8a] transition-all min-h-[42px]"
-              />
-            </div>
-
-            {/* Institution List */}
-            <div className="overflow-y-auto space-y-2.5 pr-1 flex-1 min-h-[220px]">
-              {loadingInstitutions ? (
-                <div className="py-12 text-center text-xs text-[#78716c]">
-                  Loading academies...
-                </div>
-              ) : filteredInstitutions.length === 0 ? (
-                <div className="py-12 text-center text-xs text-[#78716c]">
-                  No academies found matching "{searchQuery}"
-                </div>
-              ) : (
-                filteredInstitutions.map((inst) => {
-                  const isActive = activeAcademySlug === inst.slug;
-                  return (
-                    <div
-                      key={inst._id || inst.slug}
-                      className={`p-3.5 rounded-xl border transition flex items-center justify-between gap-3 ${isActive
-                        ? "bg-[#eff6ff] border-[#1e3a8a]"
-                        : "bg-white border-[#e8e5dc] hover:border-[#bfdbfe] hover:bg-[#faf8f5]"
-                        }`}
-                    >
-                      <div className="flex items-center gap-3 min-w-0">
-                        <div className="w-10 h-10 rounded-lg bg-[#f8f7f4] border border-[#e8e5dc] flex items-center justify-center shrink-0 overflow-hidden p-1">
-                          {inst.logo ? (
-                            <img
-                              src={inst.logo}
-                              alt={inst.name}
-                              className="w-full h-full object-contain"
-                              onError={(e) => {
-                                e.target.src = "/skillio.png";
-                              }}
-                            />
-                          ) : (
-                            <Building2 size={18} className="text-[#1e3a8a]" />
-                          )}
-                        </div>
-
-                        <div className="min-w-0">
-                          <p className="text-xs sm:text-sm font-bold text-[#1c1917] truncate">
-                            {inst.name}
-                          </p>
-                          <div className="flex items-center gap-1.5 text-[11px] text-[#78716c]">
-                            <span className="truncate max-w-[130px]">
-                              {inst.institutionType || "Academy"}
-                            </span>
-                            {inst.courseCount !== undefined && (
-                              <>
-                                <span>•</span>
-                                <span>{inst.courseCount} Courses</span>
-                              </>
-                            )}
-                          </div>
-                        </div>
-                      </div>
-
-                      <div className="shrink-0">
-                        {isActive ? (
-                          <span className="inline-flex items-center gap-1 text-[11px] font-bold text-[#1e3a8a] bg-blue-100/60 border border-[#bfdbfe] px-2.5 py-1 rounded-full">
-                            <CheckCircle2 size={12} />
-                            Active
-                          </span>
-                        ) : (
-                          <button
-                            type="button"
-                            onClick={() => handleSwitchAcademy(inst.slug, inst.name)}
-                            className="px-3 py-1.5 rounded-xl bg-[#1e3a8a] hover:bg-[#172554] text-white text-xs font-semibold transition cursor-pointer pressable min-h-[38px] shadow-xs"
-                          >
-                            Switch
-                          </button>
-                        )}
-                      </div>
+              {linkPhoneStep === "input" ? (
+                <form onSubmit={handleSendLinkPhoneOtp} className="space-y-4">
+                  <div className="space-y-1.5">
+                    <label className="text-xs font-semibold text-[#44403c]">Mobile Number</label>
+                    <div className="relative flex rounded-xl border border-[#d6d3d1] bg-[#fcfbf9] overflow-hidden focus-within:border-[#1e3a8a]">
+                      <span className="px-3 py-2.5 bg-[#f2efe9] text-xs font-bold text-[#44403c] border-r border-[#d6d3d1] flex items-center">
+                        +91
+                      </span>
+                      <input
+                        type="tel"
+                        value={linkPhoneNumber}
+                        onChange={(e) => setLinkPhoneNumber(e.target.value)}
+                        placeholder="98765 43210"
+                        className="flex-1 bg-transparent px-3 py-2.5 text-xs sm:text-sm text-[#1c1917] focus:outline-none"
+                        required
+                        autoFocus
+                      />
                     </div>
-                  );
-                })
-              )}
-            </div>
+                  </div>
 
-            {/* Modal Footer */}
-            <div className="pt-2 border-t border-[#e8e5dc] flex items-center justify-between">
-              <span className="text-[11px] text-[#78716c]">
-                Enrolled progress stays saved
-              </span>
-              <button
-                type="button"
-                onClick={() => setSwitchModalOpen(false)}
-                className="px-3.5 py-1.5 rounded-xl text-xs font-semibold text-[#57534e] hover:bg-[#f2efe9] cursor-pointer min-h-[36px]"
-              >
-                Close
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-      {/* ================= LINK PHONE MODAL ================= */}
-      {linkPhoneModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 animate-in fade-in duration-200">
-          <div
-            className="fixed inset-0 bg-black/50 backdrop-blur-xs"
-            onClick={() => {
-              setLinkPhoneModalOpen(false);
-              setLinkPhoneStep("input");
-            }}
-          />
-
-          <div className="relative w-full sm:max-w-md bg-white rounded-t-3xl sm:rounded-2xl border border-[#e8e5dc] shadow-2xl p-6 sm:p-7 space-y-4 z-10 animate-in slide-in-from-bottom-4 duration-200">
-            <div className="flex items-center justify-between pb-3 border-b border-[#e8e5dc]">
-              <div>
-                <h3 className="text-lg font-bold text-[#1c1917]">Link Mobile Number</h3>
-                <p className="text-xs text-[#78716c]">
-                  {linkPhoneStep === "input"
-                    ? "Verify your phone number to enable SMS OTP login"
-                    : "Enter the 6-digit code sent via SMS"}
-                </p>
-              </div>
-              <button
-                type="button"
-                onClick={() => setLinkPhoneModalOpen(false)}
-                className="p-1.5 rounded-lg text-[#78716c] hover:bg-[#f2efe9]"
-              >
-                <X size={18} />
-              </button>
-            </div>
-
-            {linkPhoneStep === "input" ? (
-              <form onSubmit={handleSendLinkPhoneOtp} className="space-y-4">
-                <div className="space-y-1.5">
-                  <label className="text-xs font-semibold text-[#44403c]">Mobile Number</label>
-                  <div className="relative flex rounded-xl border border-[#d6d3d1] bg-[#fcfbf9] overflow-hidden focus-within:border-[#1e3a8a]">
-                    <span className="px-3 py-2.5 bg-[#f2efe9] text-xs font-bold text-[#44403c] border-r border-[#d6d3d1] flex items-center">
-                      +91
-                    </span>
+                  <button
+                    type="submit"
+                    disabled={linkPhoneLoading}
+                    className="w-full py-2.5 bg-[#1e3a8a] hover:bg-[#172554] text-white text-xs sm:text-sm font-bold rounded-xl transition cursor-pointer disabled:opacity-50 min-h-[42px]"
+                  >
+                    {linkPhoneLoading ? "Sending OTP..." : "Send Verification Code"}
+                  </button>
+                </form>
+              ) : (
+                <form onSubmit={handleVerifyLinkPhoneOtp} className="space-y-4">
+                  <div className="space-y-1.5 text-center">
+                    <label className="text-xs font-semibold text-[#44403c] block">
+                      Verification Code
+                    </label>
                     <input
-                      type="tel"
-                      value={linkPhoneNumber}
-                      onChange={(e) => setLinkPhoneNumber(e.target.value)}
-                      placeholder="98765 43210"
-                      className="flex-1 bg-transparent px-3 py-2.5 text-xs sm:text-sm text-[#1c1917] focus:outline-none"
+                      type="text"
+                      inputMode="numeric"
+                      maxLength={6}
+                      value={linkPhoneOtp}
+                      onChange={(e) => setLinkPhoneOtp(e.target.value.replace(/\D/g, ""))}
+                      placeholder="••••••"
+                      className="w-full bg-[#fcfbf9] border border-[#d6d3d1] rounded-xl py-2.5 text-center text-lg font-mono font-bold tracking-[0.4em] text-[#1c1917] focus:outline-none focus:border-[#1e3a8a]"
                       required
                       autoFocus
                     />
+                    <div className="flex items-center justify-between mt-2 text-xs">
+                      <span className="text-[#78716c]">{linkPhoneNumber}</span>
+                      {linkPhoneCooldown > 0 ? (
+                        <span className="text-[#a8a29e] font-mono">Resend in {linkPhoneCooldown}s</span>
+                      ) : (
+                        <button
+                          type="button"
+                          onClick={handleSendLinkPhoneOtp}
+                          className="text-[#1e3a8a] font-bold hover:underline"
+                        >
+                          Resend Code
+                        </button>
+                      )}
+                    </div>
                   </div>
-                </div>
 
-                <button
-                  type="submit"
-                  disabled={linkPhoneLoading}
-                  className="w-full py-2.5 bg-[#1e3a8a] hover:bg-[#172554] text-white text-xs sm:text-sm font-bold rounded-xl transition cursor-pointer disabled:opacity-50 min-h-[42px]"
-                >
-                  {linkPhoneLoading ? "Sending OTP..." : "Send Verification Code"}
-                </button>
-              </form>
-            ) : (
-              <form onSubmit={handleVerifyLinkPhoneOtp} className="space-y-4">
-                <div className="space-y-1.5 text-center">
-                  <label className="text-xs font-semibold text-[#44403c] block">
-                    Verification Code
-                  </label>
-                  <input
-                    type="text"
-                    inputMode="numeric"
-                    maxLength={6}
-                    value={linkPhoneOtp}
-                    onChange={(e) => setLinkPhoneOtp(e.target.value.replace(/\D/g, ""))}
-                    placeholder="••••••"
-                    className="w-full bg-[#fcfbf9] border border-[#d6d3d1] rounded-xl py-2.5 text-center text-lg font-mono font-bold tracking-[0.4em] text-[#1c1917] focus:outline-none focus:border-[#1e3a8a]"
-                    required
-                    autoFocus
-                  />
-                  <div className="flex items-center justify-between mt-2 text-xs">
-                    <span className="text-[#78716c]">{linkPhoneNumber}</span>
-                    {linkPhoneCooldown > 0 ? (
-                      <span className="text-[#a8a29e] font-mono">Resend in {linkPhoneCooldown}s</span>
-                    ) : (
-                      <button
-                        type="button"
-                        onClick={handleSendLinkPhoneOtp}
-                        className="text-[#1e3a8a] font-bold hover:underline"
-                      >
-                        Resend Code
-                      </button>
-                    )}
-                  </div>
-                </div>
-
-                <button
-                  type="submit"
-                  disabled={linkPhoneLoading || linkPhoneOtp.length !== 6}
-                  className="w-full py-2.5 bg-[#1e3a8a] hover:bg-[#172554] text-white text-xs sm:text-sm font-bold rounded-xl transition cursor-pointer disabled:opacity-50 min-h-[42px]"
-                >
-                  {linkPhoneLoading ? "Verifying..." : "Verify & Link Phone"}
-                </button>
-              </form>
-            )}
-          </div>
-        </div>
-      )}
-
-      {/* ================= LINK EMAIL MODAL ================= */}
-      {linkEmailModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 animate-in fade-in duration-200">
-          <div
-            className="fixed inset-0 bg-black/50 backdrop-blur-xs"
-            onClick={() => setLinkEmailModalOpen(false)}
-          />
-
-          <div className="relative w-full sm:max-w-md bg-white rounded-t-3xl sm:rounded-2xl border border-[#e8e5dc] shadow-2xl p-6 sm:p-7 space-y-4 z-10 animate-in slide-in-from-bottom-4 duration-200">
-            <div className="flex items-center justify-between pb-3 border-b border-[#e8e5dc]">
-              <div>
-                <h3 className="text-lg font-bold text-[#1c1917]">Link Email Address</h3>
-                <p className="text-xs text-[#78716c]">
-                  Add an email address and password to sign in via email
-                </p>
-              </div>
-              <button
-                type="button"
-                onClick={() => setLinkEmailModalOpen(false)}
-                className="p-1.5 rounded-lg text-[#78716c] hover:bg-[#f2efe9]"
-              >
-                <X size={18} />
-              </button>
+                  <button
+                    type="submit"
+                    disabled={linkPhoneLoading || linkPhoneOtp.length !== 6}
+                    className="w-full py-2.5 bg-[#1e3a8a] hover:bg-[#172554] text-white text-xs sm:text-sm font-bold rounded-xl transition cursor-pointer disabled:opacity-50 min-h-[42px]"
+                  >
+                    {linkPhoneLoading ? "Verifying..." : "Verify & Link Phone"}
+                  </button>
+                </form>
+              )}
             </div>
-
-            <form onSubmit={handleLinkEmail} className="space-y-4">
-              <div className="space-y-1.5">
-                <label className="text-xs font-semibold text-[#44403c]">Email Address</label>
-                <input
-                  type="email"
-                  value={newEmail}
-                  onChange={(e) => setNewEmail(e.target.value)}
-                  placeholder="student@example.com"
-                  className="w-full bg-[#fcfbf9] border border-[#d6d3d1] rounded-xl px-3.5 py-2.5 text-xs sm:text-sm text-[#1c1917] focus:outline-none focus:border-[#1e3a8a]"
-                  required
-                />
-              </div>
-
-              <div className="space-y-1.5">
-                <label className="text-xs font-semibold text-[#44403c]">Create Password (min. 8 characters)</label>
-                <input
-                  type="password"
-                  value={newEmailPassword}
-                  onChange={(e) => setNewEmailPassword(e.target.value)}
-                  placeholder="••••••••"
-                  className="w-full bg-[#fcfbf9] border border-[#d6d3d1] rounded-xl px-3.5 py-2.5 text-xs sm:text-sm text-[#1c1917] focus:outline-none focus:border-[#1e3a8a]"
-                  required
-                />
-              </div>
-
-              <button
-                type="submit"
-                disabled={linkEmailLoading}
-                className="w-full py-2.5 bg-[#1e3a8a] hover:bg-[#172554] text-white text-xs sm:text-sm font-bold rounded-xl transition cursor-pointer disabled:opacity-50 min-h-[42px]"
-              >
-                {linkEmailLoading ? "Linking Email..." : "Link Email & Password"}
-              </button>
-            </form>
           </div>
-        </div>
-      )}
-    </div>
-  );
-}
+        )}
 
-export default Profile;
+        {/* ================= LINK EMAIL MODAL ================= */}
+        {linkEmailModalOpen && (
+          <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 animate-in fade-in duration-200">
+            <div
+              className="fixed inset-0 bg-black/50 backdrop-blur-xs"
+              onClick={() => setLinkEmailModalOpen(false)}
+            />
+
+            <div className="relative w-full sm:max-w-md bg-white rounded-t-3xl sm:rounded-2xl border border-[#e8e5dc] shadow-2xl p-6 sm:p-7 space-y-4 z-10 animate-in slide-in-from-bottom-4 duration-200">
+              <div className="flex items-center justify-between pb-3 border-b border-[#e8e5dc]">
+                <div>
+                  <h3 className="text-lg font-bold text-[#1c1917]">Link Email Address</h3>
+                  <p className="text-xs text-[#78716c]">
+                    Add an email address and password to sign in via email
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setLinkEmailModalOpen(false)}
+                  className="p-1.5 rounded-lg text-[#78716c] hover:bg-[#f2efe9]"
+                >
+                  <X size={18} />
+                </button>
+              </div>
+
+              <form onSubmit={handleLinkEmail} className="space-y-4">
+                <div className="space-y-1.5">
+                  <label className="text-xs font-semibold text-[#44403c]">Email Address</label>
+                  <input
+                    type="email"
+                    value={newEmail}
+                    onChange={(e) => setNewEmail(e.target.value)}
+                    placeholder="student@example.com"
+                    className="w-full bg-[#fcfbf9] border border-[#d6d3d1] rounded-xl px-3.5 py-2.5 text-xs sm:text-sm text-[#1c1917] focus:outline-none focus:border-[#1e3a8a]"
+                    required
+                  />
+                </div>
+
+                <div className="space-y-1.5">
+                  <label className="text-xs font-semibold text-[#44403c]">Create Password (min. 8 characters)</label>
+                  <input
+                    type="password"
+                    value={newEmailPassword}
+                    onChange={(e) => setNewEmailPassword(e.target.value)}
+                    placeholder="••••••••"
+                    className="w-full bg-[#fcfbf9] border border-[#d6d3d1] rounded-xl px-3.5 py-2.5 text-xs sm:text-sm text-[#1c1917] focus:outline-none focus:border-[#1e3a8a]"
+                    required
+                  />
+                </div>
+
+                <button
+                  type="submit"
+                  disabled={linkEmailLoading}
+                  className="w-full py-2.5 bg-[#1e3a8a] hover:bg-[#172554] text-white text-xs sm:text-sm font-bold rounded-xl transition cursor-pointer disabled:opacity-50 min-h-[42px]"
+                >
+                  {linkEmailLoading ? "Linking Email..." : "Link Email & Password"}
+                </button>
+              </form>
+            </div>
+          </div>
+        )}
+      </div>
+    );
+  }
+
+  export default Profile;

@@ -119,7 +119,7 @@ export const signUp = async (req, res) => {
           status: "active",
           joinedAt: new Date(),
         });
-      } catch (e) {}
+      } catch (e) { }
     }
 
     // Register active device session (enforces maximum 2 active devices)
@@ -258,7 +258,7 @@ export const login = async (req, res) => {
           institutionType: tenantDoc.institutionType,
         };
       }
-    } catch (e) {}
+    } catch (e) { }
 
     // For students, fetch their memberships across institutions
     if (user.role === "student") {
@@ -273,7 +273,7 @@ export const login = async (req, res) => {
           institutionType: m.tenantId?.institutionType,
           joinedAt: m.joinedAt,
         })).filter((m) => m.slug);
-      } catch (e) {}
+      } catch (e) { }
     }
 
     return res.status(200).json({
@@ -301,7 +301,7 @@ export const logout = async (req, res) => {
         if (decoded?.userId && decoded?.sessionId) {
           await sessionService.revokeSession(decoded.userId, decoded.sessionId);
         }
-      } catch (e) {}
+      } catch (e) { }
     }
 
     res.clearCookie("token", getCookieOptions());
@@ -801,7 +801,7 @@ export const verifyPhoneOtp = async (req, res) => {
             joinedAt: new Date(),
           });
         }
-      } catch (e) {}
+      } catch (e) { }
     }
 
     await user.save();
@@ -834,7 +834,7 @@ export const verifyPhoneOtp = async (req, res) => {
           institutionType: m.tenantId?.institutionType,
           joinedAt: m.joinedAt,
         })).filter((m) => m.slug);
-      } catch (e) {}
+      } catch (e) { }
     }
 
     // Resolve tenant doc
@@ -842,7 +842,7 @@ export const verifyPhoneOtp = async (req, res) => {
     try {
       tenantDoc = await Tenant.findById(user.tenantId).select("name slug logo institutionType title").lean();
       if (tenantDoc) safeUser.tenant = tenantDoc;
-    } catch (e) {}
+    } catch (e) { }
 
     return res.status(200).json({
       success: true,

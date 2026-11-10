@@ -3,16 +3,16 @@ import { getCachedUser, updateCachedUser } from "../services/authStorage";
 
 const userSlice = createSlice({
   name: "user",
-  initialState: {
-    userData: typeof window !== "undefined" ? getCachedUser() : null,
-  },
-  reducers: {
-    setUserData: (state, action) => {
-      state.userData = action.payload;
-      if (typeof window !== "undefined") {
-        updateCachedUser(action.payload);
-      }
+    initialState: {
+      userData: typeof window !== "undefined" ? getCachedUser() : null,
     },
+    reducers: {
+      setUserData: (state, action) => {
+        state.userData = action.payload;
+        if (typeof window !== "undefined") {
+          updateCachedUser(action.payload);
+        }
+      },
   },
 });
 
