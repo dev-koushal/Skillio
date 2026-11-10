@@ -99,10 +99,10 @@ export default function InstitutionHome() {
     (activeTenant?.slug === "physics"
       ? "Master Physics from Basics to Advanced"
       : activeTenant?.slug === "english"
-      ? "Master English with Practical Fluency"
-      : activeTenant?.slug === "coding"
-      ? "Master Modern Software Engineering"
-      : `Welcome to ${tenantName}`);
+        ? "Master English with Practical Fluency"
+        : activeTenant?.slug === "coding"
+          ? "Master Modern Software Engineering"
+          : `Welcome to ${tenantName}`);
 
   const tenantSubtitle =
     activeTenant?.subtitle ||
@@ -196,120 +196,120 @@ export default function InstitutionHome() {
                   </div>
                 </div>
 
-                {/* Right Column: Layered Photographic Learning Studio Composition */}
-                <div className="lg:col-span-5 relative">
-                  <div className="relative mx-auto max-w-md lg:max-w-none">
-                    {/* Real Collegiate Photographic Visual */}
-                    <div className="relative rounded-3xl overflow-hidden border border-[#e8e5dc] shadow-xl bg-white aspect-[4/3] group">
-                      <img
-                        src="https://images.unsplash.com/photo-1523240795612-9a054b0db644?auto=format&fit=crop&w=1000&q=80"
-                        alt={tenantName}
-                        className="w-full h-full object-cover group-hover:scale-[1.02] transition-transform duration-500"
-                      />
-                      <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/20 to-transparent" />
+                  {/* Right Column: Layered Photographic Learning Studio Composition */}
+                  <div className="lg:col-span-5 relative">
+                    <div className="relative mx-auto max-w-md lg:max-w-none">
+                      {/* Real Collegiate Photographic Visual */}
+                      <div className="relative rounded-3xl overflow-hidden border border-[#e8e5dc] shadow-xl bg-white aspect-[4/3] group">
+                        <img
+                          src="https://images.unsplash.com/photo-1523240795612-9a054b0db644?auto=format&fit=crop&w=1000&q=80"
+                          alt={tenantName}
+                          className="w-full h-full object-cover group-hover:scale-[1.02] transition-transform duration-500"
+                        />
+                        <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/20 to-transparent" />
 
-                      {/* Top Floating Glass Badge */}
-                      <div className="absolute top-4 left-4 right-4 flex items-center justify-between">
-                        <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-xl bg-black/50 backdrop-blur-md text-white text-[11px] font-bold border border-white/20">
-                          <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
-                          <span>HLS Video Streaming</span>
+                            {/* Top Floating Glass Badge */}
+                            <div className="absolute top-4 left-4 right-4 flex items-center justify-between">
+                              <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-xl bg-black/50 backdrop-blur-md text-white text-[11px] font-bold border border-white/20">
+                                <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+                                <span>HLS Video Streaming</span>
+                              </div>
+                              <div className="px-2.5 py-1 rounded-lg bg-white/90 backdrop-blur-sm text-[#1e3a8a] text-[10px] font-extrabold uppercase tracking-wider">
+                                Verified
+                              </div>
+                            </div>
+
+                            {/* Bottom Floating Institution Details */}
+                            <div className="absolute bottom-4 left-4 right-4 text-white">
+                              <p className="text-[11px] font-bold text-blue-200 uppercase tracking-wider">
+                                {institutionType} Learning Studio
+                              </p>
+                              <h3 className="text-base sm:text-lg font-bold text-white drop-shadow-sm truncate">
+                                {tenantName} Curriculum
+                              </h3>
+                            </div>
+                          </div>
+
+                            {/* Overlapping Floating Feature Card: Notes & Downloads */}
+                            <div className="absolute -bottom-5 -left-4 sm:-left-6 bg-white/95 backdrop-blur-md border border-[#e8e5dc] rounded-2xl p-3.5 shadow-lg max-w-[240px] hidden sm:flex items-center gap-3">
+                              <div className="w-9 h-9 rounded-xl bg-amber-50 text-amber-700 flex items-center justify-center shrink-0 border border-amber-200">
+                                <FileText size={18} />
+                              </div>
+                              <div className="min-w-0">
+                                <p className="text-xs font-bold text-[#1c1917] truncate">
+                                  Notes & Materials
+                                </p>
+                                <p className="text-[10px] text-[#78716c]">
+                                  Downloadable PDFs
+                                </p>
+                              </div>
+                            </div>
+
+                              {/* Overlapping Floating Feature Card: Direct Instruction */}
+                              <div className="absolute -top-4 -right-3 sm:-right-4 bg-white/95 backdrop-blur-md border border-[#e8e5dc] rounded-2xl px-3 py-2 shadow-md flex items-center gap-2 hidden sm:flex">
+                                <Award size={16} className="text-emerald-700 shrink-0" />
+                                <div>
+                                  <p className="text-[11px] font-bold text-[#1c1917] leading-none">
+                                    Accredited
+                                  </p>
+                                  <p className="text-[10px] text-[#78716c] leading-tight">
+                                    Educator Direct
+                                  </p>
+                                </div>
+                              </div>
+                            </div>
+                          </div>
                         </div>
-                        <div className="px-2.5 py-1 rounded-lg bg-white/90 backdrop-blur-sm text-[#1e3a8a] text-[10px] font-extrabold uppercase tracking-wider">
-                          Verified
+                      </div>
+                    </section>
+
+                    {/* Continue Learning in Active Academy (if student is enrolled in courses) */}
+                    {activeEnrolledCourse && (
+                      <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 -mt-6 relative z-10">
+                        <div className="bg-white rounded-2xl border border-[#e8e5dc] p-4 sm:p-5 shadow-md flex flex-col sm:flex-row items-center justify-between gap-4">
+                          <div className="flex items-center gap-3.5 min-w-0 w-full sm:w-auto">
+                            <div className="w-10 h-10 rounded-xl bg-[#eff6ff] text-[#1e3a8a] flex items-center justify-center shrink-0 border border-[#bfdbfe]">
+                              <GraduationCap size={20} />
+                            </div>
+                            <div className="min-w-0">
+                              <p className="text-[11px] font-bold text-[#1e3a8a] uppercase tracking-wider">
+                                Continue Learning in {tenantName}
+                              </p>
+                              <p className="text-sm font-bold text-[#1c1917] truncate">
+                                {activeEnrolledCourse.title}
+                              </p>
+                            </div>
+                          </div>
+
+                          <button
+                            onClick={() => navigate(`/viewlecture/${activeEnrolledCourse._id}`)}
+                            className="w-full sm:w-auto inline-flex items-center justify-center gap-2 bg-[#1e3a8a] hover:bg-[#172554] text-white text-xs font-bold px-5 py-2.5 rounded-xl transition shrink-0 cursor-pointer touch-target pressable"
+                          >
+                            <span>Resume Lecture & Notes</span>
+                            <ArrowRight size={14} />
+                          </button>
                         </div>
-                      </div>
+                      </section>
+                    )}
 
-                      {/* Bottom Floating Institution Details */}
-                      <div className="absolute bottom-4 left-4 right-4 text-white">
-                        <p className="text-[11px] font-bold text-blue-200 uppercase tracking-wider">
-                          {institutionType} Learning Studio
-                        </p>
-                        <h3 className="text-base sm:text-lg font-bold text-white drop-shadow-sm truncate">
-                          {tenantName} Curriculum
-                        </h3>
-                      </div>
-                    </div>
+                    {/* Featured Courses for this Organization */}
+                    <CardPage courses={institutionCourses} loading={loadingCourses} />
 
-                    {/* Overlapping Floating Feature Card: Notes & Downloads */}
-                    <div className="absolute -bottom-5 -left-4 sm:-left-6 bg-white/95 backdrop-blur-md border border-[#e8e5dc] rounded-2xl p-3.5 shadow-lg max-w-[240px] hidden sm:flex items-center gap-3">
-                      <div className="w-9 h-9 rounded-xl bg-amber-50 text-amber-700 flex items-center justify-center shrink-0 border border-amber-200">
-                        <FileText size={18} />
-                      </div>
-                      <div className="min-w-0">
-                        <p className="text-xs font-bold text-[#1c1917] truncate">
-                          Notes & Materials
-                        </p>
-                        <p className="text-[10px] text-[#78716c]">
-                          Downloadable PDFs
-                        </p>
-                      </div>
-                    </div>
+                    {/* Organization Curriculum Tracks or Educational Values */}
+                    <ExploreCourses />
 
-                    {/* Overlapping Floating Feature Card: Direct Instruction */}
-                    <div className="absolute -top-4 -right-3 sm:-right-4 bg-white/95 backdrop-blur-md border border-[#e8e5dc] rounded-2xl px-3 py-2 shadow-md flex items-center gap-2 hidden sm:flex">
-                      <Award size={16} className="text-emerald-700 shrink-0" />
-                      <div>
-                        <p className="text-[11px] font-bold text-[#1c1917] leading-none">
-                          Accredited
-                        </p>
-                        <p className="text-[10px] text-[#78716c] leading-tight">
-                          Educator Direct
-                        </p>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </section>
+                    {/* About & Organization Pedagogy Section */}
+                    <Suspense fallback={<div className="h-40 bg-[#f8f7f4]" />}>
+                      <About />
+                    </Suspense>
 
-          {/* Continue Learning in Active Academy (if student is enrolled in courses) */}
-          {activeEnrolledCourse && (
-            <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 -mt-6 relative z-10">
-              <div className="bg-white rounded-2xl border border-[#e8e5dc] p-4 sm:p-5 shadow-md flex flex-col sm:flex-row items-center justify-between gap-4">
-                <div className="flex items-center gap-3.5 min-w-0 w-full sm:w-auto">
-                  <div className="w-10 h-10 rounded-xl bg-[#eff6ff] text-[#1e3a8a] flex items-center justify-center shrink-0 border border-[#bfdbfe]">
-                    <GraduationCap size={20} />
-                  </div>
-                  <div className="min-w-0">
-                    <p className="text-[11px] font-bold text-[#1e3a8a] uppercase tracking-wider">
-                      Continue Learning in {tenantName}
-                    </p>
-                    <p className="text-sm font-bold text-[#1c1917] truncate">
-                      {activeEnrolledCourse.title}
-                    </p>
-                  </div>
-                </div>
-
-                <button
-                  onClick={() => navigate(`/viewlecture/${activeEnrolledCourse._id}`)}
-                  className="w-full sm:w-auto inline-flex items-center justify-center gap-2 bg-[#1e3a8a] hover:bg-[#172554] text-white text-xs font-bold px-5 py-2.5 rounded-xl transition shrink-0 cursor-pointer touch-target pressable"
-                >
-                  <span>Resume Lecture & Notes</span>
-                  <ArrowRight size={14} />
-                </button>
-              </div>
-            </section>
-          )}
-
-          {/* Featured Courses for this Organization */}
-          <CardPage courses={institutionCourses} loading={loadingCourses} />
-
-          {/* Organization Curriculum Tracks or Educational Values */}
-          <ExploreCourses />
-
-          {/* About & Organization Pedagogy Section */}
-          <Suspense fallback={<div className="h-40 bg-[#f8f7f4]" />}>
-            <About />
-          </Suspense>
-
-          {/* Footer */}
-          <Suspense fallback={<div className="h-40 bg-white" />}>
-            <Footer />
-          </Suspense>
-        </>
+                    {/* Footer */}
+                    <Suspense fallback={<div className="h-40 bg-white" />}>
+                      <Footer />
+                    </Suspense>
+                  </>
       )}
-    </div>
-  );
+                </div>
+                );
 }
 

@@ -91,7 +91,7 @@ export default function Login() {
             setInstitutions(data.institutions);
           }
         })
-        .catch(() => {})
+        .catch(() => { })
         .finally(() => setLoadingInstitutions(false));
     }
   }, [step]);
@@ -332,22 +332,20 @@ export default function Login() {
               <button
                 type="button"
                 onClick={() => setRole("student")}
-                className={`py-2 px-3 text-xs sm:text-sm font-bold rounded-xl transition cursor-pointer ${
-                  role === "student"
+                className={`py-2 px-3 text-xs sm:text-sm font-bold rounded-xl transition cursor-pointer ${role === "student"
                     ? "bg-white text-[#1e3a8a] shadow-xs border border-[#d6d3c9]"
                     : "text-[#78716c] hover:text-[#1c1917]"
-                }`}
+                  }`}
               >
                 Student
               </button>
               <button
                 type="button"
                 onClick={() => setRole("educator")}
-                className={`py-2 px-3 text-xs sm:text-sm font-bold rounded-xl transition cursor-pointer ${
-                  role === "educator"
+                className={`py-2 px-3 text-xs sm:text-sm font-bold rounded-xl transition cursor-pointer ${role === "educator"
                     ? "bg-white text-[#1e3a8a] shadow-xs border border-[#d6d3c9]"
                     : "text-[#78716c] hover:text-[#1c1917]"
-                }`}
+                  }`}
               >
                 Educator / Studio
               </button>
@@ -393,11 +391,10 @@ export default function Login() {
               <button
                 type="button"
                 onClick={() => setAuthMethod("email")}
-                className={`py-2 px-3 text-xs sm:text-sm font-bold rounded-xl transition cursor-pointer flex items-center justify-center gap-1.5 ${
-                  authMethod === "email"
+                className={`py-2 px-3 text-xs sm:text-sm font-bold rounded-xl transition cursor-pointer flex items-center justify-center gap-1.5 ${authMethod === "email"
                     ? "bg-white text-[#1e3a8a] shadow-xs border border-[#d6d3c9]"
                     : "text-[#78716c] hover:text-[#1c1917]"
-                }`}
+                  }`}
               >
                 <Mail size={15} />
                 <span>Email</span>
@@ -405,11 +402,10 @@ export default function Login() {
               <button
                 type="button"
                 onClick={() => setAuthMethod("phone")}
-                className={`py-2 px-3 text-xs sm:text-sm font-bold rounded-xl transition cursor-pointer flex items-center justify-center gap-1.5 ${
-                  authMethod === "phone"
+                className={`py-2 px-3 text-xs sm:text-sm font-bold rounded-xl transition cursor-pointer flex items-center justify-center gap-1.5 ${authMethod === "phone"
                     ? "bg-white text-[#1e3a8a] shadow-xs border border-[#d6d3c9]"
                     : "text-[#78716c] hover:text-[#1c1917]"
-                }`}
+                  }`}
               >
                 <Phone size={15} />
                 <span>Phone</span>
