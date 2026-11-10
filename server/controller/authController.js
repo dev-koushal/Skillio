@@ -146,6 +146,7 @@ export const signUp = async (req, res) => {
     return res.status(201).json({
       success: true,
       message: "User created successfully!",
+      token,
       user: safeUser,
       tenant: tenantDoc,
     });
@@ -202,8 +203,9 @@ export const login = async (req, res) => {
 
     // Validate target role allowing compatible administrator / educator roles
     if (role && user.role !== "platform_admin") {
-      const isEducatorTarget = role === "educator" || role === "tenant_admin";
-      const isUserEducator = user.role === "educator" || user.role === "tenant_admin";
+      const educatorRoles = ["educator", "tenant_admin", "instructor", "creator", "admin"];
+      const isEducatorTarget = educatorRoles.includes(role);
+      const isUserEducator = educatorRoles.includes(user.role);
       const isStudentTarget = role === "student";
       const isUserStudent = user.role === "student";
 
@@ -277,6 +279,7 @@ export const login = async (req, res) => {
     return res.status(200).json({
       success: true,
       message: "Login successful!",
+      token,
       user: safeUser,
     });
   } catch (error) {
@@ -287,9 +290,6 @@ export const login = async (req, res) => {
 
 export const logout = async (req, res) => {
   try {
-    const isProduction = process.env.NODE_ENV === "production";
-    const cookieDomain = process.env.COOKIE_DOMAIN || undefined;
-
     // Revoke only the active session on this device (leaves other device active)
     let rawToken = req.cookies?.token;
     if (!rawToken && req.headers.authorization?.startsWith("Bearer ")) {
@@ -304,12 +304,7 @@ export const logout = async (req, res) => {
       } catch (e) {}
     }
 
-    res.clearCookie("token", {
-      httpOnly: true,
-      secure: true,
-      sameSite: "none",
-      domain: cookieDomain,
-    });
+    res.clearCookie("token", getCookieOptions());
     return res.status(200).json({ success: true, message: "Logged out successfully!" });
   } catch (error) {
     return res.status(400).json({ success: false, message: `Logout error: ${error.message || error}` });
@@ -852,6 +847,7 @@ export const verifyPhoneOtp = async (req, res) => {
     return res.status(200).json({
       success: true,
       message: "Phone verified and signed in successfully!",
+      token,
       user: safeUser,
       tenant: tenantDoc,
     });

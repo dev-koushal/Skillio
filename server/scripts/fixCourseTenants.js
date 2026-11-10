@@ -10,10 +10,19 @@ async function main() {
 
   const oct = await Tenant.findOne({ slug: "oriental-college-of-technology" });
   const hello = await Tenant.findOne({ slug: "hello-academy" });
+  const english = await Tenant.findOne({ slug: "english" });
+
+  if (english) {
+    const resEng = await Course.updateMany(
+      { title: { $in: ["English Mastery Course", "English Full Course"] } },
+      { $set: { tenantId: english._id, isPublished: true } }
+    );
+    console.log("Updated courses for English Academy:", resEng.modifiedCount);
+  }
 
   if (oct) {
     const res1 = await Course.updateMany(
-      { title: { $in: ["Docker from first principle", "English Mastery Course"] } },
+      { title: "Docker from first principle" },
       { $set: { tenantId: oct._id, isPublished: true } }
     );
     console.log("Updated courses for Oriental College Of Technology:", res1.modifiedCount);
@@ -21,10 +30,10 @@ async function main() {
 
   if (hello) {
     const res2 = await Course.updateMany(
-      { title: "Introduction to Computer Science and Technology" },
+      { title: { $in: ["Introduction to Computer Science and Technology", "Introduction to Physics"] } },
       { $set: { isPublished: true, tenantId: hello._id } }
     );
-    console.log("Published Introduction to Computer Science for Hello Academy:", res2.modifiedCount);
+    console.log("Published courses for Hello Academy:", res2.modifiedCount);
   }
 
   const allCourses = await Course.find({}).populate("tenantId", "name slug");
@@ -45,3 +54,4 @@ main().catch((err) => {
   console.error(err);
   process.exit(1);
 });
+

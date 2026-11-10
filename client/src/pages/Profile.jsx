@@ -33,6 +33,7 @@ import { setUserData } from "../redux/userSlice";
 import Navbar from "../components/Navbar";
 import { useTenant } from "../context/TenantContext";
 import api from "../services/api";
+import { performLogout } from "../services/authStorage";
 
 function Profile() {
   const { userData } = useSelector((store) => store.user);
@@ -222,11 +223,9 @@ function Profile() {
     }
   };
 
-  const handleLogout = () => {
-    localStorage.removeItem("skillio_active_tenant");
-    sessionStorage.clear();
+  const handleLogout = async () => {
     toast.success("Logged out successfully");
-    window.location.replace("/");
+    await performLogout();
   };
 
   const isStudent = userData?.role === "student";

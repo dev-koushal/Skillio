@@ -87,9 +87,16 @@ const api = axios.create({
   },
 });
 
-// Interceptor to inject tenant slug header on every request automatically
+// Interceptor to inject token and tenant slug headers on every request automatically
 api.interceptors.request.use(
   (config) => {
+    // 1. Inject Authorization header if stored token exists (resilient MNC dual-layer persistence)
+    const token = typeof window !== "undefined" ? localStorage.getItem("skillio_auth_token") : null;
+    if (token && !config.headers.Authorization) {
+      config.headers.Authorization = `Bearer ${token}`;
+    }
+
+    // 2. Inject active tenant slug
     const tenantSlug = getActiveTenantSlug();
     if (tenantSlug) {
       config.headers["x-tenant-slug"] = tenantSlug;
@@ -105,8 +112,13 @@ api.interceptors.response.use(
   (error) => {
     if (error.response?.data?.code === "SESSION_REVOKED") {
       console.warn("[API] Session revoked by another device login.");
-      if (typeof window !== "undefined" && !window.location.pathname.includes("/login")) {
-        window.location.href = "/login?revoked=true";
+      if (typeof window !== "undefined") {
+        localStorage.removeItem("skillio_auth_token");
+        localStorage.removeItem("skillio_user_data");
+        localStorage.removeItem("skillio_active_tenant");
+        if (!window.location.pathname.includes("/login")) {
+          window.location.href = "/login?revoked=true";
+        }
       }
     }
     if (error.response?.data?.code === "CROSS_TENANT_FORBIDDEN") {

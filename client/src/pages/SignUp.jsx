@@ -25,6 +25,7 @@ import { setUserData } from "../redux/userSlice";
 import api from "../services/api";
 import { useTenant } from "../context/TenantContext";
 import Button from "../components/common/Button";
+import { setAuthSession } from "../services/authStorage";
 
 export default function SignUp() {
   const [showPassword, setShowPassword] = useState(false);
@@ -166,6 +167,7 @@ export default function SignUp() {
 
       const { data } = await api.post("/api/auth/signup", payload);
 
+      setAuthSession(data.token, data.user);
       dispatch(setUserData(data.user));
       toast.success("Account created successfully!");
 
@@ -251,6 +253,7 @@ export default function SignUp() {
 
       const { data } = await api.post("/api/auth/phone/verify-otp", payload);
 
+      setAuthSession(data.token, data.user);
       dispatch(setUserData(data.user));
 
       if (role === "educator") {

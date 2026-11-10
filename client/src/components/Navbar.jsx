@@ -26,6 +26,7 @@ import { toast } from "react-toastify";
 import api from "../services/api";
 import { useTenant } from "../context/TenantContext";
 import MobileBottomNav from "./common/MobileBottomNav";
+import { performLogout } from "../services/authStorage";
 
 function Navbar({ currentInstitution = null }) {
   const { userData } = useSelector((state) => state.user);
@@ -76,23 +77,16 @@ function Navbar({ currentInstitution = null }) {
   };
 
   const handleLogout = async () => {
-    try {
-      await api.get("/api/auth/logout");
-    } catch (error) {
-      // Proceed with local logout regardless of network state
-    }
     dispatch(setUserData(null));
     try {
       const { setCreatorCourseData } = await import("../redux/courseSlice");
       dispatch(setCreatorCourseData([]));
     } catch (e) {}
-    localStorage.removeItem("skillio_active_tenant");
-    sessionStorage.clear();
     setDropdownOpen(false);
     setMobileMenuOpen(false);
     setProfileSheetOpen(false);
     toast.success("Logged out successfully!");
-    window.location.replace("/");
+    await performLogout();
   };
 
   // Determine if we are rendering within an institution context or the public platform

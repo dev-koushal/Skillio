@@ -196,54 +196,67 @@ export default function InstitutionHome() {
                   </div>
                 </div>
 
-                {/* Right Academy Pillars */}
-                <div className="lg:col-span-5 grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <div className="bg-white border border-[#e8e5dc] p-5 sm:p-6 rounded-2xl shadow-xs hover:border-[#1e3a8a]/40 transition">
-                    <div className="w-10 h-10 rounded-xl bg-blue-50 text-[#1e3a8a] flex items-center justify-center mb-3">
-                      <BookOpen size={20} />
-                    </div>
-                    <h3 className="font-bold text-sm sm:text-base text-[#1c1917]">
-                      Curated Curriculum
-                    </h3>
-                    <p className="text-xs text-[#78716c] mt-1.5 leading-relaxed">
-                      Sequenced video lectures with free previews and structured chapters.
-                    </p>
-                  </div>
+                {/* Right Column: Layered Photographic Learning Studio Composition */}
+                <div className="lg:col-span-5 relative">
+                  <div className="relative mx-auto max-w-md lg:max-w-none">
+                    {/* Real Collegiate Photographic Visual */}
+                    <div className="relative rounded-3xl overflow-hidden border border-[#e8e5dc] shadow-xl bg-white aspect-[4/3] group">
+                      <img
+                        src="https://images.unsplash.com/photo-1523240795612-9a054b0db644?auto=format&fit=crop&w=1000&q=80"
+                        alt={tenantName}
+                        className="w-full h-full object-cover group-hover:scale-[1.02] transition-transform duration-500"
+                      />
+                      <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/20 to-transparent" />
 
-                  <div className="bg-white border border-[#e8e5dc] p-5 sm:p-6 rounded-2xl shadow-xs hover:border-[#1e3a8a]/40 transition">
-                    <div className="w-10 h-10 rounded-xl bg-amber-50 text-amber-700 flex items-center justify-center mb-3">
-                      <FileText size={20} />
-                    </div>
-                    <h3 className="font-bold text-sm sm:text-base text-[#1c1917]">
-                      Notes & Resources
-                    </h3>
-                    <p className="text-xs text-[#78716c] mt-1.5 leading-relaxed">
-                      Download lecture notes, formula sheets, problem sets, and practice materials.
-                    </p>
-                  </div>
+                      {/* Top Floating Glass Badge */}
+                      <div className="absolute top-4 left-4 right-4 flex items-center justify-between">
+                        <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-xl bg-black/50 backdrop-blur-md text-white text-[11px] font-bold border border-white/20">
+                          <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+                          <span>HLS Video Streaming</span>
+                        </div>
+                        <div className="px-2.5 py-1 rounded-lg bg-white/90 backdrop-blur-sm text-[#1e3a8a] text-[10px] font-extrabold uppercase tracking-wider">
+                          Verified
+                        </div>
+                      </div>
 
-                  <div className="bg-white border border-[#e8e5dc] p-5 sm:p-6 rounded-2xl shadow-xs hover:border-[#1e3a8a]/40 transition">
-                    <div className="w-10 h-10 rounded-xl bg-purple-50 text-purple-700 flex items-center justify-center mb-3">
-                      <GraduationCap size={20} />
+                      {/* Bottom Floating Institution Details */}
+                      <div className="absolute bottom-4 left-4 right-4 text-white">
+                        <p className="text-[11px] font-bold text-blue-200 uppercase tracking-wider">
+                          {institutionType} Learning Studio
+                        </p>
+                        <h3 className="text-base sm:text-lg font-bold text-white drop-shadow-sm truncate">
+                          {tenantName} Curriculum
+                        </h3>
+                      </div>
                     </div>
-                    <h3 className="font-bold text-sm sm:text-base text-[#1c1917]">
-                      Direct Instruction
-                    </h3>
-                    <p className="text-xs text-[#78716c] mt-1.5 leading-relaxed">
-                      Learn directly from specialized educators dedicated to your learning progress.
-                    </p>
-                  </div>
 
-                  <div className="bg-white border border-[#e8e5dc] p-5 sm:p-6 rounded-2xl shadow-xs hover:border-[#1e3a8a]/40 transition">
-                    <div className="w-10 h-10 rounded-xl bg-emerald-50 text-emerald-700 flex items-center justify-center mb-3">
-                      <Award size={20} />
+                    {/* Overlapping Floating Feature Card: Notes & Downloads */}
+                    <div className="absolute -bottom-5 -left-4 sm:-left-6 bg-white/95 backdrop-blur-md border border-[#e8e5dc] rounded-2xl p-3.5 shadow-lg max-w-[240px] hidden sm:flex items-center gap-3">
+                      <div className="w-9 h-9 rounded-xl bg-amber-50 text-amber-700 flex items-center justify-center shrink-0 border border-amber-200">
+                        <FileText size={18} />
+                      </div>
+                      <div className="min-w-0">
+                        <p className="text-xs font-bold text-[#1c1917] truncate">
+                          Notes & Materials
+                        </p>
+                        <p className="text-[10px] text-[#78716c]">
+                          Downloadable PDFs
+                        </p>
+                      </div>
                     </div>
-                    <h3 className="font-bold text-sm sm:text-base text-[#1c1917]">
-                      Dedicated Academy
-                    </h3>
-                    <p className="text-xs text-[#78716c] mt-1.5 leading-relaxed">
-                      Your independent learning home with personalized courses and notes.
-                    </p>
+
+                    {/* Overlapping Floating Feature Card: Direct Instruction */}
+                    <div className="absolute -top-4 -right-3 sm:-right-4 bg-white/95 backdrop-blur-md border border-[#e8e5dc] rounded-2xl px-3 py-2 shadow-md flex items-center gap-2 hidden sm:flex">
+                      <Award size={16} className="text-emerald-700 shrink-0" />
+                      <div>
+                        <p className="text-[11px] font-bold text-[#1c1917] leading-none">
+                          Accredited
+                        </p>
+                        <p className="text-[10px] text-[#78716c] leading-tight">
+                          Educator Direct
+                        </p>
+                      </div>
+                    </div>
                   </div>
                 </div>
               </div>

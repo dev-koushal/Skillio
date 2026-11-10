@@ -22,6 +22,7 @@ import { setUserData } from "../redux/userSlice";
 import api from "../services/api";
 import { useTenant } from "../context/TenantContext";
 import Button from "../components/common/Button";
+import { setAuthSession } from "../services/authStorage";
 
 export default function Login() {
   const [showPassword, setShowPassword] = useState(false);
@@ -97,6 +98,8 @@ export default function Login() {
 
   // Reusable Unified Authentication Success Handler
   const handleAuthSuccess = (data) => {
+    // 1. Persist session token and user payload for MNC-grade session resilience
+    setAuthSession(data.token, data.user);
     dispatch(setUserData(data.user));
     setLoggedInUser(data.user);
 
