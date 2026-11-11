@@ -1,16 +1,18 @@
 import React from "react";
 import { Link } from "react-router-dom";
+import { useSelector } from "react-redux";
 import { useTenant } from "../context/TenantContext";
-import { Building2, Globe } from "lucide-react";
+import "./Footer.css";
 
 function Footer() {
   const { tenant } = useTenant();
+  const { userData } = useSelector((state) => state.user);
   const currentYear = new Date().getFullYear();
   const tenantName = tenant?.name || "Skillio Academy";
   const tenantLogo = tenant?.logo || "/skillio.png";
 
   return (
-    <footer className="bg-white text-[#57534e] border-t border-[#e8e5dc]">
+    <footer className={`app-footer bg-white text-[#57534e] border-t border-[#e8e5dc] ${userData ? "app-footer-authenticated" : ""}`}>
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 sm:py-16">
         <div className="grid grid-cols-1 md:grid-cols-4 gap-8 lg:gap-12">
           {/* Brand Col */}
@@ -38,24 +40,13 @@ function Footer() {
             </h4>
             <ul className="space-y-2 text-xs sm:text-sm">
               <li>
-                <Link to="/allcourses" className="hover:text-[#1e3a8a] transition">
-                  Browse Courses
-                </Link>
-              </li>
-              <li>
-                <Link to="/institutions" className="hover:text-[#1e3a8a] transition flex items-center gap-1.5 font-medium text-[#1e3a8a]">
-                  <Building2 size={13} />
-                  Find Institution
-                </Link>
-              </li>
-              <li>
-                <Link to="/login" className="hover:text-[#1e3a8a] transition">
+                <Link to="/login" className="hover:text-[#5b3cc4] transition">
                   Sign In
                 </Link>
               </li>
               <li>
-                <Link to="/signup" className="hover:text-[#1e3a8a] transition">
-                  Get Started
+                <Link to="/signup" className="hover:text-[#5b3cc4] transition">
+                  Create an account
                 </Link>
               </li>
             </ul>
@@ -68,17 +59,17 @@ function Footer() {
             </h4>
             <ul className="space-y-2 text-xs sm:text-sm">
               <li>
-                <Link to="/create-institution" className="hover:text-[#1e3a8a] transition font-semibold text-[#451a03]">
+                <Link to="/signup?role=educator" className="hover:text-[#5b3cc4] transition font-semibold text-[#5b3cc4]">
                   Launch Academy
                 </Link>
               </li>
               <li>
-                <Link to="/courses" className="hover:text-[#1e3a8a] transition">
+                <Link to="/courses" className="hover:text-[#5b3cc4] transition">
                   Course Studio
                 </Link>
               </li>
               <li>
-                <Link to="/dashboard" className="hover:text-[#1e3a8a] transition">
+                <Link to="/dashboard" className="hover:text-[#5b3cc4] transition">
                   Instructor Dashboard
                 </Link>
               </li>
@@ -93,12 +84,8 @@ function Footer() {
             <p className="text-xs sm:text-sm font-semibold text-[#1c1917]">
               {tenant?.organizationName || tenantName}
             </p>
-            <p className="text-xs text-[#78716c]">
-              Domain: <span className="font-mono text-[11px] text-[#1e3a8a] font-semibold">{tenant?.slug}.mylms.com</span>
-            </p>
-            <p className="text-xs text-[#78716c]">
-              Status: <span className="text-emerald-700 font-semibold capitalize bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200">{tenant?.status || "Active"}</span>
-            </p>
+            {tenant?.customDomain && <p className="text-xs text-[#78716c]">Domain: <span className="font-mono text-[11px] text-[#5b3cc4] font-semibold">{tenant.customDomain}</span></p>}
+            {tenant?.status && <p className="text-xs text-[#78716c]">Status: <span className="text-emerald-700 font-semibold capitalize bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200">{tenant.status}</span></p>}
           </div>
         </div>
 
@@ -106,8 +93,6 @@ function Footer() {
         <div className="mt-12 pt-6 border-t border-[#f2efe9] flex flex-col sm:flex-row justify-between items-center gap-4 text-xs text-[#78716c]">
           <p>© {currentYear} {tenantName}. {tenant?.footerText || "All rights reserved."}</p>
           <div className="flex items-center gap-4">
-            <Link to="/institutions" className="hover:text-[#1e3a8a]">Institution Directory</Link>
-            <span>•</span>
             <span>Powered by Skillio SaaS</span>
           </div>
         </div>

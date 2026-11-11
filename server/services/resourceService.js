@@ -1,6 +1,7 @@
 import Resource from "../models/resourceModel.js";
 import Course from "../models/coursesModel.js";
 import Lecture from "../models/lectureModel.js";
+import { canManageCourse, canManageResource } from "../utils/permissions.js";
 
 /**
  * Shared Resource Service for both REST controllers and the AI Assistant.
@@ -34,11 +35,7 @@ export const resourceService = {
       throw new Error("Course not found in this organization");
     }
 
-    if (
-      course.creator.toString() !== userId.toString() &&
-      userRole !== "tenant_admin" &&
-      userRole !== "platform_admin"
-    ) {
+    if (!(await canManageCourse({ course, tenantId, userId, userRole }))) {
       throw new Error("You are not authorized to add resources to this course");
     }
 
@@ -100,13 +97,7 @@ export const resourceService = {
     }
 
     const course = await Course.findOne({ _id: resource.courseId, tenantId });
-    if (
-      course &&
-      course.creator.toString() !== userId.toString() &&
-      resource.uploadedBy.toString() !== userId.toString() &&
-      userRole !== "tenant_admin" &&
-      userRole !== "platform_admin"
-    ) {
+    if (!(await canManageResource({ course, resource, tenantId, userId, userRole }))) {
       throw new Error("You are not authorized to delete this resource");
     }
 

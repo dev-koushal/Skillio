@@ -10,6 +10,8 @@ import Footer from "../components/Footer";
 import { CourseCardSkeleton } from "../components/common/Skeleton";
 import { useTenant } from "../context/TenantContext";
 import EmptyState from "../components/common/EmptyState";
+import { setStoredTenantSlug } from "../services/tenantStorage";
+import "./InstitutionStudentPages.css";
 
 function AllCourses() {
   const navigate = useNavigate();
@@ -23,7 +25,7 @@ function AllCourses() {
 
   useEffect(() => {
     if (slug && slug !== "platform") {
-      localStorage.setItem("skillio_active_tenant", slug);
+      setStoredTenantSlug(slug);
     }
     if (activeSlug && activeSlug !== "platform") {
       api.get(`/api/course/by-institution/${activeSlug}`)
@@ -141,10 +143,14 @@ function AllCourses() {
 
   const isLoading = courseData === null;
   const tenantName = tenant?.name || "This Academy";
+  const accent = /^#(?:[\da-f]{3}|[\da-f]{6})$/i.test(tenant?.primaryColor || "")
+    ? tenant.primaryColor
+    : "#5b3cc4";
+  const tenantStyle = { "--institution-accent": accent };
 
   return (
-    <div className="flex flex-col min-h-screen bg-[#f8f7f4] text-[#1c1917] font-sans">
-      <Navbar />
+    <div className="institution-student-page flex flex-col min-h-screen font-sans" style={tenantStyle}>
+      <Navbar currentInstitution={tenant?.isPlatform ? null : tenant} />
 
       <main className="max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-10 flex-1 space-y-6 pb-28 md:pb-12">
         {/* Top Header */}
@@ -159,7 +165,7 @@ function AllCourses() {
                 <ArrowLeft size={18} />
               </button>
               <h1 className="text-2xl sm:text-3xl font-extrabold text-[#1c1917] tracking-tight">
-                Curriculum Catalog
+                {tenant?.isPlatform ? "Explore courses" : `Courses at ${tenantName}`}
               </h1>
             </div>
             <p className="text-xs sm:text-sm text-[#78716c]">

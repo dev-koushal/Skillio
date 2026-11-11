@@ -1,0 +1,17 @@
+.course-delete-button,.course-mobile-delete { display:inline-flex; align-items:center; justify-content:center; gap:7px; min-height:38px; padding:0 11px; border:1px solid #efcaca; border-radius:8px; background:#fff; color:#a22d2d; font-size:12px; font-weight:700; cursor:pointer; }
+.course-delete-button:hover,.course-mobile-delete:hover { background:#fff5f5; border-color:#d99a9a; }
+.course-delete-button:disabled,.course-mobile-delete:disabled { opacity:.55; cursor:wait; }
+.course-mobile-actions { display:grid; grid-template-columns:1fr auto; gap:8px; }
+.course-mobile-edit { min-height:40px; padding:0 12px; border:1px solid #d6d3c9; border-radius:8px; background:#faf9f6; color:#1e3a8a; font-size:12px; font-weight:700; cursor:pointer; }
+.course-list-loading { display:flex; min-height:180px; align-items:center; justify-content:center; gap:10px; color:#69645c; font-size:13px; }
+.course-loading-spinner { width:17px; height:17px; border:2px solid #ddd5f0; border-top-color:#5b3cc4; border-radius:50%; animation:course-spin .7s linear infinite; }
+@keyframes course-spin { to { transform:rotate(360deg); } }
+@media(max-width:640px) {
+ .educator-courses-main { width:min(100% - 24px, 1280px); padding-top:14px; gap:16px; }
+ .educator-courses-main > div:first-child { align-items:stretch; gap:12px; }
+ .educator-courses-main h1 { font-size:21px; line-height:1.15; }
+ .educator-courses-main > div:first-child > button { min-height:40px; padding:0 13px; font-size:12px; }
+ .educator-courses-main .md\:hidden { gap:9px; }
+ .educator-courses-main .md\:hidden > div { padding:12px; border-radius:12px; }
+ .course-mobile-delete { min-height:40px; padding:0 12px; }
+}

@@ -5,53 +5,32 @@ import { connectDB } from "../config/connectDB.js";
 import Course from "../models/coursesModel.js";
 import Tenant from "../models/tenantModel.js";
 
+// Usage: node server/scripts/fixCourseTenants.js <tenant-slug> <course-id> [course-id ...]
+// Takes explicit IDs so similarly named courses can never be reassigned accidentally.
 async function main() {
+  const [tenantSlug, ...courseIds] = process.argv.slice(2);
+  if (!tenantSlug || courseIds.length === 0) {
+    throw new Error("Provide a tenant slug and one or more course IDs. No records were changed.");
+  }
+
   await connectDB();
+  const tenant = await Tenant.findOne({ slug: tenantSlug.trim().toLowerCase(), status: "active" });
+  if (!tenant) throw new Error(`Active institution not found: ${tenantSlug}`);
 
-  const oct = await Tenant.findOne({ slug: "oriental-college-of-technology" });
-  const hello = await Tenant.findOne({ slug: "hello-academy" });
-  const english = await Tenant.findOne({ slug: "english" });
-
-  if (english) {
-    const resEng = await Course.updateMany(
-      { title: { $in: ["English Mastery Course", "English Full Course"] } },
-      { $set: { tenantId: english._id, isPublished: true } }
-    );
-    console.log("Updated courses for English Academy:", resEng.modifiedCount);
-  }
-
-  if (oct) {
-    const res1 = await Course.updateMany(
-      { title: "Docker from first principle" },
-      { $set: { tenantId: oct._id, isPublished: true } }
-    );
-    console.log("Updated courses for Oriental College Of Technology:", res1.modifiedCount);
-  }
-
-  if (hello) {
-    const res2 = await Course.updateMany(
-      { title: { $in: ["Introduction to Computer Science and Technology", "Introduction to Physics"] } },
-      { $set: { isPublished: true, tenantId: hello._id } }
-    );
-    console.log("Published courses for Hello Academy:", res2.modifiedCount);
-  }
-
-  const allCourses = await Course.find({}).populate("tenantId", "name slug");
-  console.log("Current courses in database:");
-  allCourses.forEach((c) => {
-    console.log({
-      title: c.title,
-      isPublished: c.isPublished,
-      tenantName: c.tenantId?.name,
-      tenantSlug: c.tenantId?.slug,
-    });
-  });
-
-  process.exit(0);
+  const result = await Course.updateMany(
+    { _id: { $in: courseIds }, tenantId: { $ne: tenant._id } },
+    { $set: { tenantId: tenant._id } }
+  );
+  console.log(`Assigned ${result.modifiedCount} course(s) to ${tenant.name} (${tenant.slug}).`);
 }
 
-main().catch((err) => {
-  console.error(err);
-  process.exit(1);
-});
+main()
+  .catch((error) => {
+    console.error(error.message || error);
+    process.exitCode = 1;
+  })
+  .finally(async () => {
+    const mongoose = await import("mongoose");
+    await mongoose.default.connection.close().catch(() => {});
+  });
 

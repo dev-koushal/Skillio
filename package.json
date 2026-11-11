@@ -10,8 +10,10 @@
     "client": "cd client && npm run dev",
     "build": "cd client && npx vite build",
     "build:client": "cd client && npx vite build",
-    "test": "node server/tests/multiTenantSecurity.test.js && node server/tests/inProcessRoutes.test.js && node server/tests/courseAccessAndResources.test.js && node server/tests/aiAssistant.test.js && node server/tests/forgotPassword.test.js && node server/tests/institutionStudentManagement.test.js && node server/tests/phoneAuth.test.js && node server/tests/videoSecurityAndSessions.test.js",
-    "migrate:tenants": "node server/scripts/migrateMultiTenant.js"
+    "test": "node client/src/services/tenantContext.test.js && node client/src/services/enrollmentUser.test.js && node client/src/auth/permissions.test.js && node server/tests/authorizationPolicy.test.js && node server/tests/authorizationErrorContract.test.js && node server/utils/youtubeVideo.test.js && node server/tests/liveClassControllerTenantScope.test.js && node server/tests/youtubeLiveSync.test.js && node server/tests/multiTenantSecurity.test.js && node server/tests/inProcessRoutes.test.js && node server/tests/courseAccessAndResources.test.js && node server/tests/courseControllerTenantScope.test.js && node server/tests/institutionCourseDropdown.test.js && node server/tests/coursePublicationVisibility.test.js && node server/tests/courseDeletionCascade.test.js && node server/tests/courseReviewAccess.test.js && node server/tests/resourceControllerTenantScope.test.js && node server/tests/orderControllerSecurity.test.js && node server/tests/razorpayPaymentVerification.test.js && node server/tests/institutionCreationController.test.js && node server/tests/institutionStudentTenantGuard.test.js && node server/tests/institutionSelectionController.test.js && node server/tests/tenantLoginResolution.test.js && node server/tests/invitationCourseScope.test.js && node server/tests/studentInviteFlow.test.js && node server/tests/aiAssistant.test.js && node server/tests/forgotPassword.test.js && node server/tests/institutionStudentManagement.test.js && node server/tests/institutionSignupPayload.test.js && node server/tests/phoneAuth.test.js && node server/tests/videoSecurityAndSessions.test.js",
+    "migrate:tenants": "node server/scripts/migrateMultiTenant.js",
+    "migrate:live-class-indexes": "node server/scripts/ensureLiveClassIndexes.js",
+    "migrate:educator-roles": "node server/scripts/migrateInstitutionEducatorRoles.js"
   },
   "keywords": [
     "lms",

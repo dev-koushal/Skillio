@@ -64,49 +64,7 @@ const runMigration = async () => {
       console.log(`Existing default tenant found: ${defaultTenant._id} (${defaultTenant.name})`);
     }
 
-    // Step 2: Ensure Localhost / Subdomain Test Tenants (Physics & Coding)
-    const testTenants = [
-      {
-        name: "Physics Academy",
-        slug: "physics",
-        title: "Master Physics from Basics to Advanced",
-        subtitle: "Comprehensive physics curricula crafted for school and university students.",
-        primaryColor: "#1e3a8a",
-        secondaryColor: "#0f172a",
-        organizationName: "Physics Academy",
-        status: "active",
-      },
-      {
-        name: "Coding Academy",
-        slug: "coding",
-        title: "Master Modern Software Engineering",
-        subtitle: "Full-stack web development, system design, and AI tooling with industry experts.",
-        primaryColor: "#065f46",
-        secondaryColor: "#0f172a",
-        organizationName: "Coding Academy",
-        status: "active",
-      },
-      {
-        name: "ABC Academy",
-        slug: "abcacademy",
-        title: "Excellence in Executive Education",
-        subtitle: "Accelerate your career with accredited programs and mentorship.",
-        primaryColor: "#7c2d12",
-        secondaryColor: "#0f172a",
-        organizationName: "ABC Academy",
-        status: "active",
-      }
-    ];
-
-    for (const t of testTenants) {
-      const exists = await Tenant.findOne({ slug: t.slug });
-      if (!exists && !isDryRun) {
-        const created = await Tenant.create(t);
-        console.log(`Created test tenant: ${created.slug} (${created.name})`);
-      }
-    }
-
-    // Step 3: Clean up legacy global unique email index if present
+    // Step 2: Clean up legacy global unique email index if present
     try {
       const userCollection = mongoose.connection.collection("users");
       const indexes = await userCollection.indexes();
@@ -124,7 +82,7 @@ const runMigration = async () => {
       console.log("Note on index inspection:", err.message);
     }
 
-    // Step 4: Associate orphaned Users with default tenant
+    // Step 3: Associate orphaned Users with default tenant
     const orphanedUsers = await User.countDocuments({
       $or: [{ tenantId: { $exists: false } }, { tenantId: null }],
     });
@@ -137,7 +95,7 @@ const runMigration = async () => {
       console.log(`Migrated ${res.modifiedCount} users to default tenant.`);
     }
 
-    // Step 5: Associate orphaned Courses with default tenant
+    // Step 4: Associate orphaned Courses with default tenant
     const orphanedCourses = await Course.countDocuments({
       $or: [{ tenantId: { $exists: false } }, { tenantId: null }],
     });
@@ -150,7 +108,7 @@ const runMigration = async () => {
       console.log(`Migrated ${res.modifiedCount} courses to default tenant.`);
     }
 
-    // Step 6: Associate orphaned Lectures with default tenant and link courseId
+    // Step 5: Associate orphaned Lectures with default tenant and link courseId
     const orphanedLectures = await Lecture.countDocuments({
       $or: [{ tenantId: { $exists: false } }, { tenantId: null }],
     });
@@ -174,7 +132,7 @@ const runMigration = async () => {
       console.log(`Migrated lectures and backfilled courseId references.`);
     }
 
-    // Step 7: Associate orphaned Reviews with default tenant
+    // Step 6: Associate orphaned Reviews with default tenant
     const orphanedReviews = await Review.countDocuments({
       $or: [{ tenantId: { $exists: false } }, { tenantId: null }],
     });
@@ -187,7 +145,7 @@ const runMigration = async () => {
       console.log(`Migrated ${res.modifiedCount} reviews to default tenant.`);
     }
 
-    // Step 8: Build and sync all schema indexes
+    // Step 7: Build and sync all schema indexes
     if (!isDryRun) {
       console.log("Synchronizing schema indexes...");
       await Tenant.syncIndexes();

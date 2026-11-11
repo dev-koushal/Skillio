@@ -1,7 +1,12 @@
 import Course from "../models/coursesModel.js";
 import Lecture from "../models/lectureModel.js";
 import Resource from "../models/resourceModel.js";
+import Review from "../models/reviewModel.js";
+import CourseAccess from "../models/courseAccessModel.js";
+import User from "../models/userModel.js";
+import Invitation from "../models/invitationModel.js";
 import uploadCloudinary from "../config/cloudinary.js";
+import { canManageCourse } from "../utils/permissions.js";
 
 /**
  * Service to manage course business logic.
@@ -16,6 +21,14 @@ export const courseService = {
       throw new Error("Course title is required");
     }
 
+    const normalizedPrice = Number(price);
+    if (!Number.isFinite(normalizedPrice) || normalizedPrice < 0) {
+      throw new Error("Course price must be a valid non-negative number");
+    }
+    if (!["Beginner", "Intermediate", "Advanced"].includes(level || "Beginner")) {
+      throw new Error("Course level is invalid");
+    }
+
     const course = await Course.create({
       tenantId,
       creator: userId,
@@ -23,9 +36,9 @@ export const courseService = {
       category: category ? category.trim() : "General",
       subTitle: subTitle ? subTitle.trim() : "",
       description: description ? description.trim() : "",
-      price: Number(price) || 0,
+      price: normalizedPrice,
       level: level || "Beginner",
-      isPublished: Boolean(isPublished),
+      isPublished: isPublished === true || isPublished === "true",
       lectures: [],
       enrolledStudents: [],
     });
@@ -42,22 +55,34 @@ export const courseService = {
       throw new Error("Course not found in this organization");
     }
 
-    // Check authorization: only creator or tenant/platform admin
-    if (
-      course.creator.toString() !== userId.toString() &&
-      userRole !== "tenant_admin" &&
-      userRole !== "platform_admin"
-    ) {
+    // The course creator or institution owner may edit it.
+    if (!(await canManageCourse({ course, tenantId, userId, userRole }))) {
       throw new Error("You are not authorized to edit this course");
     }
 
     const fieldsToUpdate = {};
-    if (typeof updateData.title !== "undefined") fieldsToUpdate.title = updateData.title.trim();
-    if (typeof updateData.subTitle !== "undefined") fieldsToUpdate.subTitle = updateData.subTitle.trim();
-    if (typeof updateData.description !== "undefined") fieldsToUpdate.description = updateData.description.trim();
-    if (typeof updateData.category !== "undefined") fieldsToUpdate.category = updateData.category.trim();
+    if (typeof updateData.title !== "undefined") {
+      if (typeof updateData.title !== "string" || !updateData.title.trim()) {
+        throw new Error("Course title is required");
+      }
+      fieldsToUpdate.title = updateData.title.trim();
+    }
+    if (typeof updateData.subTitle !== "undefined") fieldsToUpdate.subTitle = String(updateData.subTitle ?? "").trim();
+    if (typeof updateData.description !== "undefined") fieldsToUpdate.description = String(updateData.description ?? "").trim();
+    if (typeof updateData.category !== "undefined") {
+      const category = String(updateData.category ?? "").trim();
+      if (!category) throw new Error("Course category is required");
+      fieldsToUpdate.category = category;
+    }
     if (typeof updateData.level !== "undefined") fieldsToUpdate.level = updateData.level;
-    if (typeof updateData.price !== "undefined") fieldsToUpdate.price = Number(updateData.price);
+    if (typeof updateData.price !== "undefined") {
+      const price = Number(updateData.price);
+      if (!Number.isFinite(price) || price < 0) throw new Error("Course price must be a valid non-negative number");
+      fieldsToUpdate.price = price;
+    }
+    if (typeof updateData.level !== "undefined" && !["Beginner", "Intermediate", "Advanced"].includes(updateData.level)) {
+      throw new Error("Course level is invalid");
+    }
     if (typeof updateData.isPublished !== "undefined") {
       fieldsToUpdate.isPublished = updateData.isPublished === true || updateData.isPublished === "true";
     }
@@ -69,8 +94,11 @@ export const courseService = {
       fieldsToUpdate.thumbnail = updateData.thumbnailUrl;
     }
 
-    const updated = await Course.findByIdAndUpdate(courseId, fieldsToUpdate, {
+    const courseFilter = { _id: courseId };
+    if (userRole !== "platform_admin") courseFilter.tenantId = tenantId;
+    const updated = await Course.findOneAndUpdate(courseFilter, fieldsToUpdate, {
       returnDocument: "after",
+      runValidators: true,
     }).populate("lectures reviews");
 
     return updated;
@@ -131,18 +159,33 @@ export const courseService = {
       throw new Error("Course not found");
     }
 
-    if (
-      course.creator.toString() !== userId.toString() &&
-      userRole !== "tenant_admin" &&
-      userRole !== "platform_admin"
-    ) {
+    if (!(await canManageCourse({ course, tenantId, userId, userRole }))) {
       throw new Error("You are not authorized to delete this course");
     }
 
-    // Delete associated lectures and resources
+    // Remove dependent learning content, but retain access grants as an audit trail.
     await Lecture.deleteMany({ _id: { $in: course.lectures }, tenantId });
     await Resource.deleteMany({ courseId, tenantId });
-    await Course.findByIdAndDelete(courseId);
+    await Review.deleteMany({ course: courseId, tenantId });
+    await CourseAccess.updateMany(
+      { courseId, tenantId, status: "active" },
+      {
+        $set: {
+          status: "revoked",
+          revokedAt: new Date(),
+          revokedBy: userId,
+          revocationReason: "Course deleted",
+        },
+      }
+    );
+    await Invitation.updateMany(
+      { courseId, tenantId, status: "pending" },
+      { $set: { status: "revoked" } }
+    );
+    // Course IDs are globally unique, while a student's primary tenant may differ from
+    // another institution they joined. Remove the course reference from every user record.
+    await User.updateMany({ enrolledCourses: courseId }, { $pull: { enrolledCourses: courseId } });
+    await Course.deleteOne({ _id: courseId, tenantId });
 
     return { success: true, deletedCourseId: courseId, title: course.title };
   },
@@ -169,11 +212,7 @@ export const courseService = {
       throw new Error("Course not found");
     }
 
-    if (
-      course.creator.toString() !== userId.toString() &&
-      userRole !== "tenant_admin" &&
-      userRole !== "platform_admin"
-    ) {
+    if (!(await canManageCourse({ course, tenantId, userId, userRole }))) {
       throw new Error("You are not authorized to reorder lectures in this course");
     }
 

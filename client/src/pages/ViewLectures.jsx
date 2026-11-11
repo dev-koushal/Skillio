@@ -16,10 +16,17 @@ import api from "../services/api";
 import Navbar from "../components/Navbar";
 import Footer from "../components/Footer";
 import SecureVideoPlayer from "../components/video/SecureVideoPlayer";
+import { useTenant } from "../context/TenantContext";
+import "./InstitutionStudentPages.css";
 
 function ViewLectures() {
   const { courseId } = useParams();
   const navigate = useNavigate();
+  const { tenant } = useTenant();
+  const accent = /^#(?:[\da-f]{3}|[\da-f]{6})$/i.test(tenant?.primaryColor || "")
+    ? tenant.primaryColor
+    : "#5b3cc4";
+  const tenantStyle = { "--institution-accent": accent };
 
   const [course, setCourse] = useState(null);
   const [selectedLecture, setSelectedLecture] = useState(null);
@@ -104,8 +111,8 @@ function ViewLectures() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-[#f8f7f4] text-[#1c1917] flex flex-col">
-        <Navbar />
+      <div className="institution-student-page min-h-screen text-[#1c1917] flex flex-col" style={tenantStyle}>
+        <Navbar currentInstitution={tenant?.isPlatform ? null : tenant} />
         <div className="max-w-4xl mx-auto px-4 py-20 text-center space-y-4 flex-1 flex flex-col items-center justify-center">
           <div className="w-10 h-10 border-4 border-[#1e3a8a] border-t-transparent rounded-full animate-spin" />
           <p className="text-xs font-bold uppercase tracking-wider text-[#78716c]">
@@ -119,8 +126,8 @@ function ViewLectures() {
   // Access Denied State (Locked Course)
   if (accessDenied) {
     return (
-      <div className="min-h-screen bg-[#f8f7f4] text-[#1c1917] flex flex-col">
-        <Navbar />
+      <div className="institution-student-page min-h-screen text-[#1c1917] flex flex-col" style={tenantStyle}>
+        <Navbar currentInstitution={tenant?.isPlatform ? null : tenant} />
         <div className="flex-1 max-w-xl mx-auto px-4 py-16 flex flex-col items-center justify-center text-center space-y-5">
           <div className="w-16 h-16 rounded-3xl bg-amber-100 text-amber-800 flex items-center justify-center border border-amber-300 shadow-xs">
             <Lock size={32} />
@@ -172,10 +179,10 @@ function ViewLectures() {
   };
 
   return (
-    <div className="min-h-screen bg-[#f8f7f4] text-[#1c1917] flex flex-col font-sans">
-      <Navbar />
+    <div className="institution-student-page min-h-screen text-[#1c1917] flex flex-col font-sans" style={tenantStyle}>
+      <Navbar currentInstitution={tenant?.isPlatform ? null : tenant} />
 
-      <main className="max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-6 space-y-5 flex-1 pb-28 md:pb-12">
+      <main className="lecture-player-page max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-6 space-y-5 flex-1 pb-28 md:pb-12">
         {/* Navigation & Progress Header */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-[#e8e5dc]">
           <div className="flex items-center gap-2">
@@ -208,8 +215,8 @@ function ViewLectures() {
         {/* Video Player + Playlist Layout */}
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
           {/* Main Video Player & Controls */}
-          <div className="lg:col-span-8 space-y-5">
-            <div className="bg-white border border-[#e8e5dc] rounded-3xl p-4 sm:p-6 space-y-4 shadow-xs">
+          <div className="lecture-player-content lg:col-span-8 space-y-5">
+            <div className="lecture-video-panel bg-white border border-[#e8e5dc] rounded-3xl p-4 sm:p-6 space-y-4 shadow-xs">
               {/* Dominant Video Container with Secure Authorized Player */}
               <div className="w-full">
                 {selectedLecture?._id ? (
@@ -341,7 +348,7 @@ function ViewLectures() {
           </div>
 
           {/* Playlist Sidebar */}
-          <div className="lg:col-span-4 bg-white border border-[#e8e5dc] rounded-3xl p-5 sm:p-6 space-y-4 shadow-xs sticky top-24">
+          <div className="lecture-playlist lg:col-span-4 bg-white border border-[#e8e5dc] rounded-3xl p-5 sm:p-6 space-y-4 shadow-xs sticky top-24">
             <div className="flex items-center justify-between pb-3 border-b border-[#f2efe9]">
               <h2 className="text-sm font-bold text-[#1c1917]">Course Playlist</h2>
               <span className="text-xs font-semibold text-[#78716c]">{lectures.length} Lectures</span>
@@ -371,6 +378,9 @@ function ViewLectures() {
                         {idx + 1}
                       </div>
                       <span className="text-xs truncate">{lec.lectureTitle}</span>
+                      <span className="shrink-0 rounded-full border border-[#e8e5dc] bg-white px-1.5 py-0.5 text-[9px] font-semibold text-[#57534e]">
+                        {lec.videoProvider === "youtube" ? "YouTube" : lec.videoProvider === "bunny" ? "Native video" : "Video"}
+                      </span>
                     </div>
 
                     {isCurrent && (

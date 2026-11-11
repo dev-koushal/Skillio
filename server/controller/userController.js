@@ -26,8 +26,8 @@ export const getCurrentUser = async (req, res) => {
 
     const safeUser = user.toObject ? user.toObject() : { ...user };
 
-    // Filter enrolled courses if in explicit institution context
-    if (tenantId && safeUser.enrolledCourses && Array.isArray(safeUser.enrolledCourses)) {
+    // Keep non-student course summaries within the active tenant context.
+    if (safeUser.role !== "student" && tenantId && safeUser.enrolledCourses && Array.isArray(safeUser.enrolledCourses)) {
       safeUser.enrolledCourses = safeUser.enrolledCourses.filter(
         (c) => c && (!c.tenantId || c.tenantId.toString() === tenantId.toString())
       );
@@ -38,6 +38,7 @@ export const getCurrentUser = async (req, res) => {
       try {
         const memberships = await InstitutionMembership.find({
           userId: safeUser._id,
+          role: "student",
           status: { $in: ["active", "enrolled", "ACTIVE", "ENROLLED"] },
         }).populate("tenantId", "name slug logo institutionType title");
 
@@ -52,18 +53,39 @@ export const getCurrentUser = async (req, res) => {
             institutionType: m.tenantId.institutionType,
             joinedAt: m.joinedAt,
           }));
-      } catch (e) {}
+        const activeTenantIds = new Set(
+          memberships.filter((membership) => membership?.tenantId).map((membership) => membership.tenantId._id.toString())
+        );
+        if (Array.isArray(safeUser.enrolledCourses)) {
+          safeUser.enrolledCourses = safeUser.enrolledCourses.filter((course) =>
+            course?.tenantId &&
+            activeTenantIds.has(course.tenantId.toString()) &&
+            (!tenantId || course.tenantId.toString() === tenantId.toString())
+          );
+        }
+      } catch (error) {
+        console.error("[GetCurrentUser Membership Error]", error);
+        return res.status(503).json({
+          success: false,
+          code: "MEMBERSHIP_LOOKUP_UNAVAILABLE",
+          message: "Your institution list is temporarily unavailable. Please retry.",
+        });
+      }
     }
 
     // Attach tenant doc if tenantId exists or if owned
     if (safeUser.tenantId) {
       try {
         const tenantDoc = await Tenant.findById(safeUser.tenantId)
-          .select("name slug logo institutionType title")
+          .select("name slug logo institutionType title ownerId")
           .lean();
-        if (tenantDoc) safeUser.tenant = tenantDoc;
+        if (tenantDoc) {
+          safeUser.isInstitutionOwner = tenantDoc.ownerId?.toString() === safeUser._id.toString();
+          delete tenantDoc.ownerId;
+          safeUser.tenant = tenantDoc;
+        }
       } catch (e) {}
-    } else if (safeUser.role === "educator" || safeUser.role === "tenant_admin") {
+    } else if (safeUser.role === "educator") {
       try {
         const ownedTenant = await Tenant.findOne({ ownerId: safeUser._id, status: "active" })
           .select("name slug logo institutionType title")

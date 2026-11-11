@@ -27,8 +27,18 @@ const lectureSchema = new mongoose.Schema(
     },
     videoProvider: {
       type: String,
-      enum: ["bunny", "cloudinary"],
+      enum: ["bunny", "cloudinary", "youtube"],
       default: "cloudinary",
+    },
+    youtubeVideoId: {
+      type: String,
+      default: "",
+      trim: true,
+    },
+    youtubeUrl: {
+      type: String,
+      default: "",
+      trim: true,
     },
     bunnyVideoId: {
       type: String,

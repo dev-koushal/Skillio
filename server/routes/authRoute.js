@@ -5,6 +5,8 @@ import {
   resetPassword,
   sendOtp,
   signUp,
+  selectInstitution,
+  joinInstitution,
   verifyOtp,
   sendPhoneOtp,
   verifyPhoneOtp,
@@ -18,6 +20,8 @@ const authRouter = express.Router();
 
 authRouter.post('/signup', signUp);
 authRouter.post('/login', login);
+authRouter.post('/select-institution', isAuth, selectInstitution);
+authRouter.post('/join-institution', isAuth, joinInstitution);
 authRouter.get('/logout', logout);
 authRouter.post("/sendotp", sendOtp);
 authRouter.post("/verifyotp", verifyOtp);

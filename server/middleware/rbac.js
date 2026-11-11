@@ -1,53 +1,41 @@
 import User from "../models/userModel.js";
+import { can, normalizeRole, PERMISSIONS, ROLES } from "../utils/permissions.js";
+import { apiError, AUTH_MESSAGES } from "../utils/apiErrors.js";
 
-/**
- * Middleware to require specific roles.
- * Must be used after isAuth middleware (req.userId and req.tenantId present).
- */
-export const requireRole = (allowedRoles = []) => {
-  return async (req, res, next) => {
-    try {
-      if (!req.userId) {
-        return res.status(401).json({ success: false, message: "Authentication required" });
-      }
+export const requirePermission = (permission) => async (req, res, next) => {
+  try {
+    if (!req.userId) return apiError(res, 401, "UNAUTHENTICATED");
+    const user = await User.findById(req.userId);
+    if (!user) return apiError(res, 401, "UNAUTHENTICATED");
 
-      // Check user role from DB if not already attached, scoping to tenant
-      // Note: platform_admin can access across tenants if needed, but otherwise scoped to tenant
-      const user = await User.findById(req.userId);
-      if (!user) {
-        return res.status(401).json({ success: false, message: "User not found" });
-      }
-
-      // Allow platform_admin anywhere
-      if (user.role === "platform_admin") {
-        req.userRole = user.role;
-        return next();
-      }
-
-      // Strict tenant check: user must belong to active tenant
-      if (user.tenantId.toString() !== req.tenantId.toString()) {
-        return res.status(403).json({
-          success: false,
-          message: "Access denied: user does not belong to this organization",
-        });
-      }
-
-      if (!allowedRoles.includes(user.role)) {
-        return res.status(403).json({
-          success: false,
-          message: `Access denied: requires one of [${allowedRoles.join(", ")}] roles`,
-        });
-      }
-
-      req.userRole = user.role;
-      next();
-    } catch (error) {
-      return res.status(500).json({ success: false, message: error.message });
+    const userRole = normalizeRole(user.role);
+    const allowed = await can({
+      permission,
+      userId: user._id,
+      userRole,
+      userTenantId: user.tenantId,
+      tenantId: req.tenantId,
+    });
+    if (!allowed) {
+      const institutionPermission = [PERMISSIONS.MANAGE_INSTITUTION, PERMISSIONS.MANAGE_STUDENTS, PERMISSIONS.MANAGE_LIVE_CLASSES].includes(permission);
+      console.warn(`[Authorization] permission denied user=${req.userId} permission=${permission} tenant=${req.tenantId}`);
+      return apiError(res, 403, institutionPermission ? "INSTITUTION_ACCESS_DENIED" : "FORBIDDEN");
     }
-  };
+
+    req.userRole = userRole;
+    req.userTenantId = user.tenantId;
+    req.isInstitutionOwner = userRole === ROLES.PLATFORM_ADMIN ||
+      Boolean(await can({ permission: PERMISSIONS.MANAGE_INSTITUTION, userId: user._id, userRole, userTenantId: user.tenantId, tenantId: req.tenantId }));
+    return next();
+  } catch (error) {
+    console.error("[Authorization] permission check failed", error);
+    return apiError(res, 500, "AUTHORIZATION_UNAVAILABLE", "Authorization could not be verified. Please try again.");
+  }
 };
 
-export const requirePlatformAdmin = requireRole(["platform_admin"]);
-export const requireTenantAdmin = requireRole(["tenant_admin", "platform_admin"]);
-export const requireEducator = requireRole(["educator", "tenant_admin", "platform_admin"]);
-
+export const requirePlatformAdmin = requirePermission(PERMISSIONS.MANAGE_PLATFORM);
+export const requireEducator = requirePermission(PERMISSIONS.USE_EDUCATOR_WORKSPACE);
+export const requireInstitutionOwner = requirePermission(PERMISSIONS.MANAGE_INSTITUTION);
+export const requireInstitutionStudentManager = requirePermission(PERMISSIONS.MANAGE_STUDENTS);
+export const requireLiveClassManager = requirePermission(PERMISSIONS.MANAGE_LIVE_CLASSES);
+export { AUTH_MESSAGES };

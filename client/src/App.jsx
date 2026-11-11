@@ -1,5 +1,5 @@
 import React, { lazy, Suspense } from "react";
-import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
+import { BrowserRouter, Routes, Route, Navigate, useParams } from "react-router-dom";
 import { ToastContainer } from "react-toastify";
 import { useSelector } from "react-redux";
 import "react-toastify/dist/ReactToastify.css";
@@ -8,15 +8,18 @@ import ScrollToTop from "./components/ScrollToTop";
 import WelcomeModal from "./components/common/WelcomeModal";
 import { TenantProvider } from "./context/TenantContext";
 import { serverURL, getActiveTenantSlug } from "./services/api";
+import { getStoredTenantSlug } from "./services/tenantStorage";
 
 import useGetCurrentUser from "./hooks/useGetCurrentUser";
 import useGetCreatorCourse from "./hooks/getCreatorCourse";
 import useGetPublishedCourse from "./hooks/useGetPublishedCourse";
 import useGetAllReviews from "./hooks/useGetAllReviews";
+import { canUseEducatorWorkspace } from "./auth/permissions";
 
 // Lazy-loaded route components for high performance & code-splitting
 const PlatformHome = lazy(() => import("./pages/PlatformHome"));
 const InstitutionHome = lazy(() => import("./pages/InstitutionHome"));
+const InstitutionLiveClass = lazy(() => import("./pages/InstitutionLiveClass"));
 const StudentNeutralHome = lazy(() => import("./pages/StudentNeutralHome"));
 const Login = lazy(() => import("./pages/Login"));
 const Signup = lazy(() => import("./pages/SignUp"));
@@ -35,7 +38,6 @@ const EditLecture = lazy(() => import("./pages/Educator/EditLecture"));
 const ViewCourses = lazy(() => import("./pages/ViewCourses"));
 const ViewLectures = lazy(() => import("./pages/ViewLectures"));
 const MyEnrolledCourses = lazy(() => import("./pages/MyEnrolledCourses"));
-const InstitutionDirectory = lazy(() => import("./pages/InstitutionDirectory"));
 const CreateInstitution = lazy(() => import("./pages/CreateInstitution"));
 const InstitutionStudents = lazy(() => import("./pages/Educator/Students"));
 const AcceptInvite = lazy(() => import("./pages/AcceptInvite"));
@@ -53,38 +55,35 @@ export { serverURL };
  */
 function StudentCoursesDispatcher() {
   const { userData } = useSelector((store) => store.user);
-  const isEducator =
-    userData?.role === "educator" ||
-    userData?.role === "tenant_admin" ||
-    userData?.role === "platform_admin";
+  const isEducator = canUseEducatorWorkspace(userData);
 
   if (isEducator) {
     return <Courses />;
   }
+  if (!userData) return <Navigate to="/login" replace />;
 
-  const storedSlug = localStorage.getItem("skillio_active_tenant");
   const memberships = Array.isArray(userData?.memberships) ? userData.memberships : [];
-  const primarySlug = userData?.tenant?.slug || (memberships.length > 0 ? memberships[0].slug : null);
-  const activeSlug = (storedSlug && !["platform", "default"].includes(storedSlug) ? storedSlug : null) || primarySlug;
+  const storedSlug = getStoredTenantSlug();
+  const activeSlug = memberships.find((membership) => membership.slug === storedSlug)?.slug || memberships[0]?.slug;
 
   if (activeSlug) {
     return <Navigate to={`/institution/${encodeURIComponent(activeSlug)}/courses`} replace />;
   }
-
-  return <AllCourses />;
+  return <Navigate to="/" replace />;
 }
 
 function AllCoursesDispatcher() {
   const { userData } = useSelector((store) => store.user);
+  if (!userData) return <Navigate to="/login" replace />;
   if (userData?.role === "student") {
-    const storedSlug = localStorage.getItem("skillio_active_tenant");
+    const storedSlug = getStoredTenantSlug();
     const memberships = Array.isArray(userData?.memberships) ? userData.memberships : [];
-    const primarySlug = userData?.tenant?.slug || (memberships.length > 0 ? memberships[0].slug : null);
-    const activeSlug = (storedSlug && !["platform", "default"].includes(storedSlug) ? storedSlug : null) || primarySlug;
+    const activeSlug = memberships.find((membership) => membership.slug === storedSlug)?.slug || memberships[0]?.slug;
 
     if (activeSlug) {
       return <Navigate to={`/institution/${encodeURIComponent(activeSlug)}/courses`} replace />;
     }
+    return <Navigate to="/" replace />;
   }
   return <AllCourses />;
 }
@@ -94,10 +93,9 @@ function MyCoursesDispatcher() {
   if (!userData) return <Navigate to="/login" replace />;
 
   if (userData?.role === "student") {
-    const storedSlug = localStorage.getItem("skillio_active_tenant");
+    const storedSlug = getStoredTenantSlug();
     const memberships = Array.isArray(userData?.memberships) ? userData.memberships : [];
-    const primarySlug = userData?.tenant?.slug || (memberships.length > 0 ? memberships[0].slug : null);
-    const activeSlug = (storedSlug && !["platform", "default"].includes(storedSlug) ? storedSlug : null) || primarySlug;
+    const activeSlug = memberships.find((membership) => membership.slug === storedSlug)?.slug || memberships[0]?.slug;
 
     if (activeSlug) {
       return <Navigate to={`/institution/${encodeURIComponent(activeSlug)}/my-courses`} replace />;
@@ -111,10 +109,9 @@ function ProfileDispatcher() {
   if (!userData) return <Navigate to="/login" replace />;
 
   if (userData?.role === "student") {
-    const storedSlug = localStorage.getItem("skillio_active_tenant");
+    const storedSlug = getStoredTenantSlug();
     const memberships = Array.isArray(userData?.memberships) ? userData.memberships : [];
-    const primarySlug = userData?.tenant?.slug || (memberships.length > 0 ? memberships[0].slug : null);
-    const activeSlug = (storedSlug && !["platform", "default"].includes(storedSlug) ? storedSlug : null) || primarySlug;
+    const activeSlug = memberships.find((membership) => membership.slug === storedSlug)?.slug || memberships[0]?.slug;
 
     if (activeSlug) {
       return <Navigate to={`/institution/${encodeURIComponent(activeSlug)}/profile`} replace />;
@@ -123,19 +120,34 @@ function ProfileDispatcher() {
   return <Profile />;
 }
 
+function InstitutionRouteGuard({ children }) {
+  const { slug } = useParams();
+  const { userData } = useSelector((store) => store.user);
+  if (!userData) return <Navigate to="/login" replace />;
+  if (userData.role === "student") {
+    const memberships = Array.isArray(userData.memberships) ? userData.memberships : [];
+    if (!memberships.some((membership) => membership.slug === slug)) return <Navigate to="/" replace />;
+  }
+  return children;
+}
+
+function InstitutionSelectionRoute() {
+  const { userData } = useSelector((store) => store.user);
+  if (userData?.role === "student") return <StudentNeutralHome />;
+  if (!userData) return <Navigate to="/signup?role=student" replace />;
+  return <Navigate to={canUseEducatorWorkspace(userData) ? "/educator/home" : "/"} replace />;
+}
+
 function RootRouteDispatcher() {
   const { userData } = useSelector((store) => store.user);
-  const isEducator =
-    userData?.role === "educator" ||
-    userData?.role === "tenant_admin" ||
-    userData?.role === "platform_admin";
+  const isEducator = canUseEducatorWorkspace(userData);
 
   if (isEducator) {
     return <Navigate to="/educator/home" replace />;
   }
 
   const slug = getActiveTenantSlug();
-  if (slug && slug !== "platform" && slug !== "default") {
+  if (userData && userData.role !== "student" && slug && slug !== "platform" && slug !== "default") {
     return <InstitutionHome />;
   }
 
@@ -145,14 +157,11 @@ function RootRouteDispatcher() {
       userData.tenant?.slug ||
       (typeof userData.tenantId === "object" ? userData.tenantId?.slug : null);
 
-    const storedSlug = localStorage.getItem("skillio_active_tenant");
+    const storedSlug = getStoredTenantSlug();
     const validStoredSlug = memberships.find((m) => m.slug === storedSlug)?.slug;
 
-    const selectedTenantSlug =
-      validStoredSlug ||
-      (storedSlug && !["platform", "default"].includes(storedSlug) ? storedSlug : null) ||
-      (memberships.length > 0 ? memberships[0].slug : null) ||
-      (primaryTenantSlug && !["platform", "default"].includes(primaryTenantSlug) ? primaryTenantSlug : null);
+    const selectedTenantSlug = validStoredSlug || memberships[0]?.slug ||
+      (memberships.some((membership) => membership.slug === primaryTenantSlug) ? primaryTenantSlug : null);
 
     if (selectedTenantSlug) {
       return <Navigate to={`/institution/${encodeURIComponent(selectedTenantSlug)}`} replace />;
@@ -174,10 +183,7 @@ function AppRoutes() {
   useGetPublishedCourse();
   useGetAllReviews();
 
-  const isEducator =
-    userData?.role === "educator" ||
-    userData?.role === "tenant_admin" ||
-    userData?.role === "platform_admin";
+  const isEducator = canUseEducatorWorkspace(userData);
 
   return (
     <>
@@ -193,15 +199,16 @@ function AppRoutes() {
         <Routes>
           {/* Public Platform & Institution Routes */}
           <Route path="/" element={<RootRouteDispatcher />} />
-          <Route path="/institution/:slug" element={<InstitutionHome />} />
-          <Route path="/institution/:slug/courses" element={<AllCourses />} />
-          <Route path="/institution/:slug/my-courses" element={userData ? <MyEnrolledCourses /> : <Navigate to="/login" replace />} />
-          <Route path="/institution/:slug/course/:courseId" element={<ViewCourses />} />
-          <Route path="/institution/:slug/profile" element={userData ? <Profile /> : <Navigate to="/login" replace />} />
-          <Route path="/institutions" element={<InstitutionDirectory />} />
-          <Route path="/find-institution" element={<Navigate to="/institutions" replace />} />
+          <Route path="/institution/:slug" element={<InstitutionRouteGuard><InstitutionHome /></InstitutionRouteGuard>} />
+          <Route path="/institution/:slug/live" element={<InstitutionRouteGuard><InstitutionLiveClass /></InstitutionRouteGuard>} />
+          <Route path="/institution/:slug/courses" element={<InstitutionRouteGuard><AllCourses /></InstitutionRouteGuard>} />
+          <Route path="/institution/:slug/my-courses" element={<InstitutionRouteGuard><MyEnrolledCourses /></InstitutionRouteGuard>} />
+          <Route path="/institution/:slug/course/:courseId" element={<InstitutionRouteGuard><ViewCourses /></InstitutionRouteGuard>} />
+          <Route path="/institution/:slug/profile" element={<InstitutionRouteGuard><Profile /></InstitutionRouteGuard>} />
+          <Route path="/institutions" element={<InstitutionSelectionRoute />} />
+          <Route path="/find-institution" element={<InstitutionSelectionRoute />} />
           <Route path="/allcourses" element={<AllCoursesDispatcher />} />
-          <Route path="/viewcourse/:courseId" element={<ViewCourses />} />
+          <Route path="/viewcourse/:courseId" element={userData ? <ViewCourses /> : <Navigate to="/login" replace />} />
 
           {/* Course Invitation Acceptance Route */}
           <Route path="/accept-invite" element={<AcceptInvite />} />

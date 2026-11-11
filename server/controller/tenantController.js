@@ -5,6 +5,8 @@ import InstitutionMembership from "../models/institutionMembershipModel.js";
 import { genToken } from "../config/token.js";
 import { clearTenantCache } from "../middleware/tenantResolver.js";
 import uploadCloudinary from "../config/cloudinary.js";
+import { isInstitutionOwner as canManageInstitution } from "../utils/permissions.js";
+import { apiError } from "../utils/apiErrors.js";
 
 /**
  * Returns the public branding & features of the active tenant
@@ -49,7 +51,7 @@ export const getCurrentTenant = async (req, res) => {
 export const getTenantBySlug = async (req, res) => {
   try {
     const { slug } = req.params;
-    const tenant = await Tenant.findOne({ slug: slug.toLowerCase() });
+    const tenant = await Tenant.findOne({ slug: slug.toLowerCase(), status: "active" });
     if (!tenant) {
       return res.status(404).json({ success: false, message: "Tenant not found" });
     }
@@ -79,14 +81,17 @@ export const getInstitutionDirectory = async (req, res) => {
   try {
     const { q, type } = req.query;
 
-    const filter = { status: "active" };
+    // Only real institution workspaces belong in discovery; the reserved
+    // platform/default tenants are infrastructure, not selectable academies.
+    const filter = { status: "active", slug: { $nin: ["default", "platform"] } };
 
     if (type && type !== "all") {
       filter.institutionType = type;
     }
 
     if (q && q.trim()) {
-      const searchRegex = new RegExp(q.trim(), "i");
+      const searchTerm = q.trim().slice(0, 80).replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+      const searchRegex = new RegExp(searchTerm, "i");
       filter.$or = [
         { name: searchRegex },
         { slug: searchRegex },
@@ -134,9 +139,12 @@ export const getInstitutionDirectory = async (req, res) => {
 
 /**
  * Authenticated: Educator creates their own organization / institution
- * The creating educator becomes the tenant_admin of the new organization.
+ * The creating educator owns the institution while keeping the educator role.
  */
 export const createOrganizationByEducator = async (req, res) => {
+  let tenantCreatedForRollback = null;
+  let userForRollback = null;
+  let originalUserState = null;
   try {
     const {
       name,
@@ -159,6 +167,9 @@ export const createOrganizationByEducator = async (req, res) => {
     if (!user) {
       return res.status(404).json({ success: false, message: "User not found" });
     }
+    userForRollback = user;
+    originalUserState = { role: user.role, tenantId: user.tenantId };
+    const accountRole = user.role === "platform_admin" ? "platform_admin" : "educator";
 
     // Role check: Students are strictly consumers/members and cannot create institutions
     if (user.role === "student" || req.userRole === "student") {
@@ -172,7 +183,7 @@ export const createOrganizationByEducator = async (req, res) => {
     const existingOwned = await Tenant.findOne({
       $or: [
         { ownerId: userId },
-        ...(user.tenantId ? [{ _id: user.tenantId }] : []),
+        ...(user.tenantId ? [{ _id: user.tenantId, slug: { $nin: ["default", "platform"] } }] : []),
       ],
     });
     if (existingOwned) {
@@ -231,9 +242,10 @@ export const createOrganizationByEducator = async (req, res) => {
       status: "active",
       features: { quizzes: true, certificates: true, analytics: true, reviews: true },
     });
+    tenantCreatedForRollback = newTenant;
 
-    // Update user to tenant_admin
-    user.role = "tenant_admin";
+    // Institution ownership is recorded on Tenant.ownerId. Teachers remain educators.
+    user.role = accountRole;
     user.tenantId = newTenant._id;
     await user.save();
 
@@ -241,15 +253,15 @@ export const createOrganizationByEducator = async (req, res) => {
     await InstitutionMembership.create({
       userId: user._id,
       tenantId: newTenant._id,
-      role: "tenant_admin",
+      role: "educator",
       status: "active",
       joinedAt: new Date(),
     });
 
     clearTenantCache();
 
-    // Generate updated token reflecting tenant_admin role and new tenantId
-    const token = await genToken(user._id, newTenant._id, "tenant_admin");
+    // Keep the account role as educator in both the session and token.
+    const token = await genToken(user._id, newTenant._id, accountRole);
 
     const safeUser = user.toObject();
     delete safeUser.password;
@@ -262,6 +274,28 @@ export const createOrganizationByEducator = async (req, res) => {
       token,
     });
   } catch (error) {
+    if (tenantCreatedForRollback) {
+      if (userForRollback && originalUserState) {
+        try {
+          userForRollback.role = originalUserState.role;
+          userForRollback.tenantId = originalUserState.tenantId;
+          await userForRollback.save();
+        } catch (rollbackError) {
+          console.error("[CreateOrganizationByEducator] User rollback failed:", rollbackError);
+        }
+        try {
+          await InstitutionMembership.deleteOne({ userId: userForRollback._id, tenantId: tenantCreatedForRollback._id });
+        } catch (rollbackError) {
+          console.error("[CreateOrganizationByEducator] Membership rollback failed:", rollbackError);
+        }
+      }
+      try {
+        await Tenant.deleteOne({ _id: tenantCreatedForRollback._id });
+        clearTenantCache();
+      } catch (rollbackError) {
+        console.error("[CreateOrganizationByEducator] Tenant rollback failed:", rollbackError);
+      }
+    }
     console.error("[CreateOrganizationByEducator Error]", error);
     return res.status(500).json({ success: false, message: error.message });
   }
@@ -283,9 +317,12 @@ export const getMyInstitution = async (req, res) => {
     }
 
     // Lookup tenant owned by user or assigned to user
-    let tenant = await Tenant.findOne({ ownerId: userId });
+    let tenant = user.role === "platform_admin" && req.tenantId
+      ? await Tenant.findById(req.tenantId)
+      : await Tenant.findOne({ ownerId: userId });
     if (!tenant && user.tenantId) {
-      tenant = await Tenant.findById(user.tenantId);
+      const assignedTenant = await Tenant.findById(user.tenantId);
+      if (assignedTenant && !["default", "platform"].includes(assignedTenant.slug)) tenant = assignedTenant;
     }
 
     return res.status(200).json({
@@ -319,9 +356,12 @@ export const updateMyInstitution = async (req, res) => {
     }
 
     // Resolve tenant owned by user or assigned to user
-    let tenant = await Tenant.findOne({ ownerId: userId });
+    let tenant = user.role === "platform_admin" && req.tenantId
+      ? await Tenant.findById(req.tenantId)
+      : await Tenant.findOne({ ownerId: userId });
     if (!tenant && user.tenantId) {
-      tenant = await Tenant.findById(user.tenantId);
+      const assignedTenant = await Tenant.findById(user.tenantId);
+      if (assignedTenant && !["default", "platform"].includes(assignedTenant.slug)) tenant = assignedTenant;
     }
 
     if (!tenant) {
@@ -329,6 +369,10 @@ export const updateMyInstitution = async (req, res) => {
         success: false,
         message: "No institution found under your account. Please create one first.",
       });
+    }
+
+    if (!(await canManageInstitution({ tenantId: tenant._id, userId, userRole: user.role, userTenantId: user.tenantId }))) {
+      return apiError(res, 403, "INSTITUTION_ACCESS_DENIED");
     }
 
     const {
@@ -448,7 +492,7 @@ export const createTenant = async (req, res) => {
 };
 
 /**
- * Tenant Admin / Platform Admin: Update branding and settings
+ * Institution owner / Platform Admin: Update branding and settings
  */
 export const updateTenantBranding = async (req, res) => {
   try {

@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { ArrowLeft, Edit, Plus, Video, Trash2, FileText, UploadCloud, Sparkles } from "lucide-react";
+import { ArrowLeft, Edit, Plus, Video, Trash2, FileText } from "lucide-react";
 import { useNavigate, useParams } from "react-router-dom";
 import { useDispatch, useSelector } from "react-redux";
 import api from "../../services/api";
@@ -8,6 +8,7 @@ import { setLectureData } from "../../redux/lectureSlice";
 import Button from "../../components/common/Button";
 import Navbar from "../../components/Navbar";
 import Footer from "../../components/Footer";
+import LectureVideoSourceFields from "../../components/video/LectureVideoSourceFields";
 
 function CreateLecture() {
   const navigate = useNavigate();
@@ -17,6 +18,10 @@ function CreateLecture() {
   const [loading, setLoading] = useState(false);
   const [lectureTitle, setLectureTitle] = useState("");
   const [isPreviewFree, setIsPreviewFree] = useState(false);
+  const [videoProvider, setVideoProvider] = useState("upload");
+  const [youtubeUrl, setYoutubeUrl] = useState("");
+  const [validatedVideoId, setValidatedVideoId] = useState("");
+  const [videoFile, setVideoFile] = useState(null);
 
   // Optional attached resource
   const [resourceTitle, setResourceTitle] = useState(`${lectureTitle} Notes`);
@@ -31,18 +36,31 @@ function CreateLecture() {
       toast.error("Please enter a lecture title");
       return;
     }
+    if (videoProvider === "youtube" && !validatedVideoId) {
+      toast.error("Validate the YouTube video URL before adding this lecture.");
+      return;
+    }
 
     setLoading(true);
     try {
       // 1. Create lecture
-      const result = await api.post(`/api/course/createlecture/${courseId}`, {
-        lectureTitle: lectureTitle.trim(),
+      const formData = new FormData();
+      formData.append("lectureTitle", lectureTitle.trim());
+      formData.append("isPreviewFree", String(isPreviewFree));
+      if (videoProvider === "youtube") {
+        formData.append("videoProvider", "youtube");
+        formData.append("youtubeUrl", youtubeUrl.trim());
+      } else if (videoFile) {
+        formData.append("video", videoFile);
+      }
+      const result = await api.post(`/api/course/createlecture/${courseId}`, formData, {
+        headers: { "Content-Type": "multipart/form-data" },
       });
 
       const newLecture = result.data.lecture;
 
       // 2. If optional resource file provided, upload it linked to this lecture
-      if (resourceFile && (resourceTitle || lectureTitle)) {
+      if (resourceFile && (resourceTitle || lectureTitle) && !result.data.resource) {
         const formData = new FormData();
         formData.append("courseId", courseId);
         formData.append("lectureId", newLecture._id);
@@ -60,13 +78,17 @@ function CreateLecture() {
           toast.info("Lecture created (note upload failed, you can re-attach in Course Studio)");
         }
       } else {
-        toast.success("Lecture added! Click Configure to upload video content.");
+        toast.success(videoProvider === "youtube" ? "YouTube lecture added to your course." : "Lecture added to your course.");
       }
 
       dispatch(setLectureData([...lectures, newLecture]));
       setLectureTitle("");
       setResourceTitle("");
       setResourceFile(null);
+      setVideoProvider("upload");
+      setYoutubeUrl("");
+      setValidatedVideoId("");
+      setVideoFile(null);
     } catch (error) {
       console.error("[CreateLecture Error]", error);
       toast.error(error.response?.data?.message || "Failed to add lecture");
@@ -123,11 +145,13 @@ function CreateLecture() {
           </h2>
 
           <div className="space-y-1">
-            <label className="block text-xs font-bold uppercase tracking-wider text-[#44403c]">
+            <label htmlFor="lecture-title" className="block text-xs font-bold uppercase tracking-wider text-[#44403c]">
               Lecture Title *
             </label>
             <input
               type="text"
+              id="lecture-title"
+              name="lectureTitle"
               required
               value={lectureTitle}
               onChange={(e) => setLectureTitle(e.target.value)}
@@ -135,6 +159,22 @@ function CreateLecture() {
               className="w-full bg-[#faf9f6] border border-[#d6d3c9] rounded-xl px-4 py-2.5 text-[#1c1917] text-sm focus:outline-none focus:ring-2 focus:ring-[#1e3a8a] focus:bg-white min-h-[44px]"
             />
           </div>
+
+          <LectureVideoSourceFields
+            idPrefix="new-lecture"
+            provider={videoProvider}
+            onProviderChange={setVideoProvider}
+            youtubeUrl={youtubeUrl}
+            onYoutubeUrlChange={setYoutubeUrl}
+            videoFile={videoFile}
+            onVideoFileChange={setVideoFile}
+            onValidatedVideoIdChange={setValidatedVideoId}
+          />
+
+          <label className="flex min-h-11 items-center gap-3 rounded-xl border border-[#e8e5dc] bg-[#faf9f6] px-3 py-2 text-xs font-semibold text-[#44403c]">
+            <input type="checkbox" checked={isPreviewFree} onChange={(event) => setIsPreviewFree(event.target.checked)} className="h-4 w-4 accent-[#5b3cc4]" />
+            Allow this lecture as a free course preview
+          </label>
 
           {/* Optional Notes Section */}
           <div className="p-4 rounded-2xl bg-[#faf9f6] border border-[#e8e5dc] space-y-3">
@@ -210,6 +250,9 @@ function CreateLecture() {
                         Preview
                       </span>
                     )}
+                    <span className="shrink-0 rounded-full border border-[#e8e5dc] bg-white px-2 py-0.5 text-[10px] font-semibold text-[#57534e]">
+                      {lec.videoProvider === "youtube" ? "YouTube" : (lec.videoProvider === "bunny" || lec.videoUrl) ? "Native video" : "Video pending"}
+                    </span>
                   </div>
 
                   <div className="flex items-center gap-2 shrink-0 self-end sm:self-auto">

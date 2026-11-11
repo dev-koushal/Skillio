@@ -92,7 +92,9 @@ Configure the following DNS records with your registrar:
 | **Course Isolation** | Every query scopes by `{ _id, tenantId: req.tenantId }` | Tenant A cannot view or manipulate Tenant B courses |
 | **Lecture Access** | Lectures linked to `tenantId` & `courseId` | Direct IDOR attacks against lecture URLs blocked |
 | **Payments** | Server extracts `req.userId` from session; verifies course belongs to tenant | Forgery of user ID or course ID in payment payloads blocked |
-| **RBAC** | `requireRole(["educator", "tenant_admin", "platform_admin"])` | Students cannot escalate to teachers or administrators |
+| **RBAC** | `requirePermission(...)` backed by `server/utils/permissions.js` | Institution ownership is stored on the institution; teachers keep the educator role |
+
+Existing deployments should run `npm run migrate:educator-roles` once with the application `MONGO_URI` before deploying the role schema that no longer accepts the retired `tenant_admin` value. The migration changes those account and membership records to `educator`; institution ownership remains attached to `Tenant.ownerId`.
 
 ---
 

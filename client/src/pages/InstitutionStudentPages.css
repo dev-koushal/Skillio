@@ -1,0 +1,25 @@
+.institution-student-page {
+  --institution-accent-soft: color-mix(in srgb, var(--institution-accent) 9%, white);
+  --institution-line: #e7e5df;
+  min-height: 100vh;
+  background: #f7f7f4 !important;
+  color: #211f1d;
+}
+
+.institution-student-page [class*="bg-[#1e3a8a]"] { background-color: var(--institution-accent) !important; }
+.institution-student-page [class*="text-[#1e3a8a]"] { color: var(--institution-accent) !important; }
+.institution-student-page [class*="hover:bg-[#172554]"]:hover { background-color: color-mix(in srgb, var(--institution-accent) 84%, #141414) !important; }
+.institution-student-page [class*="bg-[#eff6ff]"] { background-color: var(--institution-accent-soft) !important; }
+.institution-student-page [class*="border-[#bfdbfe]"] { border-color: color-mix(in srgb, var(--institution-accent) 22%, white) !important; }
+.institution-student-page [class*="hover:border-[#1e3a8a]"]:hover { border-color: color-mix(in srgb, var(--institution-accent) 38%, var(--institution-line)) !important; }
+.institution-student-page :focus-visible { outline: 3px solid color-mix(in srgb, var(--institution-accent) 38%, white); outline-offset: 3px; }
+.institution-student-page button, .institution-student-page a { -webkit-tap-highlight-color: transparent; }
+
+@media (prefers-reduced-motion: reduce) {
+  .institution-student-page *, .institution-student-page *::before, .institution-student-page *::after {
+    scroll-behavior: auto !important;
+    animation-duration: .01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: .01ms !important;
+  }
+}

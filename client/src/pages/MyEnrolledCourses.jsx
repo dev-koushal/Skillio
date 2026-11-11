@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
-import { ArrowLeft, BookOpen, PlayCircle, Clock, GraduationCap, Video, ArrowRight, Loader2, Sparkles, CheckCircle2 } from "lucide-react";
-import { useSelector, useDispatch } from "react-redux";
+import { ArrowLeft, BookOpen, PlayCircle, GraduationCap, Video, ArrowRight, Sparkles } from "lucide-react";
+import { useSelector } from "react-redux";
 import { useNavigate, useParams } from "react-router-dom";
 import Navbar from "../components/Navbar";
 import Footer from "../components/Footer";
@@ -9,6 +9,8 @@ import { optimizeImage } from "../utils/imageOptimizer";
 import EmptyState from "../components/common/EmptyState";
 import Button from "../components/common/Button";
 import { useTenant } from "../context/TenantContext";
+import { getStoredTenantSlug } from "../services/tenantStorage";
+import "./MyEnrolledCourses.css";
 
 function MyEnrolledCourses() {
   const { userData } = useSelector((state) => state.user);
@@ -17,12 +19,19 @@ function MyEnrolledCourses() {
   const { slug } = useParams();
   const { tenant } = useTenant();
 
-  const activeSlug = slug || (tenant && !tenant.isPlatform ? tenant.slug : localStorage.getItem("skillio_active_tenant"));
+  const activeSlug = slug || (tenant && !tenant.isPlatform ? tenant.slug : getStoredTenantSlug());
+  const institution = tenant && !tenant.isPlatform && (!activeSlug || tenant.slug === activeSlug) ? tenant : null;
+  const institutionName = institution?.name || "Your learning space";
+  const institutionHomePath = activeSlug ? `/institution/${encodeURIComponent(activeSlug)}` : "/";
+  const institutionCoursesPath = activeSlug
+    ? `/institution/${encodeURIComponent(activeSlug)}/courses`
+    : "/allcourses";
+  const accent = /^#(?:[\da-f]{3}|[\da-f]{6})$/i.test(institution?.primaryColor || "")
+    ? institution.primaryColor
+    : "#5b3cc4";
+  const studentTheme = { "--student-accent": accent, "--institution-accent": accent };
 
   const [coursesList, setCoursesList] = useState([]);
-  const [loading, setLoading] = useState(false);
-  const [filterTab, setFilterTab] = useState("all"); // "all" | "in_progress" | "completed"
-
   useEffect(() => {
     let isMounted = true;
     const rawEnrolled = userData?.enrolledCourses || [];
@@ -53,7 +62,6 @@ function MyEnrolledCourses() {
       .filter(Boolean);
 
     if (missingIds.length > 0) {
-      setLoading(true);
       Promise.all(
         missingIds.map((id) =>
           api
@@ -72,7 +80,6 @@ function MyEnrolledCourses() {
             })
           );
         }
-        setLoading(false);
       });
     }
 
@@ -85,66 +92,45 @@ function MyEnrolledCourses() {
   const activeCourse = coursesList.find((c) => c?.title) || coursesList[0];
 
   return (
-    <div className="min-h-screen bg-[#f8f7f4] text-[#1c1917] flex flex-col font-sans selection:bg-[#1e3a8a] selection:text-white">
-      <Navbar />
+    <div className="institution-student-page institution-student-library min-h-screen flex flex-col font-sans" style={studentTheme}>
+      <Navbar currentInstitution={institution} />
 
       <main className="max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-10 space-y-8 flex-1 pb-28 md:pb-12">
         {/* Page Header */}
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-[#e8e5dc]">
+        <div className="institution-library-header flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-[#e8e5dc]">
           <div className="flex items-center gap-3">
             <button
-              onClick={() => navigate(activeSlug ? `/institution/${activeSlug}` : "/")}
+              onClick={() => navigate(institutionHomePath)}
               className="p-2 rounded-xl text-[#78716c] hover:text-[#1c1917] hover:bg-[#f1ede4] transition cursor-pointer touch-target pressable"
               aria-label="Back to home"
             >
               <ArrowLeft size={20} />
             </button>
-            <div>
+            <div className="institution-library-title">
+              <div className="institution-library-brand">
+                {institution?.logo && <img src={institution.logo} alt="" onError={(event) => { event.currentTarget.style.display = "none"; }} />}
+                <span>{institutionName}</span>
+              </div>
               <div className="flex items-center gap-2">
-                <span className="p-1.5 rounded-lg bg-[#eff6ff] text-[#1e3a8a]">
+                <span className="institution-library-heading-icon p-1.5 rounded-lg bg-[#eff6f4] text-[var(--student-accent)]">
                   <GraduationCap size={20} />
                 </span>
-                <h1 className="text-2xl sm:text-3xl font-extrabold text-[#1c1917] tracking-tight">
-                  My Courses
-                </h1>
+                <h1 className="text-2xl sm:text-3xl font-extrabold text-[#1c1917] tracking-tight">My courses</h1>
               </div>
               <p className="text-xs sm:text-sm text-[#78716c] mt-0.5">
-                Resume video lectures, download instructor notes, and track your curriculum progress
+                Your lessons and study materials, all in one place.
               </p>
             </div>
           </div>
 
           {/* Quick Filter Tabs */}
-          {coursesList.length > 0 && (
-            <div className="flex items-center gap-1 bg-white border border-[#e8e5dc] p-1 rounded-xl shadow-2xs self-start sm:self-auto">
-              <button
-                onClick={() => setFilterTab("all")}
-                className={`text-xs font-semibold px-3 py-1.5 rounded-lg transition cursor-pointer ${
-                  filterTab === "all"
-                    ? "bg-[#1e3a8a] text-white"
-                    : "text-[#57534e] hover:bg-[#f8f7f4]"
-                }`}
-              >
-                All Courses ({coursesList.length})
-              </button>
-              <button
-                onClick={() => setFilterTab("in_progress")}
-                className={`text-xs font-semibold px-3 py-1.5 rounded-lg transition cursor-pointer ${
-                  filterTab === "in_progress"
-                    ? "bg-[#1e3a8a] text-white"
-                    : "text-[#57534e] hover:bg-[#f8f7f4]"
-                }`}
-              >
-                Active Session
-              </button>
-            </div>
-          )}
+          {coursesList.length > 0 && <div className="institution-course-count"><BookOpen size={16} /> {coursesList.length} {coursesList.length === 1 ? "course" : "courses"} to explore</div>}
         </div>
 
         {/* 1. Continue Learning Hero Spotlight */}
         {activeCourse && activeCourse.title && (
-          <div className="rounded-3xl bg-white border border-[#e8e5dc] p-5 sm:p-7 shadow-xs grid grid-cols-1 lg:grid-cols-12 gap-6 items-center">
-            <div className="lg:col-span-4 aspect-video rounded-2xl overflow-hidden bg-black relative flex items-center justify-center border border-[#e8e5dc]">
+          <div className="institution-library-feature rounded-3xl bg-white border border-[#e8e5dc] p-5 sm:p-7 shadow-xs grid grid-cols-1 lg:grid-cols-12 gap-6 items-center">
+            <div className="institution-library-feature-thumb lg:col-span-4 aspect-video rounded-2xl overflow-hidden bg-black relative flex items-center justify-center border border-[#e8e5dc]">
               {activeCourse.thumbnail ? (
                 <img
                   src={optimizeImage(activeCourse.thumbnail, 600)}
@@ -162,7 +148,7 @@ function MyEnrolledCourses() {
             <div className="lg:col-span-8 space-y-4">
               <div className="flex items-center gap-2">
                 <span className="inline-flex items-center gap-1 text-[10px] font-bold uppercase tracking-wider text-[#1e3a8a] bg-[#eff6ff] px-2.5 py-0.5 rounded-full border border-[#bfdbfe]">
-                  <Sparkles size={11} /> Continue Learning
+                  <Sparkles size={11} /> In your course library
                 </span>
                 <span className="text-xs text-[#78716c] font-medium">
                   {activeCourse.category || "Academy Track"}
@@ -174,19 +160,8 @@ function MyEnrolledCourses() {
                   {activeCourse.title}
                 </h2>
                 <p className="text-xs sm:text-sm text-[#78716c] line-clamp-2 mt-1">
-                  {activeCourse.subTitle || activeCourse.description || "Pick up right where you left off in your classroom video lecture and study notes."}
+                  {activeCourse.subTitle || activeCourse.description || "Open the lessons and study materials included with this course."}
                 </p>
-              </div>
-
-              {/* Progress Bar & CTA */}
-              <div className="space-y-2 pt-1 max-w-lg">
-                <div className="flex items-center justify-between text-xs font-semibold text-[#57534e]">
-                  <span>Curriculum Progress</span>
-                  <span className="font-mono text-[#1e3a8a]">Active Session</span>
-                </div>
-                <div className="w-full h-2 bg-[#f2efe9] rounded-full overflow-hidden border border-[#e8e5dc]">
-                  <div className="h-full bg-[#1e3a8a] rounded-full w-[65%]" />
-                </div>
               </div>
 
               <div className="pt-2">
@@ -197,7 +172,7 @@ function MyEnrolledCourses() {
                   icon={PlayCircle}
                   className="shadow-sm pressable"
                 >
-                  Resume Watching & Notes
+                  Open lessons
                 </Button>
               </div>
             </div>
@@ -211,12 +186,12 @@ function MyEnrolledCourses() {
             title="You haven't joined a course yet"
             description="Explore courses and enroll in verified curriculum with high-definition video lectures and downloadable notes."
             actionLabel="Explore Course Catalog"
-            onAction={() => navigate("/allcourses")}
+            onAction={() => navigate(institutionCoursesPath)}
           />
         ) : (
           <div className="space-y-4">
             <h2 className="text-lg font-bold text-[#1c1917] tracking-tight">
-              All Enrolled Courses ({coursesList.length})
+              Your courses <span className="institution-course-total">{coursesList.length}</span>
             </h2>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -228,10 +203,10 @@ function MyEnrolledCourses() {
                 return (
                   <div
                     key={courseId || ind}
-                    className="group bg-white border border-[#e8e5dc] rounded-2xl overflow-hidden shadow-xs hover:border-[#1e3a8a]/40 hover:shadow-lg card-lift transition-all duration-300 flex flex-col justify-between"
+                    className="institution-library-course-card group bg-white border border-[#e8e5dc] rounded-2xl overflow-hidden shadow-xs hover:border-[#1e3a8a]/40 hover:shadow-lg card-lift transition-all duration-300 flex flex-col justify-between"
                   >
                     {/* Thumbnail */}
-                    <div className="relative aspect-video bg-[#f1ede4] overflow-hidden">
+                    <div className="institution-library-course-thumb relative aspect-video bg-[#f1ede4] overflow-hidden">
                       {hasThumbnail ? (
                         <img
                           src={optimizeImage(course.thumbnail, 600)}
@@ -288,7 +263,7 @@ function MyEnrolledCourses() {
                         className="w-full inline-flex items-center justify-center gap-2 bg-[#1e3a8a] hover:bg-[#172554] text-white font-bold text-xs sm:text-sm py-2.5 rounded-xl transition shadow-xs cursor-pointer min-h-[44px] active:scale-98 pressable"
                       >
                         <PlayCircle size={16} />
-                        <span>Resume Watching & Notes</span>
+                        <span>Open lessons and notes</span>
                         <ArrowRight size={14} />
                       </button>
                     </div>

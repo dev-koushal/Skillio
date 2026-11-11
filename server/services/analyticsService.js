@@ -1,4 +1,5 @@
 import Course from "../models/coursesModel.js";
+import { canManageCourse, isInstitutionOwner } from "../utils/permissions.js";
 
 /**
  * Shared Analytics Service for educators and academy administrators.
@@ -13,7 +14,7 @@ export const analyticsService = {
 
     // Fetch courses owned by the educator or all in tenant for admin
     const filter = { tenantId };
-    if (userRole !== "tenant_admin" && userRole !== "platform_admin") {
+    if (!(await isInstitutionOwner({ tenantId, userId, userRole }))) {
       filter.creator = userId;
     }
 
@@ -74,11 +75,7 @@ export const analyticsService = {
       throw new Error("Course not found in this academy");
     }
 
-    if (
-      course.creator.toString() !== userId.toString() &&
-      userRole !== "tenant_admin" &&
-      userRole !== "platform_admin"
-    ) {
+    if (!(await canManageCourse({ course, tenantId, userId, userRole }))) {
       throw new Error("You are not authorized to view analytics for this course");
     }
 

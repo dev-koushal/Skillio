@@ -301,7 +301,7 @@ const simulateRevokeCourseAccess = ({ educatorId, studentId, courseId }) => {
 
 const simulateGetInstitutionOverview = ({ educatorId }) => {
   const educator = mockUsers.get(educatorId);
-  if (!educator || (educator.role !== "educator" && educator.role !== "tenant_admin")) {
+  if (!educator || educator.role !== "educator") {
     return { status: 403, message: "Unauthorized: only educators can access institution overview" };
   }
   const tenantId = educator.tenantId;
@@ -664,7 +664,7 @@ async function runTests() {
 
   const simulateCreateInvitation = ({ educatorId, courseId, invitedEmail }) => {
     const educator = mockUsers.get(educatorId);
-    if (!educator || (educator.role !== "educator" && educator.role !== "tenant_admin")) {
+    if (!educator || educator.role !== "educator") {
       return { status: 403, message: "Unauthorized" };
     }
 

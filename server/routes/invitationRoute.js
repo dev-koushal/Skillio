@@ -5,12 +5,12 @@ import {
   acceptInvitation,
 } from "../controller/invitationController.js";
 import isAuth from "../middleware/isAuth.js";
-import { requireEducator } from "../middleware/rbac.js";
+import { requireInstitutionStudentManager } from "../middleware/rbac.js";
 
 const router = express.Router();
 
 // Educator creates secure course invitation link
-router.post("/create", isAuth, requireEducator, createCourseInvitation);
+router.post("/create", isAuth, requireInstitutionStudentManager, createCourseInvitation);
 
 // Public verification of token
 router.get("/verify/:token", verifyInvitation);

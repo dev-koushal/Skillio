@@ -1,4 +1,7 @@
 import axios from "axios";
+import { resolveActiveTenantSlug } from "./tenantContext";
+import { clearStoredTenantSlug, getStoredTenantSlug } from "./tenantStorage";
+import { friendlyAuthorizationMessage } from "../auth/permissions";
 
 /**
  * Determine API Base URL dynamically based on environment and hostname.
@@ -37,45 +40,12 @@ export const serverURL = getApiBaseUrl();
  */
 export const getActiveTenantSlug = () => {
   if (typeof window === "undefined") return null;
-
-  // 1. Check Path: e.g. /institution/physics or /institution/english
-  const pathMatch = window.location.pathname.match(/\/institution\/([^/]+)/);
-  if (pathMatch && pathMatch[1]) {
-    return pathMatch[1].toLowerCase().trim();
-  }
-
-  // 2. Check URL search param: e.g. ?tenant=physics
-  const params = new URLSearchParams(window.location.search);
-  const paramTenant = params.get("tenant");
-  if (paramTenant) {
-    return paramTenant.toLowerCase().trim();
-  }
-
-  // 3. Extract from Subdomain (e.g. physics.mylms.com or physics.lvh.me)
-  const hostname = window.location.hostname.toLowerCase();
-  if (hostname.endsWith(".lvh.me")) {
-    const sub = hostname.replace(".lvh.me", "");
-    if (sub && sub !== "www" && sub !== "app") return sub;
-  }
-
-  if (hostname.endsWith(".localhost")) {
-    const sub = hostname.replace(".localhost", "");
-    if (sub && sub !== "www" && sub !== "app") return sub;
-  }
-
-  const parts = hostname.split(".");
-  if (parts.length >= 3 && !hostname.endsWith(".onrender.com") && !hostname.endsWith(".vercel.app")) {
-    const sub = parts[0];
-    if (sub && sub !== "www" && sub !== "app") return sub;
-  }
-
-  // 4. Stored active institution (persists active academy across pages)
-  const storedTenant = localStorage.getItem("skillio_active_tenant");
-  if (storedTenant && storedTenant !== "platform" && storedTenant !== "default") {
-    return storedTenant.toLowerCase().trim();
-  }
-
-  return null;
+  return resolveActiveTenantSlug({
+    pathname: window.location.pathname,
+    search: window.location.search,
+    hostname: window.location.hostname,
+    storedTenant: getStoredTenantSlug(),
+  });
 };
 
 // Create configured Axios instance
@@ -91,7 +61,10 @@ const api = axios.create({
 api.interceptors.request.use(
   (config) => {
     // 1. Inject Authorization header if stored token exists (resilient MNC dual-layer persistence)
-    const token = typeof window !== "undefined" ? localStorage.getItem("skillio_auth_token") : null;
+    let token = null;
+    try {
+      token = typeof window !== "undefined" ? window.localStorage.getItem("skillio_auth_token") : null;
+    } catch { /* Cookie auth remains available when browser storage is disabled. */ }
     if (token && !config.headers.Authorization) {
       config.headers.Authorization = `Bearer ${token}`;
     }
@@ -110,12 +83,21 @@ api.interceptors.request.use(
 api.interceptors.response.use(
   (response) => response,
   (error) => {
+      const status = error.response?.status;
+      if (status === 401 || status === 403) {
+        error.response.data = {
+          ...error.response.data,
+          message: friendlyAuthorizationMessage(error),
+        };
+      }
     if (error.response?.data?.code === "SESSION_REVOKED") {
       console.warn("[API] Session revoked by another device login.");
         if (typeof window !== "undefined") {
-          localStorage.removeItem("skillio_auth_token");
-          localStorage.removeItem("skillio_user_data");
-          localStorage.removeItem("skillio_active_tenant");
+          try {
+            window.localStorage.removeItem("skillio_auth_token");
+            window.localStorage.removeItem("skillio_user_data");
+          } catch { /* The revoked server session still prevents access. */ }
+          clearStoredTenantSlug();
           if (!window.location.pathname.includes("/login")) {
             window.location.href = "/login?revoked=true";
           }

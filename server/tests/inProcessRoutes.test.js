@@ -1,7 +1,8 @@
 import assert from "assert";
 import { tenantResolver, extractSubdomain } from "../middleware/tenantResolver.js";
 import isAuth from "../middleware/isAuth.js";
-import { requireRole } from "../middleware/rbac.js";
+import { requirePermission } from "../middleware/rbac.js";
+import { PERMISSIONS } from "../utils/permissions.js";
 import { getCurrentTenant, getTenantBySlug } from "../controller/tenantController.js";
 import { genToken } from "../config/token.js";
 
@@ -140,9 +141,9 @@ await test("isAuth: Blocks cross-tenant token replay with 403", async () => {
   assert.strictEqual(nextCalled, false);
 });
 
-// Test 6: RBAC: requireRole rejects non-educator from educator endpoints
-await test("RBAC: requireRole blocks unauthenticated or unauthorized role", async () => {
-  const middleware = requireRole(["educator", "tenant_admin"]);
+// Test 6: Permission middleware rejects unauthenticated callers
+await test("Authorization policy blocks unauthenticated callers", async () => {
+  const middleware = requirePermission(PERMISSIONS.USE_EDUCATOR_WORKSPACE);
   const req = { userId: null };
   const res = createMockRes();
   let nextCalled = false;

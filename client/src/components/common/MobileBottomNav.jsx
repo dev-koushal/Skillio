@@ -12,16 +12,18 @@ import {
 } from "lucide-react";
 import { useSelector } from "react-redux";
 import { useTenant } from "../../context/TenantContext";
+import { canUseEducatorWorkspace } from "../../auth/permissions";
 
 export default function MobileBottomNav({ currentInstitution = null }) {
   const location = useLocation();
   const { userData } = useSelector((state) => state.user);
   const { tenant } = useTenant();
 
-  const isEducator =
-    userData?.role === "educator" ||
-    userData?.role === "tenant_admin" ||
-    userData?.role === "platform_admin";
+  // Keep the course builder's long, multi-step form clear of the persistent
+  // mobile navigation. The builder has its own step controls and back action.
+  if (location.pathname.startsWith("/builder")) return null;
+
+  const isEducator = canUseEducatorWorkspace(userData);
 
   const activeInstitution =
     currentInstitution ||

@@ -32,8 +32,10 @@ import { toast } from "react-toastify";
 import { setUserData } from "../redux/userSlice";
 import Navbar from "../components/Navbar";
 import { useTenant } from "../context/TenantContext";
+import { getRoleLabel, ROLES } from "../auth/permissions";
 import api from "../services/api";
 import { performLogout } from "../services/authStorage";
+import { setStoredTenantSlug } from "../services/tenantStorage";
 
 function Profile() {
   const { userData } = useSelector((store) => store.user);
@@ -274,7 +276,7 @@ function Profile() {
 
     const handleSwitchAcademy = (targetSlug, targetName) => {
       try {
-        localStorage.setItem("skillio_active_tenant", targetSlug);
+        setStoredTenantSlug(targetSlug);
         toast.success(`Switched to ${targetName}!`);
         setSwitchModalOpen(false);
         switchTenant(targetSlug);
@@ -340,7 +342,7 @@ function Profile() {
                   </p>
                   <div className="pt-1 flex items-center justify-center sm:justify-start gap-2 flex-wrap">
                     <span className="inline-flex items-center gap-1 text-[11px] font-mono uppercase px-2.5 py-0.5 rounded-full bg-[#eff6ff] text-[#1e3a8a] border border-[#bfdbfe]">
-                      <BadgeCheck size={13} /> {userData.role}
+                      <BadgeCheck size={13} /> {getRoleLabel(userData)}
                     </span>
                     {activeAcademySlug && (
                       <span className="inline-flex items-center gap-1 text-[11px] px-2.5 py-0.5 rounded-full bg-[#faf8f5] text-[#57534e] border border-[#e8e5dc]">
@@ -445,7 +447,7 @@ function Profile() {
               >
                 View Enrolled Courses →
               </button>
-              {userData.role === "educator" && (
+              {userData.role === ROLES.EDUCATOR && (
                 <button
                   onClick={() => navigate("/dashboard")}
                   className="px-4 py-2.5 rounded-xl bg-[#eff6ff] hover:bg-[#dbeafe] border border-[#bfdbfe] text-xs font-semibold text-[#1e3a8a] transition cursor-pointer pressable min-h-[40px]"

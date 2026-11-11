@@ -25,7 +25,9 @@ import { setUserData } from "../redux/userSlice";
 import { toast } from "react-toastify";
 import api from "../services/api";
 import { useTenant } from "../context/TenantContext";
+import { canUseEducatorWorkspace } from "../auth/permissions";
 import MobileBottomNav from "./common/MobileBottomNav";
+import StudentInstitutionSwitcher from "./common/StudentInstitutionSwitcher";
 import { performLogout } from "../services/authStorage";
 
 function Navbar({ currentInstitution = null }) {
@@ -100,12 +102,9 @@ function Navbar({ currentInstitution = null }) {
   const brandLogo = activeInstitution ? (activeInstitution.logo || "/skillio.png") : "/skillio.png";
   const brandSubtitle = activeInstitution
     ? activeInstitution.institutionType || "Academy"
-    : "SaaS Platform";
+    : "Learning platform";
 
-  const isEducator =
-    userData?.role === "educator" ||
-    userData?.role === "tenant_admin" ||
-    userData?.role === "platform_admin";
+  const isEducator = canUseEducatorWorkspace(userData);
 
   return (
     <>
@@ -115,7 +114,7 @@ function Navbar({ currentInstitution = null }) {
           <div className="flex items-center gap-3 sm:gap-6">
             <Link
               to={isEducator ? "/educator/home" : activeInstitution ? `/institution/${activeInstitution.slug}` : "/"}
-              className="flex items-center gap-2.5 sm:gap-3 group cursor-pointer focus:outline-none focus:ring-2 focus:ring-[#1e3a8a] rounded-xl p-1 pressable"
+              className="flex items-center gap-2.5 sm:gap-3 group cursor-pointer focus:outline-none focus:ring-2 focus:ring-[#5b3cc4] rounded-xl p-1 pressable"
             >
               <img
                 src={brandLogo}
@@ -135,69 +134,28 @@ function Navbar({ currentInstitution = null }) {
               </div>
             </Link>
 
-            {/* Platform / Institution badges for non-students or visitors */}
-            {!userData && (
-              activeInstitution ? (
-                <div className="hidden lg:flex items-center gap-2">
-                  <Link
-                    to="/"
-                    className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#f8f7f4] hover:bg-[#f2efe9] border border-[#e8e5dc] text-xs font-semibold text-[#44403c] transition cursor-pointer pressable"
-                    title="Return to Skillio Platform Homepage"
-                  >
-                    <span>← Platform</span>
-                  </Link>
-                </div>
-              ) : (
-                <Link
-                  to="/institutions"
-                  className="hidden lg:inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-[#eff6ff] hover:bg-blue-100/70 border border-[#bfdbfe] text-xs font-bold text-[#1e3a8a] transition cursor-pointer pressable"
-                >
-                  <Building2 size={13} />
-                  <span>Explore Institutions</span>
-                </Link>
-              )
-            )}
           </div>
 
           {/* Desktop Navigation Links — Strictly Role-Aware */}
           <div className="hidden md:flex items-center gap-2 lg:gap-4">
-            {/* 1. PUBLIC VISITOR SHELL */}
-            {!userData && (
-              <>
-                <Link
-                  to="/institutions"
-                  className="inline-flex items-center gap-1.5 text-xs sm:text-sm font-semibold text-[#44403c] hover:text-[#1e3a8a] px-3 py-2 rounded-xl hover:bg-[#f8f7f4] transition"
-                >
-                  <Building2 size={15} className="text-[#1e3a8a]" />
-                  <span>Explore Institutions</span>
-                </Link>
-                <Link
-                  to="/allcourses"
-                  className="text-xs sm:text-sm font-semibold text-[#44403c] hover:text-[#1e3a8a] px-3 py-2 rounded-xl hover:bg-[#f8f7f4] transition"
-                >
-                  Courses
-                </Link>
-              </>
-            )}
-
             {/* 2. STUDENT LEARNING SHELL */}
             {userData && userData.role === "student" && (
               <>
                 <Link
                   to={activeInstitution ? `/institution/${activeInstitution.slug}` : "/"}
-                  className="text-xs sm:text-sm font-semibold text-[#44403c] hover:text-[#1e3a8a] px-3 py-2 rounded-xl hover:bg-[#f8f7f4] transition"
+                  className="text-xs sm:text-sm font-semibold text-[#44403c] hover:text-[#5b3cc4] px-3 py-2 rounded-xl hover:bg-[#f8f7f4] transition"
                 >
                   Home
                 </Link>
                 <Link
                   to={activeInstitution ? `/institution/${activeInstitution.slug}/courses` : "/courses"}
-                  className="text-xs sm:text-sm font-semibold text-[#44403c] hover:text-[#1e3a8a] px-3 py-2 rounded-xl hover:bg-[#f8f7f4] transition"
+                  className="text-xs sm:text-sm font-semibold text-[#44403c] hover:text-[#5b3cc4] px-3 py-2 rounded-xl hover:bg-[#f8f7f4] transition"
                 >
                   Courses
                 </Link>
                 <Link
                   to={activeInstitution ? `/institution/${activeInstitution.slug}/my-courses` : "/mycourses"}
-                  className="text-xs sm:text-sm font-semibold text-[#44403c] hover:text-[#1e3a8a] px-3 py-2 rounded-xl hover:bg-[#f8f7f4] transition"
+                  className="text-xs sm:text-sm font-semibold text-[#44403c] hover:text-[#5b3cc4] px-3 py-2 rounded-xl hover:bg-[#f8f7f4] transition"
                 >
                   My Courses
                 </Link>
@@ -208,46 +166,36 @@ function Navbar({ currentInstitution = null }) {
             {isEducator && (
               <>
                 <Link
-                  to="/educator/home"
-                  className="text-xs sm:text-sm font-semibold text-[#44403c] hover:text-[#1e3a8a] px-3 py-2 rounded-xl hover:bg-[#f8f7f4] transition"
-                >
-                  Home
-                </Link>
-                <Link
                   to="/dashboard"
-                  className="text-xs sm:text-sm font-semibold text-[#44403c] hover:text-[#1e3a8a] px-3 py-2 rounded-xl hover:bg-[#f8f7f4] transition"
+                  className="text-xs sm:text-sm font-semibold text-[#44403c] hover:text-[#5b3cc4] px-3 py-2 rounded-xl hover:bg-[#f8f7f4] transition"
                 >
                   Dashboard
                 </Link>
                 <Link
                   to="/courses"
-                  className="text-xs sm:text-sm font-semibold text-[#44403c] hover:text-[#1e3a8a] px-3 py-2 rounded-xl hover:bg-[#f8f7f4] transition"
+                  className="text-xs sm:text-sm font-semibold text-[#44403c] hover:text-[#5b3cc4] px-3 py-2 rounded-xl hover:bg-[#f8f7f4] transition"
                 >
                   Courses
                 </Link>
                 <Link
                   to="/students"
-                  className="inline-flex items-center gap-1.5 text-xs sm:text-sm font-semibold text-[#44403c] hover:text-[#1e3a8a] px-3 py-2 rounded-xl hover:bg-[#f8f7f4] transition"
+                  className="inline-flex items-center gap-1.5 text-xs sm:text-sm font-semibold text-[#44403c] hover:text-[#5b3cc4] px-3 py-2 rounded-xl hover:bg-[#f8f7f4] transition"
                 >
-                  <Users size={14} className="text-[#1e3a8a]" />
+                  <Users size={14} className="text-[#5b3cc4]" />
                   <span>Students</span>
                 </Link>
                 <Link
                   to="/create-institution"
-                  className="inline-flex items-center gap-1.5 text-xs sm:text-sm font-semibold text-[#44403c] hover:text-[#1e3a8a] px-3 py-2 rounded-xl hover:bg-[#f8f7f4] transition"
+                  className="inline-flex items-center gap-1.5 text-xs sm:text-sm font-semibold text-[#44403c] hover:text-[#5b3cc4] px-3 py-2 rounded-xl hover:bg-[#f8f7f4] transition"
                 >
-                  <Building2 size={14} className="text-[#1e3a8a]" />
+                  <Building2 size={14} className="text-[#5b3cc4]" />
                   <span>Institution</span>
                 </Link>
-                <button
-                  onClick={() => navigate("/builder/new")}
-                  className="inline-flex items-center gap-1.5 bg-[#eff6ff] text-[#1e3a8a] hover:bg-blue-100/70 border border-[#bfdbfe] text-xs font-bold px-3 py-1.5 rounded-xl cursor-pointer transition pressable"
-                >
-                  <PlusCircle size={14} />
-                  <span>New Course</span>
-                </button>
+
               </>
             )}
+
+            {userData?.role === "student" && <StudentInstitutionSwitcher />}
 
             {/* Install App Button if PWA available */}
             {canInstall && (
@@ -264,13 +212,13 @@ function Navbar({ currentInstitution = null }) {
               <div className="flex items-center gap-2 pl-2">
                 <button
                   onClick={() => navigate("/login")}
-                  className="text-xs sm:text-sm font-bold text-[#1e3a8a] hover:bg-blue-50/80 px-3.5 py-2 rounded-xl cursor-pointer transition"
+                  className="text-xs sm:text-sm font-bold text-[#5b3cc4] hover:bg-[#f1edff] px-3.5 py-2 rounded-xl cursor-pointer transition"
                 >
                   Sign In
                 </button>
                 <button
                   onClick={() => navigate("/signup")}
-                  className="bg-[#1e3a8a] hover:bg-[#172554] text-white text-xs sm:text-sm font-bold px-4 py-2.5 rounded-xl cursor-pointer transition shadow-xs pressable"
+                  className="bg-[#5b3cc4] hover:bg-[#38256f] text-white text-xs sm:text-sm font-bold px-4 py-2.5 rounded-xl cursor-pointer transition shadow-xs pressable"
                 >
                   Get Started
                 </button>
@@ -281,11 +229,11 @@ function Navbar({ currentInstitution = null }) {
                 <button
                   type="button"
                   onClick={() => setDropdownOpen((prev) => !prev)}
-                  className="flex items-center gap-1.5 p-1 rounded-full border border-[#d6d3c9] hover:border-[#1e3a8a] focus:outline-none focus:ring-2 focus:ring-[#1e3a8a] cursor-pointer transition pressable min-h-[44px] min-w-[44px] justify-center"
+                  className="flex items-center gap-1.5 p-1 rounded-full border border-[#d6d3c9] hover:border-[#5b3cc4] focus:outline-none focus:ring-2 focus:ring-[#5b3cc4] cursor-pointer transition pressable min-h-[44px] min-w-[44px] justify-center"
                   aria-label="User account menu"
                   aria-expanded={dropdownOpen}
                 >
-                  <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-full overflow-hidden bg-[#1e3a8a] flex items-center justify-center text-xs sm:text-sm font-bold text-white shadow-xs">
+                  <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-full overflow-hidden bg-[#5b3cc4] flex items-center justify-center text-xs sm:text-sm font-bold text-white shadow-xs">
                     {userData?.profilePicture ? (
                       <img
                         src={userData.profilePicture}
@@ -347,7 +295,7 @@ function Navbar({ currentInstitution = null }) {
                               }}
                               className="w-full flex items-center gap-2.5 px-4 py-2.5 text-xs sm:text-sm text-[#44403c] hover:bg-[#f8f7f4] transition cursor-pointer text-left font-medium"
                             >
-                              <Building2 size={15} className="text-[#1e3a8a]" />
+                              <Building2 size={15} className="text-[#5b3cc4]" />
                               My Academy & Settings
                             </button>
                           </>
@@ -363,7 +311,7 @@ function Navbar({ currentInstitution = null }) {
                               }}
                               className="w-full flex items-center gap-2.5 px-4 py-2.5 text-xs sm:text-sm text-[#44403c] hover:bg-[#f8f7f4] transition cursor-pointer text-left font-medium"
                             >
-                              <Building2 size={15} className="text-[#1e3a8a]" />
+                              <Building2 size={15} className="text-[#5b3cc4]" />
                               Educator Home
                             </button>
                             <button
@@ -373,7 +321,7 @@ function Navbar({ currentInstitution = null }) {
                               }}
                               className="w-full flex items-center gap-2.5 px-4 py-2.5 text-xs sm:text-sm text-[#44403c] hover:bg-[#f8f7f4] transition cursor-pointer text-left font-medium"
                             >
-                              <LayoutDashboard size={15} className="text-[#1e3a8a]" />
+                              <LayoutDashboard size={15} className="text-[#5b3cc4]" />
                               Educator Dashboard
                             </button>
                             <button
@@ -383,7 +331,7 @@ function Navbar({ currentInstitution = null }) {
                               }}
                               className="w-full flex items-center gap-2.5 px-4 py-2.5 text-xs sm:text-sm text-[#44403c] hover:bg-[#f8f7f4] transition cursor-pointer text-left font-medium"
                             >
-                              <Users size={15} className="text-[#1e3a8a]" />
+                              <Users size={15} className="text-[#5b3cc4]" />
                               Manage Students
                             </button>
                             <button
@@ -403,7 +351,7 @@ function Navbar({ currentInstitution = null }) {
                               }}
                               className="w-full flex items-center gap-2.5 px-4 py-2.5 text-xs sm:text-sm text-[#44403c] hover:bg-[#f8f7f4] transition cursor-pointer text-left font-medium"
                             >
-                              <Building2 size={15} className="text-[#1e3a8a]" />
+                              <Building2 size={15} className="text-[#5b3cc4]" />
                               Institution Settings
                             </button>
                           </>
@@ -452,10 +400,12 @@ function Navbar({ currentInstitution = null }) {
 
           {/* Compact Mobile Top Actions (App Style) */}
           <div className="flex items-center gap-1.5 md:hidden">
-            {activeInstitution && (
+            {userData?.role === "student" ? (
+              <StudentInstitutionSwitcher compact />
+            ) : activeInstitution && (
               <Link
-                to={userData?.role === "student" ? `/institution/${activeInstitution.slug}` : "/institutions"}
-                className="px-2.5 py-1.5 rounded-xl text-[#1e3a8a] bg-[#eff6ff] hover:bg-blue-100 border border-[#bfdbfe] flex items-center gap-1.5 text-[11px] font-bold touch-target pressable"
+                to="/"
+                className="px-2.5 py-1.5 rounded-xl text-[#5b3cc4] bg-[#f1edff] hover:bg-[#e5defc] border border-[#d8cdf7] flex items-center gap-1.5 text-[11px] font-bold touch-target pressable"
               >
                 <Building2 size={14} />
                 <span className="truncate max-w-[80px]">{brandName}</span>
@@ -487,11 +437,11 @@ function Navbar({ currentInstitution = null }) {
               <button
                 type="button"
                 onClick={() => setProfileSheetOpen(true)}
-                className="p-1 rounded-full border border-[#d6d3c9] hover:border-[#1e3a8a] touch-target pressable min-h-[44px] min-w-[44px] flex items-center justify-center cursor-pointer"
+                className="p-1 rounded-full border border-[#d6d3c9] hover:border-[#5b3cc4] touch-target pressable min-h-[44px] min-w-[44px] flex items-center justify-center cursor-pointer"
                 aria-label="Open profile menu"
                 aria-expanded={profileSheetOpen}
               >
-                <div className="w-8 h-8 rounded-full overflow-hidden bg-[#1e3a8a] flex items-center justify-center text-xs font-bold text-white shadow-xs">
+                <div className="w-8 h-8 rounded-full overflow-hidden bg-[#5b3cc4] flex items-center justify-center text-xs font-bold text-white shadow-xs">
                   {userData?.profilePicture ? (
                     <img src={userData.profilePicture} alt={userData.name} className="w-full h-full object-cover" />
                   ) : (
@@ -544,10 +494,10 @@ function Navbar({ currentInstitution = null }) {
                       navigate("/profile");
                       setMobileMenuOpen(false);
                     }}
-                    className="w-full text-left p-3.5 rounded-2xl bg-[#eff6ff] hover:bg-blue-100/70 border border-[#bfdbfe] transition cursor-pointer touch-target pressable flex items-center justify-between"
+                    className="w-full text-left p-3.5 rounded-2xl bg-[#f1edff] hover:bg-[#e5defc] border border-[#d8cdf7] transition cursor-pointer touch-target pressable flex items-center justify-between"
                   >
                     <div className="flex items-center gap-3 min-w-0">
-                      <div className="w-10 h-10 rounded-full overflow-hidden bg-[#1e3a8a] text-white flex items-center justify-center font-bold text-xs shadow-xs shrink-0">
+                      <div className="w-10 h-10 rounded-full overflow-hidden bg-[#5b3cc4] text-white flex items-center justify-center font-bold text-xs shadow-xs shrink-0">
                         {userData?.profilePicture ? (
                           <img src={userData.profilePicture} alt={userData.name} className="w-full h-full object-cover" />
                         ) : (
@@ -557,12 +507,12 @@ function Navbar({ currentInstitution = null }) {
                       <div className="min-w-0">
                         <p className="text-sm font-bold text-[#1c1917] truncate">{userData.name}</p>
                         <p className="text-xs text-[#78716c] truncate">{userData.email}</p>
-                        <span className="inline-block mt-0.5 text-[10px] uppercase font-mono font-bold text-[#1e3a8a]">
+                        <span className="inline-block mt-0.5 text-[10px] uppercase font-mono font-bold text-[#5b3cc4]">
                           {userData.role} • View Profile
                         </span>
                       </div>
                     </div>
-                    <ChevronRight size={17} className="text-[#1e3a8a] shrink-0 ml-2" />
+                    <ChevronRight size={17} className="text-[#5b3cc4] shrink-0 ml-2" />
                   </button>
                 ) : (
                   <div className="grid grid-cols-2 gap-2 pt-1">
@@ -580,7 +530,7 @@ function Navbar({ currentInstitution = null }) {
                         navigate("/signup");
                         setMobileMenuOpen(false);
                       }}
-                      className="w-full py-2.5 px-3 rounded-xl bg-[#1e3a8a] text-white text-xs font-bold hover:bg-[#172554] text-center touch-target shadow-xs pressable cursor-pointer"
+                      className="w-full py-2.5 px-3 rounded-xl bg-[#5b3cc4] text-white text-xs font-bold hover:bg-[#38256f] text-center touch-target shadow-xs pressable cursor-pointer"
                     >
                       Sign Up
                     </button>
@@ -602,31 +552,9 @@ function Navbar({ currentInstitution = null }) {
                       }}
                       className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs sm:text-sm font-semibold text-[#44403c] hover:bg-[#f8f7f4] touch-target text-left cursor-pointer pressable"
                     >
-                      <User2Icon size={16} className="text-[#1e3a8a]" />
+                      <User2Icon size={16} className="text-[#5b3cc4]" />
                       <span>My Profile</span>
                     </button>
-                  )}
-
-                  {/* Visitor Nav */}
-                  {!userData && (
-                    <>
-                      <Link
-                        to="/institutions"
-                        onClick={() => setMobileMenuOpen(false)}
-                        className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs sm:text-sm font-semibold text-[#44403c] hover:bg-[#f8f7f4] touch-target"
-                      >
-                        <Building2 size={16} className="text-[#1e3a8a]" />
-                        Explore Institutions
-                      </Link>
-                      <Link
-                        to="/courses"
-                        onClick={() => setMobileMenuOpen(false)}
-                        className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs sm:text-sm font-semibold text-[#44403c] hover:bg-[#f8f7f4] touch-target"
-                      >
-                        <BookOpen size={16} className="text-[#78716c]" />
-                        Courses
-                      </Link>
-                    </>
                   )}
 
                   {/* Student Nav */}
@@ -635,7 +563,7 @@ function Navbar({ currentInstitution = null }) {
                       <Link
                         to={activeInstitution ? `/institution/${activeInstitution.slug}` : "/"}
                         onClick={() => setMobileMenuOpen(false)}
-                        className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs sm:text-sm font-bold text-[#1e3a8a] hover:bg-blue-50/60 touch-target"
+                        className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs sm:text-sm font-bold text-[#5b3cc4] hover:bg-[#f1edff] touch-target"
                       >
                         <Building2 size={16} />
                         Home
@@ -675,7 +603,7 @@ function Navbar({ currentInstitution = null }) {
                       <Link
                         to="/educator/home"
                         onClick={() => setMobileMenuOpen(false)}
-                        className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs sm:text-sm font-bold text-[#1e3a8a] hover:bg-blue-50/60 touch-target"
+                        className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs sm:text-sm font-bold text-[#5b3cc4] hover:bg-[#f1edff] touch-target"
                       >
                         <Building2 size={16} />
                         Educator Home
@@ -685,7 +613,7 @@ function Navbar({ currentInstitution = null }) {
                         onClick={() => setMobileMenuOpen(false)}
                         className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs sm:text-sm font-semibold text-[#44403c] hover:bg-[#f8f7f4] touch-target"
                       >
-                        <LayoutDashboard size={16} className="text-[#1e3a8a]" />
+                        <LayoutDashboard size={16} className="text-[#5b3cc4]" />
                         Dashboard
                       </Link>
                       <Link
@@ -701,7 +629,7 @@ function Navbar({ currentInstitution = null }) {
                         onClick={() => setMobileMenuOpen(false)}
                         className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs sm:text-sm font-semibold text-[#44403c] hover:bg-[#f8f7f4] touch-target"
                       >
-                        <Users size={16} className="text-[#1e3a8a]" />
+                        <Users size={16} className="text-[#5b3cc4]" />
                         Manage Students
                       </Link>
                       <Link
@@ -709,7 +637,7 @@ function Navbar({ currentInstitution = null }) {
                         onClick={() => setMobileMenuOpen(false)}
                         className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs sm:text-sm font-semibold text-[#44403c] hover:bg-[#f8f7f4] touch-target"
                       >
-                        <Building2 size={16} className="text-[#1e3a8a]" />
+                        <Building2 size={16} className="text-[#5b3cc4]" />
                         Institution
                       </Link>
                     </>
@@ -785,9 +713,9 @@ function Navbar({ currentInstitution = null }) {
                   navigate("/profile");
                   setProfileSheetOpen(false);
                 }}
-                className="w-full text-left flex items-center gap-3.5 p-3.5 rounded-2xl bg-[#eff6ff] border border-[#bfdbfe] cursor-pointer pressable transition"
+                className="w-full text-left flex items-center gap-3.5 p-3.5 rounded-2xl bg-[#f1edff] border border-[#d8cdf7] cursor-pointer pressable transition"
               >
-                <div className="w-11 h-11 rounded-full overflow-hidden bg-[#1e3a8a] text-white flex items-center justify-center font-bold text-sm shadow-xs shrink-0">
+                <div className="w-11 h-11 rounded-full overflow-hidden bg-[#5b3cc4] text-white flex items-center justify-center font-bold text-sm shadow-xs shrink-0">
                   {userData?.profilePicture ? (
                     <img src={userData.profilePicture} alt={userData.name} className="w-full h-full object-cover" />
                   ) : (
@@ -797,11 +725,11 @@ function Navbar({ currentInstitution = null }) {
                 <div className="min-w-0 flex-1">
                   <p className="text-sm font-bold text-[#1c1917] truncate">{userData.name}</p>
                   <p className="text-xs text-[#78716c] truncate">{userData.email}</p>
-                  <span className="inline-block mt-0.5 text-[10px] uppercase font-mono font-bold text-[#1e3a8a]">
+                  <span className="inline-block mt-0.5 text-[10px] uppercase font-mono font-bold text-[#5b3cc4]">
                     {userData.role} • View Profile →
                   </span>
                 </div>
-                <ChevronRight size={18} className="text-[#1e3a8a] shrink-0" />
+                <ChevronRight size={18} className="text-[#5b3cc4] shrink-0" />
               </button>
 
               {/* Direct Actions List */}
@@ -839,7 +767,7 @@ function Navbar({ currentInstitution = null }) {
                       }}
                       className="w-full flex items-center gap-3 px-3.5 py-3 rounded-xl text-sm font-semibold text-[#44403c] hover:bg-[#f8f7f4] transition cursor-pointer text-left pressable touch-target"
                     >
-                      <Building2 size={18} className="text-[#1e3a8a]" />
+                      <Building2 size={18} className="text-[#5b3cc4]" />
                       <span>Change Institution / Academy</span>
                     </button>
                   </>
@@ -855,7 +783,7 @@ function Navbar({ currentInstitution = null }) {
                       }}
                       className="w-full flex items-center gap-3 px-3.5 py-3 rounded-xl text-sm font-semibold text-[#44403c] hover:bg-[#f8f7f4] transition cursor-pointer text-left pressable touch-target"
                     >
-                      <Building2 size={18} className="text-[#1e3a8a]" />
+                      <Building2 size={18} className="text-[#5b3cc4]" />
                       <span>Educator Home</span>
                     </button>
                     <button
@@ -866,7 +794,7 @@ function Navbar({ currentInstitution = null }) {
                       }}
                       className="w-full flex items-center gap-3 px-3.5 py-3 rounded-xl text-sm font-semibold text-[#44403c] hover:bg-[#f8f7f4] transition cursor-pointer text-left pressable touch-target"
                     >
-                      <LayoutDashboard size={18} className="text-[#1e3a8a]" />
+                      <LayoutDashboard size={18} className="text-[#5b3cc4]" />
                       <span>Detailed Dashboard</span>
                     </button>
                     <button
@@ -877,7 +805,7 @@ function Navbar({ currentInstitution = null }) {
                       }}
                       className="w-full flex items-center gap-3 px-3.5 py-3 rounded-xl text-sm font-semibold text-[#44403c] hover:bg-[#f8f7f4] transition cursor-pointer text-left pressable touch-target"
                     >
-                      <Users size={18} className="text-[#1e3a8a]" />
+                      <Users size={18} className="text-[#5b3cc4]" />
                       <span>Manage Students</span>
                     </button>
                     <button
@@ -899,7 +827,7 @@ function Navbar({ currentInstitution = null }) {
                       }}
                       className="w-full flex items-center gap-3 px-3.5 py-3 rounded-xl text-sm font-semibold text-[#44403c] hover:bg-[#f8f7f4] transition cursor-pointer text-left pressable touch-target"
                     >
-                      <Building2 size={18} className="text-[#1e3a8a]" />
+                      <Building2 size={18} className="text-[#5b3cc4]" />
                       <span>Institution Settings</span>
                     </button>
                   </>

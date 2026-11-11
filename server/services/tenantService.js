@@ -1,5 +1,6 @@
 import Tenant from "../models/tenantModel.js";
 import { clearTenantCache } from "../middleware/tenantResolver.js";
+import { isInstitutionOwner } from "../utils/institutionPermissions.js";
 
 /**
  * Shared Tenant/Institution Service for both REST controllers and the AI Assistant.
@@ -22,9 +23,8 @@ export const tenantService = {
   async updateTenantBranding({ tenantId, userId, userRole, updateData = {} }) {
     if (!tenantId) throw new Error("tenantId is required");
 
-    // Only tenant_admin or platform_admin can change institution settings
-    if (userRole !== "tenant_admin" && userRole !== "platform_admin") {
-      throw new Error("Only an academy administrator can change institution branding or settings");
+    if (!(await isInstitutionOwner({ tenantId, userId, userRole }))) {
+      throw new Error("Only the institution owner can change its branding or settings");
     }
 
     const tenant = await Tenant.findById(tenantId);

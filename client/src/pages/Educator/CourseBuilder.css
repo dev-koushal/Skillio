@@ -1,0 +1,28 @@
+.course-builder-step { display: none; }
+.course-builder-step.is-active { display: block; }
+.course-builder-step.is-active > * + * { margin-top: 1rem; }
+.course-step-chip { display: inline-flex; align-items: center; gap: 7px; min-height: 40px; padding: 0 10px; border: 1px solid #e8e5dc; border-radius: 8px; background: #fff; color: #625d56; font-size: 12px; font-weight: 650; cursor: pointer; }
+.course-step-chip > span:first-child { display: grid; width: 22px; height: 22px; place-items: center; border-radius: 50%; background: #f1ede4; font-size: 11px; }
+.course-step-chip.active { border-color: #5b3cc4; background: #f5f2ff; color: #4b2fa8; }
+.course-step-chip.active > span:first-child { background: #5b3cc4; color: #fff; }
+.course-step-button { min-height: 44px; padding: 0 16px; border: 1px solid #d6d3d1; border-radius: 9px; background: #fff; color: #44403c; font-size: 13px; font-weight: 700; cursor: pointer; }
+.course-step-button.primary { border-color: #1e3a8a; background: #1e3a8a; color: #fff; }
+@media (max-width: 640px) {
+  .course-builder-main { padding-inline: 12px; padding-top: 12px; gap: 12px; }
+  .course-builder-toolbar { position: static; padding: 12px; gap: 10px; border-radius: 14px; }
+  .course-builder-toolbar > div:first-child { align-items: flex-start; }
+  .course-builder-toolbar > div:last-child { display: flex; flex-wrap: wrap; justify-content: flex-start; gap: 7px; }
+  .course-builder-toolbar > div:last-child button { min-height: 40px; padding: 0 11px; font-size: 11px; }
+  .course-toolbar-publish { display: none !important; }
+  .course-builder-step { border-radius: 14px; }
+  .course-builder-footer { position: static; display: grid; grid-template-columns: 1fr; gap: 9px; padding: 10px; border: 1px solid #e8e5dc; border-radius: 12px; background: #fff; box-shadow: 0 2px 8px rgba(30,25,23,.04); }
+  .course-stepper { display: grid; grid-template-columns: repeat(3, minmax(0,1fr)); }
+  .course-step-chip { justify-content: center; padding-inline: 5px; font-size: 10px; }
+  .course-step-chip > span:last-child { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .course-back-all { display: none; }
+  .course-step-actions { justify-content: flex-end; }
+  .course-step-actions .course-step-button { min-height: 40px; padding-inline: 14px; }
+  .course-step-actions .course-step-button.primary { min-width: 104px; }
+  .course-builder-main { padding-bottom: 84px; }
+  .course-builder-page > footer { display: none; }
+}

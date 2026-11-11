@@ -10,6 +10,7 @@ import sessionService from "../services/session/sessionService.js";
 import sendMail from "../config/sendMail.js";
 import { sendOtp as sendSmsOtp } from "../services/sms/smsService.js";
 import { normalizePhoneNumber, isValidE164 } from "../utils/phoneUtils.js";
+import { buildSignupUserPayload } from "../utils/authUserPayload.js";
 
 // In-memory rate limiter for SMS OTP requests
 const phoneOtpRateLimits = new Map();
@@ -49,14 +50,12 @@ export const signUp = async (req, res) => {
     // Allow student to specify selected institution during registration
     if (institutionSlug && institutionSlug !== "default" && institutionSlug !== "platform") {
       const selectedTenant = await Tenant.findOne({ slug: institutionSlug, status: "active" });
-      if (selectedTenant) {
-        tenantId = selectedTenant._id;
-      }
+      if (!selectedTenant) return res.status(404).json({ success: false, message: "Selected institution was not found." });
+      tenantId = selectedTenant._id;
     } else if (institutionId) {
       const selectedTenant = await Tenant.findOne({ _id: institutionId, status: "active" });
-      if (selectedTenant) {
-        tenantId = selectedTenant._id;
-      }
+      if (!selectedTenant) return res.status(404).json({ success: false, message: "Selected institution was not found." });
+      tenantId = selectedTenant._id;
     }
 
     if (!tenantId) {
@@ -86,6 +85,13 @@ export const signUp = async (req, res) => {
       });
     }
 
+    if (role === "student") {
+      const selectedTenant = tenantId ? await Tenant.findById(tenantId).select("slug") : null;
+      if (!selectedTenant || ["default", "platform"].includes(selectedTenant.slug)) {
+        return res.status(400).json({ success: false, message: "Choose an institution to create your student account." });
+      }
+    }
+
     if (!validator.isEmail(email)) {
       return res.status(400).json({ success: false, message: "Email should be valid!" });
     }
@@ -110,16 +116,24 @@ export const signUp = async (req, res) => {
       role,
     });
 
+    let studentMembership = null;
     if (role === "student" && tenantId) {
       try {
-        await InstitutionMembership.create({
+        studentMembership = await InstitutionMembership.create({
           userId: user._id,
           tenantId,
           role: "student",
           status: "active",
           joinedAt: new Date(),
         });
-      } catch (e) { }
+      } catch (membershipError) {
+        try {
+          await User.deleteOne({ _id: user._id });
+        } catch (cleanupError) {
+          console.error("[SignUp] Failed to roll back a student account without institution membership:", cleanupError);
+        }
+        throw membershipError;
+      }
     }
 
     // Register active device session (enforces maximum 2 active devices)
@@ -133,15 +147,10 @@ export const signUp = async (req, res) => {
 
     res.cookie("token", token, getCookieOptions());
 
-    const safeUser = user.toObject();
-    delete safeUser.password;
-
     const tenantDoc = await Tenant.findById(tenantId)
       .select("name slug logo institutionType title")
       .lean();
-    if (tenantDoc) {
-      safeUser.tenant = tenantDoc;
-    }
+    const safeUser = buildSignupUserPayload(user, tenantDoc, studentMembership);
 
     return res.status(201).json({
       success: true,
@@ -167,62 +176,97 @@ export const login = async (req, res) => {
       return res.status(400).json({ success: false, message: "Email and password are required!" });
     }
 
-    // 1. Look for user in active tenant
-    let user = await User.findOne({ email, tenantId })
+    // Resolve a tenant-local account first so duplicate emails across institutions are deterministic.
+    let user = tenantId ? await User.findOne({ email, tenantId }) : null;
+    if (!user) {
+      const candidates = await User.find({ email }).limit(2)
+        .select("_id name email role tenantId")
+        .lean();
+      if (candidates.length === 1) {
+        user = candidates[0];
+      }
+      const scopedCandidates = [];
+      for (const candidate of user ? [] : candidates) {
+        if (candidate.role !== "student") {
+          scopedCandidates.push(candidate);
+          continue;
+        }
+        const membership = await InstitutionMembership.findOne({
+          userId: candidate._id,
+          tenantId,
+          role: "student",
+          status: { $in: ["active", "enrolled", "ACTIVE", "ENROLLED"] },
+        });
+        if (membership) scopedCandidates.push(candidate);
+      }
+      if (scopedCandidates.length > 1 || (!user && candidates.length > 1 && scopedCandidates.length === 0)) {
+        return res.status(409).json({
+          success: false,
+          code: "AMBIGUOUS_EMAIL_ACCOUNT",
+          message: "This email is used by more than one institution. Open your institution’s sign-in page to continue.",
+        });
+      }
+      if (!user) user = scopedCandidates[0] || null;
+    }
+
+    if (user) {
+      user = await User.findById(user._id)
       .select("+password")
       .populate({
         path: "enrolledCourses",
         select: "title thumbnail description subTitle category price creator lectures isPublished tenantId",
       });
+    }
 
-    // 2. Fallback: Search globally for educators/admins or students
-    if (!user) {
-      const globalUser = await User.findOne({ email })
-        .select("+password")
-        .populate({
-          path: "enrolledCourses",
-          select: "title thumbnail description subTitle category price creator lectures isPublished tenantId",
-        });
-
-      if (globalUser) {
-        user = globalUser;
-
-        // For educators, resolve their single institution
-        if (user.role === "educator" || user.role === "tenant_admin") {
-          const ownedTenant = await Tenant.findOne({ ownerId: user._id, status: "active" });
-          if (ownedTenant) {
-            user.tenantId = ownedTenant._id;
-          }
-        }
-      }
+    if (user?.role === "educator" && user.tenantId?.toString() !== tenantId?.toString()) {
+      const ownedTenant = await Tenant.findOne({ ownerId: user._id, status: "active" });
+      if (ownedTenant) user.tenantId = ownedTenant._id;
     }
 
     if (!user) {
       return res.status(400).json({ success: false, message: "No account found with this email!" });
     }
 
-    // Validate target role allowing compatible administrator / educator roles
-    if (role && user.role !== "platform_admin") {
-      const educatorRoles = ["educator", "tenant_admin", "instructor", "creator", "admin"];
-      const isEducatorTarget = educatorRoles.includes(role);
-      const isUserEducator = educatorRoles.includes(user.role);
-      const isStudentTarget = role === "student";
-      const isUserStudent = user.role === "student";
+    const activeMemberships = user.role === "student"
+      ? await InstitutionMembership.find({
+        userId: user._id,
+        role: "student",
+        status: { $in: ["active", "enrolled", "ACTIVE", "ENROLLED"] },
+      })
+        .populate("tenantId", "name slug logo institutionType title")
+      : [];
 
-      if (isEducatorTarget && !isUserEducator) {
-        return res.status(400).json({ success: false, message: `This account is registered as ${user.role}, not an educator!` });
+    const hasRequestTenantMembership = user.role !== "student" || activeMemberships.some((membership) =>
+      membership.tenantId && membership.tenantId._id.toString() === tenantId?.toString()
+    );
+    if (user.role === "student" && !hasRequestTenantMembership && activeMemberships.length) {
+      // Authenticate first, then present only institutions the student already belongs to.
+      // The app's selection step will issue a tenant-specific token after a membership is selected.
+      user.tenantId = activeMemberships[0].tenantId._id;
+    }
+
+    // Only the product-facing roles can be requested from the login form.
+    if (role && user.role !== "platform_admin") {
+      if (!["student", "educator"].includes(role)) {
+        return res.status(400).json({ success: false, message: "Choose Student or Educator to sign in." });
       }
-      if (isStudentTarget && !isUserStudent) {
-        return res.status(400).json({ success: false, message: `This account is registered as ${user.role}, not a student!` });
-      }
-      if (!isEducatorTarget && !isStudentTarget && user.role !== role) {
-        return res.status(400).json({ success: false, message: `This account is registered as ${user.role}, not ${role}!` });
+      if (user.role !== role) {
+        const expected = user.role === "student" ? "Student" : "Educator";
+        return res.status(400).json({ success: false, message: `This account is registered as ${expected}.` });
       }
     }
 
     const isMatch = await bcrypt.compare(password, user.password);
     if (!isMatch) {
       return res.status(400).json({ success: false, message: "Wrong password!" });
+    }
+
+    if (user.role === "student" && !activeMemberships.length) {
+      return res.status(403).json({
+        success: false,
+        code: "INSTITUTION_MEMBERSHIP_REQUIRED",
+        message: "This student account has no active institution. Contact your institution or choose one during signup.",
+      });
     }
 
     // Register active device session (enforces maximum 2 active devices)
@@ -239,17 +283,22 @@ export const login = async (req, res) => {
     const safeUser = user.toObject();
     delete safeUser.password;
 
-    // Filter enrolled courses to active tenant context
-    if (tenantId && safeUser.enrolledCourses && Array.isArray(safeUser.enrolledCourses)) {
-      safeUser.enrolledCourses = safeUser.enrolledCourses.filter(
-        (c) => c && c.tenantId && c.tenantId.toString() === tenantId.toString()
-      );
+    const activeTenantIds = new Set(activeMemberships.map((membership) => membership.tenantId?._id?.toString()).filter(Boolean));
+    if (safeUser.enrolledCourses && Array.isArray(safeUser.enrolledCourses)) {
+      safeUser.enrolledCourses = safeUser.enrolledCourses.filter((course) => {
+        if (!course?.tenantId) return false;
+        const courseTenantId = course.tenantId.toString();
+        return user.role === "student"
+          ? activeTenantIds.has(courseTenantId) && (!hasRequestTenantMembership || courseTenantId === tenantId.toString())
+          : !tenantId || courseTenantId === tenantId.toString();
+      });
     }
 
     // Resolve tenant details
     try {
-      const tenantDoc = await Tenant.findById(user.tenantId).select("name slug logo institutionType");
+      const tenantDoc = await Tenant.findById(user.tenantId).select("name slug logo institutionType ownerId");
       if (tenantDoc) {
+        safeUser.isInstitutionOwner = user.role === "educator" && tenantDoc.ownerId?.toString() === user._id.toString();
         safeUser.tenant = {
           id: tenantDoc._id,
           name: tenantDoc.name,
@@ -260,20 +309,18 @@ export const login = async (req, res) => {
       }
     } catch (e) { }
 
-    // For students, fetch their memberships across institutions
+    // For students, attach the memberships already loaded and verified above.
     if (user.role === "student") {
-      try {
-        const memberships = await InstitutionMembership.find({ userId: user._id, status: "active" })
-          .populate("tenantId", "name slug logo institutionType");
-        safeUser.memberships = memberships.map((m) => ({
-          institutionId: m.tenantId?._id,
-          name: m.tenantId?.name,
-          slug: m.tenantId?.slug,
-          logo: m.tenantId?.logo,
-          institutionType: m.tenantId?.institutionType,
-          joinedAt: m.joinedAt,
-        })).filter((m) => m.slug);
-      } catch (e) { }
+      safeUser.memberships = activeMemberships.map((m) => ({
+        institutionId: m.tenantId?._id,
+        name: m.tenantId?.name,
+        slug: m.tenantId?.slug,
+        logo: m.tenantId?.logo,
+        institutionType: m.tenantId?.institutionType,
+        title: m.tenantId?.title,
+        joinedAt: m.joinedAt,
+      })).filter((m) => m.slug);
+      if (!hasRequestTenantMembership) delete safeUser.tenant;
     }
 
     return res.status(200).json({
@@ -285,6 +332,144 @@ export const login = async (req, res) => {
   } catch (error) {
     console.error("[Login Error]", error);
     return res.status(400).json({ success: false, message: `Login error: ${error.message || error}` });
+  }
+};
+
+export const selectInstitution = async (req, res) => {
+  try {
+    const institutionSlug = req.body?.institutionSlug?.toString().trim().toLowerCase();
+    if (!institutionSlug || ["default", "platform"].includes(institutionSlug)) {
+      return res.status(400).json({ success: false, message: "Choose an active institution." });
+    }
+
+    const user = await User.findById(req.userId);
+    if (!user || user.role !== "student") {
+      return res.status(403).json({ success: false, message: "Institution selection is available to student accounts." });
+    }
+
+    const tenant = await Tenant.findOne({ slug: institutionSlug, status: "active" }).select("name slug logo institutionType title");
+    if (!tenant) {
+      return res.status(404).json({ success: false, message: "That institution is not available." });
+    }
+
+    const existingMembership = await InstitutionMembership.findOne({
+      userId: user._id,
+      tenantId: tenant._id,
+      role: "student",
+      status: { $in: ["active", "enrolled", "ACTIVE", "ENROLLED"] },
+    });
+    if (!existingMembership) {
+      return res.status(403).json({
+        success: false,
+        code: "INSTITUTION_MEMBERSHIP_REQUIRED",
+        message: "You don't have access to this institution yet. Sign up through this institution or ask an educator for an invitation.",
+      });
+    }
+    user.tenantId = tenant._id;
+    await user.save();
+
+    const token = await genToken(user._id, tenant._id, user.role, req.sessionId);
+    res.cookie("token", token, getCookieOptions());
+    const safeUser = user.toObject();
+    delete safeUser.password;
+    safeUser.tenant = tenant.toObject();
+    const memberships = await InstitutionMembership.find({
+      userId: user._id,
+      role: "student",
+      status: { $in: ["active", "enrolled", "ACTIVE", "ENROLLED"] },
+    })
+      .populate("tenantId", "name slug logo institutionType title");
+    safeUser.memberships = memberships.map((membership) => ({
+      institutionId: membership.tenantId?._id,
+      name: membership.tenantId?.name,
+      slug: membership.tenantId?.slug,
+      logo: membership.tenantId?.logo,
+      institutionType: membership.tenantId?.institutionType,
+      title: membership.tenantId?.title,
+      joinedAt: membership.joinedAt,
+    })).filter((membership) => membership.slug);
+
+    return res.status(200).json({ success: true, token, user: safeUser, tenant: tenant.toObject() });
+  } catch (error) {
+    console.error("[Select Institution Error]", error);
+    return res.status(500).json({ success: false, message: "Could not save your institution selection." });
+  }
+};
+
+export const joinInstitution = async (req, res) => {
+  try {
+    const institutionSlug = req.body?.institutionSlug?.toString().trim().toLowerCase();
+    if (!institutionSlug || ["default", "platform"].includes(institutionSlug)) {
+      return res.status(400).json({ success: false, message: "Choose an active institution." });
+    }
+
+    const user = await User.findById(req.userId);
+    if (!user || user.role !== "student") {
+      return res.status(403).json({ success: false, message: "Only student accounts can join an institution." });
+    }
+
+    const tenant = await Tenant.findOne({ slug: institutionSlug, status: "active" })
+      .select("name slug logo institutionType title");
+    if (!tenant) {
+      return res.status(404).json({ success: false, message: "That institution is not available." });
+    }
+
+    let membership = await InstitutionMembership.findOne({
+      userId: user._id,
+      tenantId: tenant._id,
+      role: "student",
+    });
+    if (membership && !["active", "enrolled", "ACTIVE", "ENROLLED"].includes(membership.status)) {
+      return res.status(403).json({
+        success: false,
+        code: "INSTITUTION_MEMBERSHIP_NOT_ACTIVE",
+        message: "Your access to this institution is not active. Contact its educator or use your invitation link.",
+      });
+    }
+    if (!membership) {
+      try {
+        membership = await InstitutionMembership.create({
+          userId: user._id,
+          tenantId: tenant._id,
+          role: "student",
+          status: "active",
+          joinedAt: new Date(),
+        });
+      } catch (error) {
+        if (error?.code !== 11000) throw error;
+        membership = await InstitutionMembership.findOne({ userId: user._id, tenantId: tenant._id, role: "student" });
+        if (!membership || !["active", "enrolled", "ACTIVE", "ENROLLED"].includes(membership.status)) throw error;
+      }
+    }
+
+    user.tenantId = tenant._id;
+    await user.save();
+
+    const token = await genToken(user._id, tenant._id, user.role, req.sessionId);
+    res.cookie("token", token, getCookieOptions());
+    const safeUser = user.toObject();
+    delete safeUser.password;
+    safeUser.tenant = tenant.toObject();
+
+    const memberships = await InstitutionMembership.find({
+      userId: user._id,
+      role: "student",
+      status: { $in: ["active", "enrolled", "ACTIVE", "ENROLLED"] },
+    }).populate("tenantId", "name slug logo institutionType title");
+    safeUser.memberships = memberships.map((entry) => ({
+      institutionId: entry.tenantId?._id,
+      name: entry.tenantId?.name,
+      slug: entry.tenantId?.slug,
+      logo: entry.tenantId?.logo,
+      institutionType: entry.tenantId?.institutionType,
+      title: entry.tenantId?.title,
+      joinedAt: entry.joinedAt,
+    })).filter((entry) => entry.slug);
+
+    return res.status(200).json({ success: true, token, user: safeUser, tenant: tenant.toObject() });
+  } catch (error) {
+    console.error("[Join Institution Error]", error);
+    return res.status(500).json({ success: false, message: "Could not join this institution." });
   }
 };
 
@@ -327,12 +512,30 @@ export const sendOtp = async (req, res) => {
     }
 
     // Tenant-isolated lookup with global fallback
-    let user = null;
-    if (tenantId) {
-      user = await User.findOne({ email, tenantId });
-    }
+    let user = tenantId ? await User.findOne({ email, tenantId }) : null;
     if (!user) {
-      user = await User.findOne({ email });
+      const candidates = await User.find({ email }).limit(2).select("_id role tenantId").lean();
+      const scopedCandidates = [];
+      for (const candidate of candidates) {
+        if (candidate.role !== "student") {
+          scopedCandidates.push(candidate);
+          continue;
+        }
+        const membership = await InstitutionMembership.findOne({
+          userId: candidate._id,
+          tenantId,
+          role: "student",
+          status: { $in: ["active", "enrolled", "ACTIVE", "ENROLLED"] },
+        });
+        if (membership) scopedCandidates.push(candidate);
+      }
+      if (scopedCandidates.length > 1) {
+        return res.status(200).json({
+          success: true,
+          message: "If an account with that email exists, a verification code has been sent.",
+        });
+      }
+      if (scopedCandidates[0]) user = await User.findById(scopedCandidates[0]._id);
     }
 
     if (!user) {
@@ -406,14 +609,30 @@ export const verifyOtp = async (req, res) => {
     email = email.trim().toLowerCase();
     const cleanOtp = otp.toString().trim();
 
-    // Look up user
-    let user = null;
-    if (tenantId) {
-      user = await User.findOne({ email, tenantId });
-    }
+    // Resolve the verification code against one tenant-local account only.
+    let user = tenantId ? await User.findOne({ email, tenantId }) : null;
     if (!user) {
-      user = await User.findOne({ email });
+      const candidates = await User.find({ email }).limit(2).select("_id role").lean();
+      const scopedCandidates = [];
+      for (const candidate of candidates) {
+        if (candidate.role !== "student") {
+          scopedCandidates.push(candidate);
+          continue;
+        }
+        const membership = await InstitutionMembership.findOne({
+          userId: candidate._id,
+          tenantId,
+          role: "student",
+          status: { $in: ["active", "enrolled", "ACTIVE", "ENROLLED"] },
+        });
+        if (membership) scopedCandidates.push(candidate);
+      }
+      if (scopedCandidates.length > 1) {
+        return res.status(400).json({ success: false, message: "Open your institution's sign-in page to verify this code." });
+      }
+      if (scopedCandidates[0]) user = await User.findById(scopedCandidates[0]._id);
     }
+    if (user) user = await User.findById(user._id);
 
     if (!user || !user.resetOtp || !user.otpExpires) {
       return res.status(400).json({ success: false, message: "Invalid or expired verification code." });
@@ -505,13 +724,28 @@ export const resetPassword = async (req, res) => {
 
     email = email.trim().toLowerCase();
 
-    // Look up user
-    let user = null;
-    if (tenantId) {
-      user = await User.findOne({ email, tenantId }).select("+password");
-    }
+    // Match the reset token to one tenant-local account only.
+    let user = tenantId ? await User.findOne({ email, tenantId }).select("+password") : null;
     if (!user) {
-      user = await User.findOne({ email }).select("+password");
+      const candidates = await User.find({ email }).limit(2).select("_id role").lean();
+      const scopedCandidates = [];
+      for (const candidate of candidates) {
+        if (candidate.role !== "student") {
+          scopedCandidates.push(candidate);
+          continue;
+        }
+        const membership = await InstitutionMembership.findOne({
+          userId: candidate._id,
+          tenantId,
+          role: "student",
+          status: { $in: ["active", "enrolled", "ACTIVE", "ENROLLED"] },
+        });
+        if (membership) scopedCandidates.push(candidate);
+      }
+      if (scopedCandidates.length > 1) {
+        return res.status(400).json({ success: false, message: "Open your institution's sign-in page to reset this account." });
+      }
+      if (scopedCandidates[0]) user = await User.findById(scopedCandidates[0]._id).select("+password");
     }
 
     if (!user) {
@@ -840,8 +1074,13 @@ export const verifyPhoneOtp = async (req, res) => {
     // Resolve tenant doc
     let tenantDoc = null;
     try {
-      tenantDoc = await Tenant.findById(user.tenantId).select("name slug logo institutionType title").lean();
-      if (tenantDoc) safeUser.tenant = tenantDoc;
+      tenantDoc = await Tenant.findById(user.tenantId).select("name slug logo institutionType title ownerId").lean();
+      if (tenantDoc) {
+        safeUser.isInstitutionOwner = user.role === "educator" && tenantDoc.ownerId?.toString() === user._id.toString();
+        const { ownerId, ...publicTenant } = tenantDoc;
+        safeUser.tenant = publicTenant;
+        tenantDoc = publicTenant;
+      }
     } catch (e) { }
 
     return res.status(200).json({

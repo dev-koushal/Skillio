@@ -29,6 +29,8 @@ import Navbar from "../../components/Navbar";
 import Footer from "../../components/Footer";
 import Button from "../../components/common/Button";
 import WriteWithAIModal from "../../components/WriteWithAIModal";
+import LectureVideoSourceFields from "../../components/video/LectureVideoSourceFields";
+import "./CourseBuilder.css";
 
 const SUGGESTED_TOPICS = [
   "Spoken English",
@@ -49,6 +51,7 @@ export default function CourseBuilder() {
 
   // Course Primary State
   const [activeCourseId, setActiveCourseId] = useState(courseId !== "new" ? courseId : null);
+  const [builderStep, setBuilderStep] = useState(0);
   const [title, setTitle] = useState("");
   const [category, setCategory] = useState("General");
   const [subTitle, setSubTitle] = useState("");
@@ -71,6 +74,9 @@ export default function CourseBuilder() {
   const [newLectureTitle, setNewLectureTitle] = useState("");
   const [newLecturePreview, setNewLecturePreview] = useState(false);
   const [newLectureVideo, setNewLectureVideo] = useState(null);
+  const [newLectureVideoProvider, setNewLectureVideoProvider] = useState("upload");
+  const [newLectureYoutubeUrl, setNewLectureYoutubeUrl] = useState("");
+  const [newLectureYoutubeId, setNewLectureYoutubeId] = useState("");
   const [newLectureNote, setNewLectureNote] = useState(null);
   const [newLectureNoteTitle, setNewLectureNoteTitle] = useState("");
   const [addingLecture, setAddingLecture] = useState(false);
@@ -80,6 +86,9 @@ export default function CourseBuilder() {
   const [editLectureTitle, setEditLectureTitle] = useState("");
   const [editLecturePreview, setEditLecturePreview] = useState(false);
   const [editLectureVideo, setEditLectureVideo] = useState(null);
+  const [editLectureVideoProvider, setEditLectureVideoProvider] = useState("upload");
+  const [editLectureYoutubeUrl, setEditLectureYoutubeUrl] = useState("");
+  const [editLectureYoutubeId, setEditLectureYoutubeId] = useState("");
   const [savingEditLecture, setSavingEditLecture] = useState(false);
 
   // AI Course Outline Generator Modal State
@@ -249,6 +258,10 @@ export default function CourseBuilder() {
       toast.error("Please enter a lecture title");
       return;
     }
+    if (newLectureVideoProvider === "youtube" && !newLectureYoutubeId) {
+      toast.error("Validate the YouTube video URL before adding this lecture.");
+      return;
+    }
 
     setAddingLecture(true);
 
@@ -267,13 +280,11 @@ export default function CourseBuilder() {
       formData.append("lectureTitle", newLectureTitle.trim());
       formData.append("isPreviewFree", newLecturePreview);
 
-      if (newLectureVideo) {
+      if (newLectureVideoProvider === "youtube") {
+        formData.append("videoProvider", "youtube");
+        formData.append("youtubeUrl", newLectureYoutubeUrl.trim());
+      } else if (newLectureVideo) {
         formData.append("video", newLectureVideo);
-      }
-
-      if (newLectureNote && newLectureNoteTitle.trim()) {
-        formData.append("resourceTitle", newLectureNoteTitle.trim());
-        formData.append("resourceFileUrl", URL.createObjectURL(newLectureNote)); // fallback placeholder
       }
 
       const res = await api.post(`/api/course/createlecture/${targetId}`, formData, {
@@ -305,6 +316,9 @@ export default function CourseBuilder() {
       setNewLectureTitle("");
       setNewLecturePreview(false);
       setNewLectureVideo(null);
+      setNewLectureVideoProvider("upload");
+      setNewLectureYoutubeUrl("");
+      setNewLectureYoutubeId("");
       setNewLectureNote(null);
       setNewLectureNoteTitle("");
       setShowAddLecture(false);
@@ -322,6 +336,14 @@ export default function CourseBuilder() {
   // In-place Lecture Editing
   const handleSaveEditLecture = async () => {
     if (!editingLecture || !editLectureTitle.trim()) return;
+    if (editLectureVideoProvider === "youtube" && !editLectureYoutubeId) {
+      toast.error("Validate the YouTube video URL before saving.");
+      return;
+    }
+    if (editLectureVideoProvider === "upload" && editingLecture.videoProvider === "youtube" && !editLectureVideo) {
+      toast.error("Choose an uploaded video file before switching from YouTube.");
+      return;
+    }
 
     setSavingEditLecture(true);
     try {
@@ -329,7 +351,10 @@ export default function CourseBuilder() {
       formData.append("lectureTitle", editLectureTitle.trim());
       formData.append("isPreviewFree", editLecturePreview);
 
-      if (editLectureVideo) {
+      if (editLectureVideoProvider === "youtube") {
+        formData.append("videoProvider", "youtube");
+        formData.append("youtubeUrl", editLectureYoutubeUrl.trim());
+      } else if (editLectureVideo) {
         formData.append("videoUrl", editLectureVideo);
       }
 
@@ -410,12 +435,12 @@ export default function CourseBuilder() {
   }
 
   return (
-    <div className="min-h-screen bg-[#f8f7f4] text-[#1c1917] flex flex-col font-sans">
+    <div className="course-builder-page min-h-screen bg-[#f8f7f4] text-[#1c1917] flex flex-col font-sans">
       <Navbar />
 
-      <main className="max-w-5xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8 space-y-6 flex-1 pb-28 md:pb-12">
+      <main className="course-builder-main max-w-5xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-6 space-y-4 flex-1 pb-28 md:pb-12">
         {/* Workspace Sticky Top Bar */}
-        <div className="bg-white border border-[#e8e5dc] rounded-2xl p-4 sm:p-5 shadow-xs flex flex-col sm:flex-row sm:items-center justify-between gap-4 sticky top-20 z-30 backdrop-blur-md">
+        <div className="course-builder-toolbar bg-white border border-[#e8e5dc] rounded-2xl p-4 sm:p-5 shadow-xs flex flex-col sm:flex-row sm:items-center justify-between gap-4 sticky top-20 z-30 backdrop-blur-md">
           <div className="flex items-center gap-3 min-w-0">
             <button
               onClick={() => navigate("/courses")}
@@ -474,7 +499,7 @@ export default function CourseBuilder() {
               type="button"
               disabled={loading}
               onClick={() => handleSaveCourse(false)}
-              className="bg-white hover:bg-[#f1ede4] text-[#1c1917] border border-[#d6d3d1] text-xs font-semibold px-3.5 py-2 rounded-xl transition cursor-pointer shadow-xs disabled:opacity-50"
+              className="course-toolbar-save bg-white hover:bg-[#f1ede4] text-[#1c1917] border border-[#d6d3d1] text-xs font-semibold px-3.5 py-2 rounded-xl transition cursor-pointer shadow-xs disabled:opacity-50"
             >
               Save Draft
             </button>
@@ -483,7 +508,7 @@ export default function CourseBuilder() {
               type="button"
               disabled={loading}
               onClick={() => handleSaveCourse(!isPublished)}
-              className={`inline-flex items-center gap-1.5 text-xs font-semibold px-4 py-2 rounded-xl shadow-xs transition cursor-pointer disabled:opacity-50 ${isPublished
+              className={`course-toolbar-publish inline-flex items-center gap-1.5 text-xs font-semibold px-4 py-2 rounded-xl shadow-xs transition cursor-pointer disabled:opacity-50 ${isPublished
                 ? "bg-amber-700 hover:bg-amber-800 text-white"
                 : "bg-[#1e3a8a] hover:bg-[#172554] text-white"
                 }`}
@@ -495,7 +520,7 @@ export default function CourseBuilder() {
         </div>
 
         {/* SECTION 1: COURSE BASICS */}
-        <section className="bg-white border border-[#e8e5dc] rounded-2xl p-6 sm:p-8 space-y-5 shadow-xs">
+        <section className={`course-builder-step bg-white border border-[#e8e5dc] rounded-2xl p-4 sm:p-6 space-y-4 shadow-xs ${builderStep === 0 ? "is-active" : ""}`}>
           <div className="pb-3 border-b border-[#e8e5dc]">
             <h2 className="text-base font-bold text-[#1c1917] flex items-center gap-2">
               <span className="w-6 h-6 rounded-md bg-[#eff6ff] text-[#1e3a8a] flex items-center justify-center text-xs font-bold">
@@ -674,7 +699,7 @@ export default function CourseBuilder() {
         </section>
 
         {/* SECTION 2: CURRICULUM & LECTURES (INLINE CREATION & EDITING) */}
-        <section className="bg-white border border-[#e8e5dc] rounded-2xl p-6 sm:p-8 space-y-5 shadow-xs">
+        <section className={`course-builder-step bg-white border border-[#e8e5dc] rounded-2xl p-4 sm:p-6 space-y-4 shadow-xs ${builderStep === 1 ? "is-active" : ""}`}>
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-[#e8e5dc]">
             <div>
               <h2 className="text-base font-bold text-[#1c1917] flex items-center gap-2">
@@ -727,20 +752,17 @@ export default function CourseBuilder() {
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                {/* Video Picker */}
-                <div>
-                  <label className="block text-xs font-semibold text-[#44403c] mb-1">
-                    Lesson Video File (MP4, WebM)
-                  </label>
-                  <input
-                    type="file"
-                    accept="video/*"
-                    onChange={(e) => setNewLectureVideo(e.target.files[0])}
-                    className="w-full bg-white border border-[#d6d3d1] rounded-xl p-2 text-xs text-[#1c1917] file:mr-2 file:py-1 file:px-2.5 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-[#1e3a8a] file:text-white cursor-pointer"
+                <div className="sm:col-span-2">
+                  <LectureVideoSourceFields
+                    idPrefix="builder-new-lecture"
+                    provider={newLectureVideoProvider}
+                    onProviderChange={setNewLectureVideoProvider}
+                    youtubeUrl={newLectureYoutubeUrl}
+                    onYoutubeUrlChange={setNewLectureYoutubeUrl}
+                    videoFile={newLectureVideo}
+                    onVideoFileChange={setNewLectureVideo}
+                    onValidatedVideoIdChange={setNewLectureYoutubeId}
                   />
-                  <p className="text-[10px] text-[#78716c] mt-0.5">
-                    Optional: You can also upload or replace the video file later.
-                  </p>
                 </div>
 
                 {/* Optional Note / PDF Picker */}
@@ -832,7 +854,7 @@ export default function CourseBuilder() {
                     </div>
 
                     <div className="flex flex-wrap items-center gap-2 text-[11px] text-[#78716c] pl-8">
-                      {lec.videoUrl || lec.bunnyVideoId ? (
+                      {lec.videoUrl || lec.bunnyVideoId || lec.youtubeVideoId ? (
                         lec.processingStatus === "processing" ? (
                           <span className="inline-flex items-center gap-1 text-amber-700 bg-amber-50 px-2 py-0.5 rounded border border-amber-200 font-medium">
                             <Loader2 size={11} className="animate-spin" /> Processing Video
@@ -843,7 +865,7 @@ export default function CourseBuilder() {
                           </span>
                         ) : (
                           <span className="inline-flex items-center gap-1 text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200 font-medium">
-                            <CheckCircle2 size={11} /> {lec.videoProvider === "bunny" ? "Adaptive Stream Ready" : "Video Attached"}
+                            <CheckCircle2 size={11} /> {lec.videoProvider === "bunny" ? "Bunny Stream" : lec.videoProvider === "youtube" ? "YouTube" : "Uploaded video"}
                           </span>
                         )
                       ) : (
@@ -869,6 +891,10 @@ export default function CourseBuilder() {
                         setEditingLecture(lec);
                         setEditLectureTitle(lec.lectureTitle);
                         setEditLecturePreview(Boolean(lec.isPreviewFree));
+                        setEditLectureVideo(null);
+                        setEditLectureVideoProvider(lec.videoProvider === "youtube" ? "youtube" : "upload");
+                        setEditLectureYoutubeUrl(lec.youtubeUrl || (lec.youtubeVideoId ? `https://www.youtube.com/watch?v=${lec.youtubeVideoId}` : ""));
+                        setEditLectureYoutubeId(lec.youtubeVideoId || "");
                       }}
                       className="px-3 py-1.5 rounded-lg border border-[#d6d3d1] hover:bg-[#f1ede4] text-xs font-semibold text-[#44403c] transition cursor-pointer"
                     >
@@ -879,6 +905,7 @@ export default function CourseBuilder() {
                       onClick={() => handleDeleteLecture(lec._id, lec.lectureTitle)}
                       className="p-1.5 rounded-lg border border-red-200 text-red-600 hover:bg-red-50 text-xs transition cursor-pointer"
                       title="Delete Lecture"
+                      aria-label={`Delete lecture ${lec.lectureTitle}`}
                     >
                       <Trash2 size={13} />
                     </button>
@@ -890,7 +917,7 @@ export default function CourseBuilder() {
         </section>
 
         {/* SECTION 3: PRICING & VISIBILITY */}
-        <section className="bg-white border border-[#e8e5dc] rounded-2xl p-6 sm:p-8 space-y-5 shadow-xs">
+        <section className={`course-builder-step bg-white border border-[#e8e5dc] rounded-2xl p-4 sm:p-6 space-y-4 shadow-xs ${builderStep === 2 ? "is-active" : ""}`}>
           <div className="pb-3 border-b border-[#e8e5dc]">
             <h2 className="text-base font-bold text-[#1c1917] flex items-center gap-2">
               <span className="w-6 h-6 rounded-md bg-[#eff6ff] text-[#1e3a8a] flex items-center justify-center text-xs font-bold">
@@ -999,16 +1026,25 @@ export default function CourseBuilder() {
         </section>
 
         {/* BOTTOM SAVE FOOTER */}
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pt-2">
+        <div className="course-builder-footer flex flex-col sm:flex-row sm:items-center justify-between gap-4 pt-2">
+          <div className="course-stepper flex items-center gap-2" aria-label="Course setup steps">
+            {["Essentials", "Curriculum", "Pricing"].map((label, index) => (
+              <button key={label} type="button" onClick={() => setBuilderStep(index)} aria-current={builderStep === index ? "step" : undefined} className={`course-step-chip ${builderStep === index ? "active" : ""}`}>
+                <span>{index + 1}</span><span>{label}</span>
+              </button>
+            ))}
+          </div>
           <button
             type="button"
             onClick={() => navigate("/courses")}
-            className="text-xs font-semibold text-[#78716c] hover:text-[#1c1917]"
+            className="course-back-all text-xs font-semibold text-[#78716c] hover:text-[#1c1917]"
           >
             ← Back to All Courses
           </button>
 
-          <div className="flex items-center gap-2.5">
+          <div className="course-step-actions flex items-center gap-2.5">
+            {builderStep > 0 && <button type="button" onClick={() => setBuilderStep((step) => step - 1)} className="course-step-button">Back</button>}
+            {builderStep < 2 ? <button type="button" onClick={() => setBuilderStep((step) => step + 1)} className="course-step-button primary">Continue</button> : <>
             <button
               type="button"
               disabled={loading}
@@ -1028,6 +1064,7 @@ export default function CourseBuilder() {
             >
               <Save size={15} className="inline-block" /> Save & Publish
             </Button>
+            </>}
           </div>
         </div>
       </main>
@@ -1059,17 +1096,18 @@ export default function CourseBuilder() {
                 />
               </div>
 
-              <div>
-                <label className="block text-xs font-semibold text-[#44403c] mb-1">
-                  Upload / Replace Video File
-                </label>
-                <input
-                  type="file"
-                  accept="video/*"
-                  onChange={(e) => setEditLectureVideo(e.target.files[0])}
-                  className="w-full bg-[#fcfbf9] border border-[#d6d3d1] rounded-xl p-2 text-xs text-[#1c1917] file:mr-2 file:py-1 file:px-2 file:rounded-md file:border-0 file:text-xs file:bg-[#1e3a8a] file:text-white cursor-pointer"
-                />
-              </div>
+              <LectureVideoSourceFields
+                idPrefix="builder-edit-lecture"
+                provider={editLectureVideoProvider}
+                onProviderChange={setEditLectureVideoProvider}
+                youtubeUrl={editLectureYoutubeUrl}
+                onYoutubeUrlChange={setEditLectureYoutubeUrl}
+                videoFile={editLectureVideo}
+                onVideoFileChange={setEditLectureVideo}
+                onValidatedVideoIdChange={setEditLectureYoutubeId}
+                currentProvider={editingLecture.videoProvider || "cloudinary"}
+                currentVideoId={editingLecture.youtubeVideoId || ""}
+              />
 
               <label className="flex items-center gap-2 text-xs font-semibold text-[#44403c] cursor-pointer pt-1">
                 <input

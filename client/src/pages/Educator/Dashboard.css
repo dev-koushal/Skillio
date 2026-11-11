@@ -1,0 +1,21 @@
+@media (max-width: 639px) {
+  .educator-dashboard-main { width: min(100% - 24px, 1152px); padding: 14px 0 88px; gap: 18px; }
+  .educator-dashboard-main > div:first-child { padding-bottom: 14px; gap: 12px; }
+  .educator-dashboard-main h1 { font-size: 24px; line-height: 1.2; }
+  .educator-dashboard-main .dashboard-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+  .educator-dashboard-main .dashboard-actions button { min-height: 40px; padding: 0 11px; font-size: 11px; }
+  .educator-dashboard-main > div:nth-child(2) { gap: 9px; }
+  .educator-dashboard-main > div:nth-child(2) > div { min-width: 0; padding: 12px; gap: 10px; border-radius: 13px; }
+  .educator-dashboard-main > div:nth-child(2) > div > div:first-child { min-width: 0; }
+  .educator-dashboard-main > div:nth-child(2) > div > div:first-child > div:first-child { width: 38px; height: 38px; }
+  .educator-dashboard-main > div:nth-child(2) > div p:first-child { font-size: 10px; line-height: 1.35; }
+  .educator-dashboard-main > section { gap: 14px; }
+  .educator-dashboard-main > section h2 { font-size: 18px; }
+  .dashboard-create-card { min-height: 174px !important; padding: 15px !important; border-radius: 14px !important; }
+  .dashboard-create-card > div:first-child { display: grid; grid-template-columns: 40px minmax(0,1fr); align-items: start; gap: 10px; }
+  .dashboard-create-card > div:first-child > div:first-child { width: 40px; height: 40px; border-radius: 12px; }
+  .dashboard-create-card > div:first-child > div:last-child { gap: 4px; }
+  .dashboard-create-card h3 { font-size: 15px; }
+  .dashboard-create-card p { font-size: 11px; line-height: 1.5; }
+  .dashboard-create-card > div:last-child { padding-top: 10px; }
+}

@@ -83,6 +83,23 @@ class VideoPlaybackService {
     // 4. Generate Short-Lived Authorized Playback
     const provider = lecture.videoProvider || "cloudinary";
 
+    if (provider === "youtube") {
+      if (!lecture.youtubeVideoId) {
+        return { authorized: false, status: 422, message: "This lecture's YouTube source is unavailable." };
+      }
+      return {
+        authorized: true,
+        status: 200,
+        videoProvider: "youtube",
+        playbackType: "youtube_embed",
+        youtubeVideoId: lecture.youtubeVideoId,
+        duration: lecture.duration || 0,
+        lectureTitle: lecture.lectureTitle,
+        isPreviewFree: Boolean(lecture.isPreviewFree),
+        processingStatus: "ready",
+      };
+    }
+
     if (provider === "bunny" && lecture.bunnyVideoId) {
       const tokenData = bunnyVideoService.generatePlaybackToken({
         videoId: lecture.bunnyVideoId,

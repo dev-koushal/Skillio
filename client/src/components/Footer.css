@@ -1,0 +1,3 @@
+@media (max-width: 639px) {
+  .app-footer-authenticated { display: none; }
+}

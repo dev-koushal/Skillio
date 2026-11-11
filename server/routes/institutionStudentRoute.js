@@ -9,13 +9,13 @@ import {
   inviteStudent,
 } from "../controller/institutionStudentController.js";
 import isAuth from "../middleware/isAuth.js";
-import { requireEducator } from "../middleware/rbac.js";
+import { requireInstitutionStudentManager } from "../middleware/rbac.js";
 
 const router = express.Router();
 
-// All endpoints require authenticated educator or tenant_admin
+// Institution student operations are performed by authenticated educators.
 router.use(isAuth);
-router.use(requireEducator);
+router.use(requireInstitutionStudentManager);
 
 // Institution statistics & lightweight overview
 router.get("/stats", getInstitutionStats);

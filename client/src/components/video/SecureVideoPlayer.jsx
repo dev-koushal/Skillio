@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from "react";
 import { Loader2, Lock, AlertCircle, RefreshCw, Play, ShieldAlert } from "lucide-react";
 import api from "../../services/api";
+import YouTubePlayerFrame from "./YouTubePlayerFrame";
 
 /**
  * Production-grade Secure Video Player.
@@ -8,23 +9,28 @@ import api from "../../services/api";
  * Supports Bunny Stream adaptive video embedding and secured legacy streams.
  * Never stores tokens in localStorage or Redux.
  */
-export default function SecureVideoPlayer({ lectureId, lectureTitle = "Lecture Video", onEnded = null }) {
+export default function SecureVideoPlayer({ lectureId, liveClassId = null, lectureTitle = "Lecture Video", onEnded = null }) {
   const [playback, setPlayback] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [isExpired, setIsExpired] = useState(false);
+  const [youtubeError, setYoutubeError] = useState("");
 
   const expiryTimerRef = useRef(null);
 
   const fetchPlaybackAuthorization = async () => {
-    if (!lectureId) return;
+    const playbackEndpoint = liveClassId
+      ? `/api/institution/live/${liveClassId}/playback`
+      : lectureId ? `/api/lectures/${lectureId}/playback` : null;
+    if (!playbackEndpoint) return;
 
     try {
       setLoading(true);
       setError(null);
       setIsExpired(false);
+      setYoutubeError("");
 
-      const res = await api.get(`/api/lectures/${lectureId}/playback`);
+      const res = await api.get(playbackEndpoint);
 
       if (res.data?.success && res.data?.playback?.authorized) {
         const pb = res.data.playback;
@@ -59,12 +65,14 @@ export default function SecureVideoPlayer({ lectureId, lectureTitle = "Lecture V
       // Clean up in-memory playback reference on unmount
       setPlayback(null);
     };
-  }, [lectureId]);
+  }, [lectureId, liveClassId]);
+
+  const playerShell = "relative w-full aspect-video overflow-hidden rounded-2xl border border-[#e8e5dc] bg-[#111018] shadow-xs";
 
   // Loading State
   if (loading) {
     return (
-      <div className="w-full aspect-video bg-[#0f172a] rounded-2xl flex flex-col items-center justify-center text-white space-y-3 p-6 select-none">
+      <div role="status" className={`${playerShell} flex flex-col items-center justify-center space-y-3 p-5 text-center text-white select-none`}>
         <Loader2 className="w-8 h-8 text-[#60a5fa] animate-spin" />
         <p className="text-xs font-semibold text-slate-300 uppercase tracking-wider">
           Authorizing Secure Stream...
@@ -76,7 +84,7 @@ export default function SecureVideoPlayer({ lectureId, lectureTitle = "Lecture V
   // Token Expired State
   if (isExpired) {
     return (
-      <div className="w-full aspect-video bg-[#0f172a] rounded-2xl flex flex-col items-center justify-center text-white space-y-3 p-6 text-center">
+      <div role="status" className={`${playerShell} flex flex-col items-center justify-center space-y-3 p-5 text-center text-white`}>
         <div className="w-12 h-12 rounded-full bg-amber-500/20 text-amber-400 flex items-center justify-center">
           <RefreshCw className="w-6 h-6" />
         </div>
@@ -98,7 +106,7 @@ export default function SecureVideoPlayer({ lectureId, lectureTitle = "Lecture V
   // Processing State (Bunny Transcoding)
   if (playback && playback.processingStatus === "processing") {
     return (
-      <div className="w-full aspect-video bg-[#0f172a] rounded-2xl flex flex-col items-center justify-center text-white space-y-3 p-6 text-center">
+      <div role="status" className={`${playerShell} flex flex-col items-center justify-center space-y-3 p-5 text-center text-white`}>
         <Loader2 className="w-8 h-8 text-amber-400 animate-spin" />
         <h4 className="font-bold text-sm text-slate-100">Video Processing in Progress</h4>
         <p className="text-xs text-slate-400 max-w-sm">
@@ -133,7 +141,7 @@ export default function SecureVideoPlayer({ lectureId, lectureTitle = "Lecture V
   // Bunny Stream Adaptive Player
   if (playback.videoProvider === "bunny" && playback.embedUrl) {
     return (
-      <div className="relative w-full aspect-video bg-black rounded-2xl overflow-hidden shadow-lg border border-slate-800">
+      <div className={playerShell}>
         <iframe
           src={playback.embedUrl}
           loading="lazy"
@@ -146,10 +154,32 @@ export default function SecureVideoPlayer({ lectureId, lectureTitle = "Lecture V
     );
   }
 
+  if (playback.videoProvider === "youtube" && playback.youtubeVideoId) {
+    return (
+      <div className={playerShell}>
+        <YouTubePlayerFrame
+          key={playback.youtubeVideoId}
+          videoId={playback.youtubeVideoId}
+          title={lectureTitle || playback.title || "Skillio video"}
+          isLive={Boolean(playback.isLive)}
+          onEnded={onEnded}
+          onError={setYoutubeError}
+        />
+        {youtubeError && (
+          <div role="alert" className="absolute inset-0 flex flex-col items-center justify-center gap-2 bg-[#111018]/95 p-5 text-center text-white">
+            <AlertCircle size={22} className="text-amber-300" aria-hidden="true" />
+            <p className="max-w-sm text-sm font-semibold">Video unavailable</p>
+            <p className="max-w-sm text-xs text-white/75">{youtubeError}</p>
+          </div>
+        )}
+      </div>
+    );
+  }
+
   // Authorized Direct / Legacy Cloudinary Stream
   if (playback.streamUrl) {
     return (
-      <div className="relative w-full aspect-video bg-black rounded-2xl overflow-hidden shadow-lg border border-slate-800">
+      <div className={playerShell}>
         <video
           src={playback.streamUrl}
           controls
@@ -165,7 +195,7 @@ export default function SecureVideoPlayer({ lectureId, lectureTitle = "Lecture V
   }
 
   return (
-    <div className="w-full aspect-video bg-[#0f172a] rounded-2xl flex items-center justify-center text-slate-400 text-xs">
+    <div role="status" className={`${playerShell} flex items-center justify-center text-xs text-slate-300`}>
       Video currently unavailable
     </div>
   );

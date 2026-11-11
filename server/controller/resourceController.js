@@ -5,6 +5,7 @@ import uploadCloudinary from "../config/cloudinary.js";
 import { verifyCourseAccess } from "../utils/courseAccess.js";
 import fs from "fs";
 import path from "path";
+import { canManageCourse } from "../utils/permissions.js";
 
 /**
  * Upload a new resource (either course-level or associated with a specific lecture)
@@ -26,11 +27,7 @@ export const uploadResource = async (req, res) => {
       return res.status(404).json({ success: false, message: "Course not found in this organization" });
     }
 
-    if (
-      course.creator.toString() !== userId.toString() &&
-      userRole !== "tenant_admin" &&
-      userRole !== "platform_admin"
-    ) {
+    if (!(await canManageCourse({ course, tenantId, userId, userRole }))) {
       return res.status(403).json({ success: false, message: "Not authorized to upload resources to this course" });
     }
 
@@ -208,20 +205,36 @@ export const updateResource = async (req, res) => {
     }
 
     const course = await Course.findOne({ _id: resource.courseId, tenantId });
-    if (
-      course &&
-      course.creator.toString() !== userId.toString() &&
-      userRole !== "tenant_admin" &&
-      userRole !== "platform_admin"
-    ) {
+    if (!course) {
+      return res.status(404).json({ success: false, message: "Course not found in this organization" });
+    }
+    if (!(await canManageCourse({ course, tenantId, userId, userRole }))) {
       return res.status(403).json({ success: false, message: "Not authorized to update this resource" });
     }
 
-    if (title) resource.title = title.trim();
-    if (typeof description !== "undefined") resource.description = description.trim();
-    if (topic) resource.topic = topic.trim();
-    if (type) resource.type = type;
-    if (typeof lectureId !== "undefined") resource.lectureId = lectureId || null;
+    if (typeof title !== "undefined") {
+      if (typeof title !== "string" || !title.trim()) {
+        return res.status(400).json({ success: false, message: "Resource title cannot be blank." });
+      }
+      resource.title = title.trim();
+    }
+    if (typeof description !== "undefined") resource.description = typeof description === "string" ? description.trim() : "";
+    if (typeof topic !== "undefined") resource.topic = typeof topic === "string" && topic.trim() ? topic.trim() : "General";
+    if (typeof type !== "undefined") {
+      if (!["pdf", "notes", "formula_sheet", "code", "file", "link"].includes(type)) {
+        return res.status(400).json({ success: false, message: "Resource type is not supported." });
+      }
+      resource.type = type;
+    }
+    if (typeof lectureId !== "undefined") {
+      if (lectureId) {
+        const lecture = await Lecture.findOne({ _id: lectureId, courseId: resource.courseId, tenantId });
+        if (!lecture) {
+          return res.status(404).json({ success: false, message: "Specified lecture not found in this course" });
+        }
+      }
+      resource.lectureId = lectureId || null;
+    }
 
     if (req.file) {
       const upload = await uploadCloudinary(req.file.path);
@@ -261,12 +274,10 @@ export const deleteResource = async (req, res) => {
     }
 
     const course = await Course.findOne({ _id: resource.courseId, tenantId });
-    if (
-      course &&
-      course.creator.toString() !== userId.toString() &&
-      userRole !== "tenant_admin" &&
-      userRole !== "platform_admin"
-    ) {
+    if (!course) {
+      return res.status(404).json({ success: false, message: "Course not found in this organization" });
+    }
+    if (!(await canManageCourse({ course, tenantId, userId, userRole }))) {
       return res.status(403).json({ success: false, message: "Not authorized to delete this resource" });
     }
 

@@ -14,7 +14,7 @@ export default function Button({
   ...props
 }) {
   const baseStyles =
-    "inline-flex items-center justify-center font-semibold rounded-xl transition-all duration-150 focus:outline-none focus:ring-2 focus:ring-[#1e3a8a] focus:ring-offset-1 active:scale-[0.98] cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed disabled:active:scale-100 select-none";
+    "ui-button inline-flex items-center justify-center font-semibold rounded-lg transition-all duration-150 focus:outline-none focus:ring-2 focus:ring-[#5b3cc4] focus:ring-offset-2 active:scale-[0.99] cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed disabled:active:scale-100 select-none";
 
   const sizeStyles = {
     sm: "text-xs px-3.5 py-1.5 min-h-[38px] gap-1.5",
@@ -24,9 +24,9 @@ export default function Button({
 
   const variantStyles = {
     primary:
-      "bg-[#1e3a8a] hover:bg-[#172554] text-white shadow-xs",
+      "bg-[#5b3cc4] hover:bg-[#38256f] text-white",
     secondary:
-      "bg-white hover:bg-[#f8f7f4] text-[#1c1917] border border-[#d6d3c9] shadow-2xs",
+      "bg-white hover:bg-[#f5f7f4] text-[#1c1917] border border-[#d6d3c9]",
     outline:
       "bg-transparent border border-[#d6d3c9] hover:bg-[#f2efe9] text-[#1c1917]",
     danger:
@@ -34,7 +34,7 @@ export default function Button({
     ghost:
       "bg-transparent hover:bg-[#f2efe9] text-[#44403c] hover:text-[#1c1917]",
     subtle:
-      "bg-[#eff6ff] hover:bg-blue-100/80 text-[#1e3a8a] border border-[#bfdbfe]",
+      "bg-[#f1edff] hover:bg-[#e5defc] text-[#5b3cc4] border border-[#d8cdf7]",
   };
 
   return (

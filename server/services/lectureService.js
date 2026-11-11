@@ -3,6 +3,8 @@ import Lecture from "../models/lectureModel.js";
 import Resource from "../models/resourceModel.js";
 import uploadCloudinary from "../config/cloudinary.js";
 import bunnyVideoService from "./video/bunnyVideoService.js";
+import { parseYouTubeVideoUrl } from "../utils/youtubeVideo.js";
+import { canManageCourse } from "../utils/permissions.js";
 
 /**
  * Service to manage lecture business logic.
@@ -21,6 +23,8 @@ export const lectureService = {
     isPreviewFree = false,
     videoFile = null,
     videoUrl = null,
+    videoProvider: requestedProvider = "",
+    youtubeUrl = "",
     resourceData = null,
   }) {
     if (!lectureTitle || !lectureTitle.trim()) {
@@ -36,11 +40,7 @@ export const lectureService = {
     }
 
     // Verify ownership
-    if (
-      course.creator.toString() !== userId.toString() &&
-      userRole !== "tenant_admin" &&
-      userRole !== "platform_admin"
-    ) {
+    if (!(await canManageCourse({ course, tenantId, userId, userRole }))) {
       throw new Error("Not authorized to add lectures to this course");
     }
 
@@ -49,8 +49,19 @@ export const lectureService = {
     let bunnyVideoId = "";
     let bunnyLibraryId = "";
     let processingStatus = "ready";
+    let youtubeVideoId = "";
+    let canonicalYoutubeUrl = "";
 
-    if (videoFile) {
+    if (requestedProvider === "youtube") {
+      if (videoFile) throw new Error("Choose either an uploaded video or a YouTube video.");
+      const parsed = parseYouTubeVideoUrl(youtubeUrl);
+      videoProvider = "youtube";
+      youtubeVideoId = parsed.videoId;
+      canonicalYoutubeUrl = parsed.canonicalUrl;
+      finalVideoUrl = "";
+    }
+
+    if (videoFile && requestedProvider !== "youtube") {
       if (bunnyVideoService.isConfigured()) {
         try {
           const bunnyRes = await bunnyVideoService.createVideo(lectureTitle.trim());
@@ -79,6 +90,8 @@ export const lectureService = {
       videoProvider,
       bunnyVideoId,
       bunnyLibraryId,
+      youtubeVideoId,
+      youtubeUrl: canonicalYoutubeUrl,
       processingStatus,
     });
 
@@ -115,6 +128,8 @@ export const lectureService = {
     isPreviewFree,
     videoFile = null,
     videoUrl = null,
+    videoProvider: requestedProvider = "",
+    youtubeUrl = "",
   }) {
     const lecture = await Lecture.findOne({ _id: lectureId, tenantId });
     if (!lecture) {
@@ -122,11 +137,22 @@ export const lectureService = {
     }
 
     const course = await Course.findOne({ _id: lecture.courseId, tenantId });
-    if (course && course.creator.toString() !== userId.toString() && userRole !== "tenant_admin" && userRole !== "platform_admin") {
+    if (course && !(await canManageCourse({ course, tenantId, userId, userRole }))) {
       throw new Error("Not authorized to modify this lecture");
     }
 
-    if (videoFile) {
+    if (requestedProvider === "youtube") {
+      if (videoFile) throw new Error("Choose either an uploaded video or a YouTube video.");
+      const parsed = parseYouTubeVideoUrl(youtubeUrl);
+      lecture.videoProvider = "youtube";
+      lecture.youtubeVideoId = parsed.videoId;
+      lecture.youtubeUrl = parsed.canonicalUrl;
+      lecture.videoUrl = "";
+      lecture.bunnyVideoId = "";
+      lecture.bunnyLibraryId = "";
+      lecture.bunnyDirectUrl = "";
+      lecture.processingStatus = "ready";
+    } else if (videoFile) {
       if (bunnyVideoService.isConfigured()) {
         try {
           const title = lectureTitle ? lectureTitle.trim() : lecture.lectureTitle;
@@ -135,12 +161,21 @@ export const lectureService = {
           lecture.videoProvider = "bunny";
           lecture.bunnyVideoId = bunnyRes.videoId;
           lecture.bunnyLibraryId = bunnyRes.libraryId;
+          lecture.bunnyDirectUrl = "";
+          lecture.videoUrl = "";
+          lecture.youtubeVideoId = "";
+          lecture.youtubeUrl = "";
           lecture.processingStatus = "processing";
         } catch (bErr) {
           const uploaded = await uploadCloudinary(videoFile.path);
           if (uploaded) {
             lecture.videoUrl = uploaded;
             lecture.videoProvider = "cloudinary";
+            lecture.bunnyVideoId = "";
+            lecture.bunnyLibraryId = "";
+            lecture.bunnyDirectUrl = "";
+            lecture.youtubeVideoId = "";
+            lecture.youtubeUrl = "";
             lecture.processingStatus = "ready";
           }
         }
@@ -149,10 +184,18 @@ export const lectureService = {
         if (uploaded) {
           lecture.videoUrl = uploaded;
           lecture.videoProvider = "cloudinary";
+          lecture.bunnyVideoId = "";
+          lecture.bunnyLibraryId = "";
+          lecture.bunnyDirectUrl = "";
+          lecture.youtubeVideoId = "";
+          lecture.youtubeUrl = "";
           lecture.processingStatus = "ready";
         }
       }
+    } else if (["bunny", "cloudinary"].includes(requestedProvider)) {
+      throw new Error("Select a video file to replace the current source.");
     } else if (typeof videoUrl !== "undefined" && videoUrl !== null) {
+      // Retained for trusted legacy service callers; public controllers do not accept raw URLs.
       lecture.videoUrl = videoUrl;
     }
 
@@ -197,7 +240,7 @@ export const lectureService = {
     }
 
     const course = await Course.findOne({ _id: lecture.courseId, tenantId });
-    if (course && course.creator.toString() !== userId.toString() && userRole !== "tenant_admin" && userRole !== "platform_admin") {
+    if (course && !(await canManageCourse({ course, tenantId, userId, userRole }))) {
       throw new Error("Not authorized to delete this lecture");
     }
 
@@ -210,7 +253,7 @@ export const lectureService = {
       { $pull: { lectures: lectureId } }
     );
 
-    await Lecture.findByIdAndDelete(lectureId);
+    await Lecture.deleteOne({ _id: lectureId, tenantId });
 
     return { success: true, deletedLectureId: lectureId, lectureTitle: lecture.lectureTitle };
   },

@@ -211,3 +211,40 @@ const sendMail = async (to, otp, institutionName = "Skillio Academy") => {
 };
 
 export default sendMail;
+
+const escapeHtml = (value = "") => String(value).replace(/[&<>\"']/g, (char) => ({
+  "&": "&amp;", "<": "&lt;", ">": "&gt;", "\"": "&quot;", "'": "&#39;",
+}[char]));
+
+/** Sends an account invitation with a single-use acceptance link. */
+export const sendInvitationEmail = async ({ to, inviteUrl, institutionName = "your institution", inviteeName = "there", courseTitle = null }) => {
+  const isDev = process.env.NODE_ENV !== "production";
+  const fromAddress = process.env.EMAIL_FROM || process.env.EMAIL_ID || "noreply@skillio.com";
+  const safeInstitution = escapeHtml(institutionName);
+  const safeName = escapeHtml(inviteeName);
+  const safeCourse = courseTitle ? escapeHtml(courseTitle) : "";
+  const courseCopy = safeCourse ? `You have been invited to access <strong>${safeCourse}</strong> at ${safeInstitution}.` : `You have been invited to join ${safeInstitution}. Your teacher will share course access with you.`;
+  const textCourse = courseTitle ? `You have been invited to access ${courseTitle} at ${institutionName}.` : `You have been invited to join ${institutionName}. Your teacher will share course access with you.`;
+  if (process.env.NODE_ENV === "test") return { success: true, delivered: false, error: "Mail delivery disabled in test mode" };
+  const transporter = getTransporter();
+
+  if (!transporter) {
+    console.log(`[SKILLIO INVITATION] SMTP is not configured. To: ${to}\nInvitation link: ${inviteUrl}`);
+    return { success: true, delivered: false, error: "No transporter configured" };
+  }
+
+  try {
+    const info = await transporter.sendMail({
+      from: `"${institutionName}" <${fromAddress}>`,
+      to,
+      subject: `You're invited to ${institutionName}`,
+      html: `<!doctype html><html><body style="margin:0;background:#f5f6f4;font-family:Arial,sans-serif;color:#17211d"><main style="max-width:540px;margin:32px auto;padding:32px;background:#fff;border:1px solid #e4e8e3;border-radius:16px"><p style="color:#68736c;font-size:13px">${safeInstitution}</p><h1 style="font-size:24px">You're invited, ${safeName}</h1><p style="line-height:1.6">${courseCopy}</p><p style="margin:28px 0"><a href="${escapeHtml(inviteUrl)}" style="display:inline-block;padding:13px 20px;border-radius:9px;background:#54208a;color:#fff;text-decoration:none;font-weight:700">Accept invitation</a></p><p style="font-size:13px;color:#68736c">This link expires in 7 days and can be used once. If the button does not work, copy this link into your browser:<br><a href="${escapeHtml(inviteUrl)}">${escapeHtml(inviteUrl)}</a></p></main></body></html>`,
+      text: `You're invited, ${inviteeName}. ${textCourse}\n\nAccept your invitation: ${inviteUrl}\n\nThis link expires in 7 days and can be used once.`,
+    });
+    return { success: true, delivered: true, messageId: info.messageId };
+  } catch (error) {
+    console.error(`[MailService] Failed to send invitation to ${to}: ${error.message}`);
+    if (isDev) console.log(`[SKILLIO INVITATION] Delivery failed; invitation link: ${inviteUrl}`);
+    return { success: false, delivered: false, error: error.message };
+  }
+};

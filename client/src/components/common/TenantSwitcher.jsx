@@ -1,19 +1,20 @@
 import React, { useState } from "react";
 import { useTenant } from "../../context/TenantContext";
 import { Building2, ChevronDown, Check, Globe } from "lucide-react";
-
-const DEMO_TENANTS = [
-  { slug: "default", name: "Skillio Academy", color: "bg-cyan-900" },
-  { slug: "physics", name: "Physics Academy", color: "bg-blue-900" },
-  { slug: "coding", name: "Coding Academy", color: "bg-emerald-900" },
-];
+import { useSelector } from "react-redux";
 
 export default function TenantSwitcher() {
   const { tenant, switchTenant } = useTenant();
+  const { userData } = useSelector((state) => state.user);
   const [isOpen, setIsOpen] = useState(false);
 
   // In production outside localhost / lvh.me, keep switcher accessible via discrete toggle or hide
   const activeSlug = tenant?.slug || "default";
+  const institutions = userData?.role === "student"
+    ? (userData.memberships || [])
+    : tenant && !tenant.isPlatform && !["default", "platform"].includes(tenant.slug)
+      ? [{ slug: tenant.slug, name: tenant.name, logo: tenant.logo }]
+      : [];
 
   return (
     <div className="fixed bottom-4 left-4 z-50 font-sans">
@@ -52,9 +53,9 @@ export default function TenantSwitcher() {
 
             <div className="py-1">
               <p className="px-3 py-1 text-[10px] font-semibold text-gray-500 uppercase tracking-wider">
-                Switch Organization (Multi-Tenant Demo)
+                Your institutions
               </p>
-              {DEMO_TENANTS.map((t) => {
+              {institutions.map((t) => {
                 const isActive = activeSlug === t.slug;
                 return (
                   <button
@@ -70,16 +71,17 @@ export default function TenantSwitcher() {
                     }`}
                   >
                     <div className="flex items-center gap-2 truncate">
-                      <span className={`w-2 h-2 rounded-full ${t.color}`} />
+                      {t.logo ? <img src={t.logo} alt="" className="h-5 w-5 rounded object-contain bg-white" /> : <span className="w-2 h-2 rounded-full bg-[var(--tenant-primary,#5b3cc4)]" />}
                       <span className="truncate">{t.name}</span>
                     </div>
                     {isActive && <Check size={14} className="text-cyan-400" />}
                   </button>
                 );
               })}
+              {institutions.length === 0 && <p className="px-3 py-2 text-xs text-gray-400">No institution memberships found.</p>}
             </div>
             <div className="px-3 py-1.5 border-t border-gray-800 text-[10px] text-gray-400">
-              Multi-tenancy active: test via <span className="text-cyan-400">*.lvh.me</span> or selector.
+              Switch between institutions linked to this account.
             </div>
           </div>
         )}

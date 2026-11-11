@@ -12,7 +12,7 @@ import {
   updateTenantStatus,
 } from "../controller/tenantController.js";
 import isAuth from "../middleware/isAuth.js";
-import { requireEducator, requirePlatformAdmin, requireTenantAdmin } from "../middleware/rbac.js";
+import { requireEducator, requirePlatformAdmin, requireInstitutionOwner } from "../middleware/rbac.js";
 import upload from "../middleware/multer.js";
 
 const tenantRouter = express.Router();
@@ -24,7 +24,7 @@ tenantRouter.get("/by-slug/:slug", getTenantBySlug);
 
 // Educator endpoints: Manage institution
 tenantRouter.get("/my-institution", isAuth, requireEducator, getMyInstitution);
-tenantRouter.put("/my-institution", isAuth, requireEducator, upload.single("logo"), updateMyInstitution);
+tenantRouter.put("/my-institution", isAuth, requireInstitutionOwner, upload.single("logo"), updateMyInstitution);
 
 // Educator endpoint: Create a new institution (Allowed ONLY if educator has 0 institutions)
 tenantRouter.post(
@@ -35,8 +35,8 @@ tenantRouter.post(
   createOrganizationByEducator
 );
 
-// Tenant Admin / Platform Admin endpoints
-tenantRouter.put("/branding", isAuth, requireTenantAdmin, upload.single("logo"), updateTenantBranding);
+// Institution owner / Platform Admin endpoints
+tenantRouter.put("/branding", isAuth, requireInstitutionOwner, upload.single("logo"), updateTenantBranding);
 
 // Platform Admin only endpoints
 tenantRouter.get("/all", isAuth, requirePlatformAdmin, getAllTenants);

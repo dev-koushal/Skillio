@@ -10,6 +10,8 @@ import { verifyCourseAccess, sanitizeLecturesForViewer } from "../utils/courseAc
 import { courseService } from "../services/courseService.js";
 import { lectureService } from "../services/lectureService.js";
 import videoPlaybackService from "../services/video/videoPlaybackService.js";
+import { parseYouTubeVideoUrl } from "../utils/youtubeVideo.js";
+import { canManageCourse, isInstitutionOwner } from "../utils/permissions.js";
 
 export const createCourse = async (req, res) => {
   try {
@@ -19,7 +21,7 @@ export const createCourse = async (req, res) => {
     // Guarantee educator courses always bind to their owned or assigned institution
     if (req.userId) {
       const user = await User.findById(req.userId).select("tenantId role");
-      if (user && (user.role === "educator" || user.role === "tenant_admin")) {
+      if (user?.role === "educator") {
         if (user.tenantId) {
           tenantId = user.tenantId;
         } else {
@@ -54,20 +56,7 @@ export const createCourse = async (req, res) => {
 
 export const getPublishedCourses = async (req, res) => {
   try {
-    let tenantId = req.tenantId;
-
-    // If query provides explicit tenant slug, respect it
-    if (req.query.slug) {
-      const explicitTenant = await Tenant.findOne({ slug: req.query.slug.toLowerCase().trim() });
-      if (explicitTenant) tenantId = explicitTenant._id;
-    }
-
-    const filter = { isPublished: true };
-    // When a specific institution is requested via query or header, isolate to that institution
-    const requestedSlug = req.query.slug || req.headers["x-tenant-slug"];
-    if (requestedSlug && requestedSlug !== "platform" && requestedSlug !== "default") {
-      if (tenantId) filter.tenantId = tenantId;
-    }
+    const filter = { isPublished: true, tenantId: req.tenantId };
 
     const courses = await Course.find(filter)
       .populate({
@@ -102,16 +91,11 @@ export const getPublishedCourses = async (req, res) => {
 export const getPublishedCoursesBySlug = async (req, res) => {
   try {
     const { slug } = req.params;
-    if (!slug || slug === "platform") {
-      return res.status(200).json([]);
+    if (!slug || slug.toLowerCase().trim() !== req.tenantSlug) {
+      return res.status(403).json({ success: false, message: "Select this institution before viewing its courses." });
     }
 
-    const tenant = await Tenant.findOne({ slug: slug.toLowerCase().trim(), status: { $ne: "suspended" } });
-    if (!tenant) {
-      return res.status(200).json([]);
-    }
-
-    const courses = await Course.find({ isPublished: true, tenantId: tenant._id })
+    const courses = await Course.find({ isPublished: true, tenantId: req.tenantId })
       .populate({
         path: "lectures",
         select: "_id lectureTitle isPreviewFree duration videoProvider processingStatus",
@@ -130,7 +114,7 @@ export const getPublishedCoursesBySlug = async (req, res) => {
 
     return res.status(200).json(courses);
   } catch (error) {
-    return res.status(500).json({
+    return res.status(400).json({
       success: false,
       message: `Failed to get institution courses: ${error.message || error}`,
     });
@@ -141,8 +125,15 @@ export const getCreatorCourses = async (req, res) => {
   try {
     const userId = req.userId;
 
-    // Return all courses authored by this creator across their institutions
-    const courses = await Course.find({ creator: userId })
+    const courseFilter = {};
+    if (req.userRole !== "platform_admin") courseFilter.tenantId = req.tenantId;
+    // The institution owner is still an educator. Ownership grants access to
+    // every course in this institution; other educators see their own courses.
+    const isAssignedInstitutionEducator = req.userTenantId?.toString() === req.tenantId?.toString();
+    if (!isAssignedInstitutionEducator && !(await isInstitutionOwner({ tenantId: req.tenantId, userId, userRole: req.userRole, userTenantId: req.userTenantId }))) {
+      courseFilter.creator = userId;
+    }
+    const courses = await Course.find(courseFilter)
       .populate("lectures")
       .sort({ createdAt: -1 })
       .lean();
@@ -170,20 +161,28 @@ export const editCourse = async (req, res) => {
       price,
     } = req.body;
 
-    const course = await Course.findById(courseId);
+    const courseFilter = { _id: courseId };
+    if (req.userRole !== "platform_admin") courseFilter.tenantId = req.tenantId;
+
+    const course = await Course.findOne(courseFilter);
     if (!course) {
       return res.status(404).json({ success: false, message: "Course not found" });
     }
 
     // Authorization: only the creator or an admin can edit
-    const isCreator = course.creator.toString() === req.userId.toString();
-    const isAdmin = req.userRole === "tenant_admin" || req.userRole === "platform_admin";
-    if (!isCreator && !isAdmin) {
+    if (!(await canManageCourse({ course, tenantId: req.tenantId, userId: req.userId, userRole: req.userRole }))) {
       return res.status(403).json({ success: false, message: "You are not authorized to edit this course" });
     }
 
+    if (typeof title !== "undefined" && !String(title).trim()) {
+      return res.status(400).json({ success: false, message: "Title is required" });
+    }
+    if (typeof price !== "undefined" && (!Number.isFinite(Number(price)) || Number(price) < 0)) {
+      return res.status(400).json({ success: false, message: "Price must be a valid non-negative number" });
+    }
+
     const updateData = {};
-    if (typeof title !== "undefined") updateData.title = title;
+    if (typeof title !== "undefined") updateData.title = String(title).trim();
     if (typeof subTitle !== "undefined") updateData.subTitle = subTitle;
     if (typeof description !== "undefined") updateData.description = description;
     if (typeof category !== "undefined") updateData.category = category;
@@ -196,8 +195,9 @@ export const editCourse = async (req, res) => {
       if (thumbnail) updateData.thumbnail = thumbnail;
     }
 
-    const updatedCourse = await Course.findByIdAndUpdate(courseId, updateData, {
+    const updatedCourse = await Course.findOneAndUpdate(courseFilter, updateData, {
       returnDocument: "after",
+      runValidators: true,
     }).populate("lectures reviews");
 
     return res.status(200).json(updatedCourse);
@@ -210,8 +210,9 @@ export const editCourse = async (req, res) => {
 export const getCourseById = async (req, res) => {
   try {
     const { courseId } = req.params;
+    const tenantId = req.tenantId;
 
-    const course = await Course.findById(courseId)
+    const course = await Course.findOne({ _id: courseId, tenantId })
       .populate("lectures reviews")
       .populate("creator", "name email profilePicture description");
 
@@ -219,38 +220,16 @@ export const getCourseById = async (req, res) => {
       return res.status(404).json({ success: false, message: "Course not found" });
     }
 
-    // Try optional auth extraction for viewer from cookie or Authorization header
-    let userId = req.userId;
-    let userRole = req.userRole;
-    if (!userId && (req.cookies?.token || req.headers.authorization)) {
-      try {
-        let token = req.cookies?.token;
-        if (!token && req.headers.authorization?.startsWith("Bearer ")) {
-          token = req.headers.authorization.split(" ")[1];
-        }
-        if (token) {
-          const decoded = jwt.verify(token, process.env.JWT_SECRET);
-          if (
-            decoded &&
-            (!decoded.tenantId ||
-              decoded.tenantId.toString() === tenantId.toString() ||
-              decoded.role === "platform_admin")
-          ) {
-            userId = decoded.userId;
-            userRole = decoded.role;
-          }
-        }
-      } catch (e) {
-        // Unauthenticated visitor
-      }
-    }
-
     const access = await verifyCourseAccess({
       courseId,
-      userId,
-      userRole,
+      userId: req.userId,
+      userRole: req.userRole,
       tenantId,
     });
+
+    if (req.userRole === "student" && !course.isPublished && !access.isEnrolled) {
+      return res.status(404).json({ success: false, message: "Course not found" });
+    }
 
     const courseObj = course.toObject();
     // Sanitize lectures if viewer doesn't have full access (scrub locked videoUrl)
@@ -277,14 +256,16 @@ export const removeCourse = async (req, res) => {
     }
 
     // Authorization: only the creator or admin can remove
-    if (course.creator.toString() !== req.userId.toString() && req.userRole !== "tenant_admin" && req.userRole !== "platform_admin") {
+    if (!(await canManageCourse({ course, tenantId, userId: req.userId, userRole: req.userRole }))) {
       return res.status(403).json({ success: false, message: "You are not authorized to delete this course" });
     }
 
-    // Delete associated lectures and resources
-    await Lecture.deleteMany({ _id: { $in: course.lectures }, tenantId });
-    await Resource.deleteMany({ courseId, tenantId });
-    await Course.findByIdAndDelete(courseId);
+    await courseService.deleteCourse({
+      tenantId,
+      userId: req.userId,
+      userRole: req.userRole,
+      courseId,
+    });
 
     return res.status(200).json({ success: true, message: "Course removed successfully!" });
   } catch (error) {
@@ -300,7 +281,7 @@ export const removeCourse = async (req, res) => {
 
 export const createLecture = async (req, res) => {
   try {
-    const { lectureTitle, isPreviewFree, resourceTitle, resourceDescription, resourceType, resourceFileUrl } = req.body;
+    const { lectureTitle, isPreviewFree, resourceTitle, resourceDescription, resourceType, resourceFileUrl, videoProvider, youtubeUrl } = req.body;
     const { courseId } = req.params;
     const tenantId = req.tenantId;
 
@@ -323,13 +304,24 @@ export const createLecture = async (req, res) => {
       lectureTitle,
       isPreviewFree,
       videoFile: req.file,
+      videoProvider,
+      youtubeUrl,
       resourceData,
     });
 
     return res.status(201).json({ lecture: result.lecture, course: result.course, resource: result.resource });
   } catch (error) {
     console.error("[CreateLecture Error]", error);
-    return res.status(500).json({ success: false, message: `Failed to create lecture: ${error.message}` });
+    return res.status(error.status || (/not authorized/i.test(error.message) ? 403 : /not found/i.test(error.message) ? 404 : 400)).json({ success: false, message: error.message || "Failed to create lecture." });
+  }
+};
+
+export const validateYouTubeUrl = async (req, res) => {
+  try {
+    const result = parseYouTubeVideoUrl(req.body?.youtubeUrl);
+    return res.status(200).json({ success: true, videoId: result.videoId, canonicalUrl: result.canonicalUrl });
+  } catch (error) {
+    return res.status(error.status || 400).json({ success: false, message: error.message || "Enter a valid YouTube video URL." });
   }
 };
 
@@ -395,27 +387,19 @@ export const editLecture = async (req, res) => {
   try {
     const { lectureId } = req.params;
     const tenantId = req.tenantId;
-    const { isPreviewFree, lectureTitle, resourceTitle, resourceDescription, resourceType, resourceFileUrl } = req.body;
+    const { isPreviewFree, lectureTitle, resourceTitle, resourceDescription, resourceType, resourceFileUrl, videoProvider, youtubeUrl } = req.body;
 
-    const lecture = await Lecture.findOne({ _id: lectureId, tenantId });
-    if (!lecture) {
-      return res.status(404).json({ success: false, message: "Lecture not found in this organization!" });
-    }
-
-    if (req.file) {
-      const videoUrl = await uploadCloudinary(req.file.path);
-      if (videoUrl) lecture.videoUrl = videoUrl;
-    }
-
-    if (lectureTitle) {
-      lecture.lectureTitle = lectureTitle.trim();
-    }
-
-    if (typeof isPreviewFree !== "undefined") {
-      lecture.isPreviewFree = isPreviewFree === "true" || isPreviewFree === true;
-    }
-
-    await lecture.save();
+    const lecture = await lectureService.updateLecture({
+      tenantId,
+      userId: req.userId,
+      userRole: req.userRole,
+      lectureId,
+      lectureTitle,
+      isPreviewFree,
+      videoFile: req.file,
+      videoProvider,
+      youtubeUrl,
+    });
 
     // Optional: create resource if attached during lecture editing
     let attachedResource = null;
@@ -434,9 +418,9 @@ export const editLecture = async (req, res) => {
 
     return res.status(200).json({ lecture, resource: attachedResource });
   } catch (error) {
-    return res.status(500).json({
+    return res.status(error.status || (/not authorized/i.test(error.message) ? 403 : /not found/i.test(error.message) ? 404 : 400)).json({
       success: false,
-      message: `Failed to edit lecture: ${error.message}`,
+      message: error.message || "Failed to edit lecture.",
     });
   }
 };

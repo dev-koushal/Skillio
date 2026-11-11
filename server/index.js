@@ -11,6 +11,7 @@ import "./models/index.js";
 import { connectDB } from "./config/connectDB.js";
 import { ensureDefaultTenants } from "./config/initTenants.js";
 import { tenantResolver } from "./middleware/tenantResolver.js";
+import standardizeAuthorizationResponses from "./middleware/standardizeAuthorizationResponses.js";
 
 import authRouter from "./routes/authRoute.js";
 import userRouter from "./routes/userRoute.js";
@@ -22,6 +23,8 @@ import resourceRouter from "./routes/resourceRoute.js";
 import aiRouter from "./routes/aiRoute.js";
 import institutionStudentRouter from "./routes/institutionStudentRoute.js";
 import invitationRouter from "./routes/invitationRoute.js";
+import liveClassRouter from "./routes/liveClassRoute.js";
+import { startYouTubeLiveSync } from "./services/youtubeLiveSync.js";
 import { getLecturePlayback } from "./controller/courseController.js";
 
 const __filename = fileURLToPath(import.meta.url);
@@ -37,6 +40,7 @@ const PORT = process.env.PORT || 3000;
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(cookieParser());
+app.use(standardizeAuthorizationResponses);
 
 // Static folder for local uploads
 app.use("/public", express.static(path.join(__dirname, "public")));
@@ -94,6 +98,7 @@ app.use("/api/review", reviewRouter);
 app.use("/api/resource", resourceRouter);
 app.use("/api/ai", aiRouter);
 app.use("/api/invitations", invitationRouter);
+app.use("/api/institution/live", liveClassRouter);
 
 // Serve static client assets in production
 if (process.env.NODE_ENV === "production") {
@@ -110,7 +115,8 @@ app.use((err, req, res, next) => {
   console.error("[Unhandled Error]", err);
   res.status(err.status || 500).json({
     success: false,
-    message: err.message || "Internal server error",
+    code: err.status === 401 ? "UNAUTHENTICATED" : err.status === 403 ? "FORBIDDEN" : "INTERNAL_ERROR",
+    message: err.status === 401 ? "You need to sign in to continue." : err.status === 403 ? "You don't have permission to perform this action." : "Something went wrong. Please try again.",
   });
 });
 
@@ -120,6 +126,7 @@ if (process.env.NODE_ENV !== "test") {
     try {
       await connectDB();
       await ensureDefaultTenants();
+      startYouTubeLiveSync();
     } catch (error) {
       console.error("[Database] Initialization error:", error);
     }

@@ -32,47 +32,7 @@ export const ensureDefaultTenants = async () => {
       console.log(`[Multi-Tenant] Created default tenant (${defaultTenant.name}, ID: ${defaultTenant._id})`);
     }
 
-    // 2. Only seed demo tenants if explicitly requested in test environment
-    if (process.env.SEED_TEST_TENANTS === "true" && process.env.NODE_ENV === "test") {
-      const seedTenants = [
-        {
-          name: "English Academy",
-          slug: "english",
-          title: "Master English with Practical Confidence",
-          subtitle: "Build fluent speaking skills, correct grammar, and ace IELTS or corporate interviews.",
-          primaryColor: "#0f766e",
-          secondaryColor: "#042f2e",
-          organizationName: "English Academy",
-          institutionType: "Language Institute",
-          description: "Specialized language training for spoken fluency, IELTS band 8+, corporate communication, and vocabulary.",
-          domainTags: ["English", "IELTS", "Communication"],
-          status: "active",
-        },
-        {
-          name: "Physics Academy",
-          slug: "physics",
-          title: "Master Physics from Basics to Advanced",
-          subtitle: "Comprehensive physics curricula crafted for school and university students.",
-          primaryColor: "#1e3a8a",
-          secondaryColor: "#0f172a",
-          organizationName: "Physics Academy",
-          institutionType: "Coaching Center",
-          description: "Premier preparation for competitive exams and university physics with in-depth lectures and problem sets.",
-          domainTags: ["Physics", "JEE", "Science"],
-          status: "active",
-        },
-      ];
-
-      for (const seed of seedTenants) {
-        const exists = await Tenant.findOne({ slug: seed.slug });
-        if (!exists) {
-          await Tenant.create(seed);
-          console.log(`[Multi-Tenant] Seeded test tenant: ${seed.slug} (${seed.name})`);
-        }
-      }
-    }
-
-    // 3. Migrate orphaned documents
+    // 2. Migrate orphaned documents
     const orphanedUsers = await User.countDocuments({
       $or: [{ tenantId: { $exists: false } }, { tenantId: null }],
     });

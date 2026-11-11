@@ -23,6 +23,7 @@ import { useTenant } from "../../context/TenantContext";
 import AIAssistantModal from "../../components/AIAssistantModal";
 import { optimizeImage } from "../../utils/imageOptimizer";
 import api from "../../services/api";
+import "./Dashboard.css";
 
 export default function Dashboard() {
   const navigate = useNavigate();
@@ -80,10 +81,10 @@ export default function Dashboard() {
     hour < 12 ? "Good morning" : hour < 18 ? "Good afternoon" : "Good evening";
 
   return (
-    <div className="min-h-screen bg-[#f8f7f4] text-[#1c1917] flex flex-col font-sans">
+    <div className="educator-dashboard-page min-h-screen bg-[#f8f7f4] text-[#1c1917] flex flex-col font-sans">
       <Navbar />
 
-      <main className="max-w-6xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-10 space-y-8 flex-1 pb-28 md:pb-12">
+      <main className="educator-dashboard-main max-w-6xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-10 space-y-8 flex-1 pb-28 md:pb-12">
         {/* ============================================================== */}
         {/* 1. WELCOME GREETING & HEADER (PRESERVED)                        */}
         {/* ============================================================== */}
@@ -105,7 +106,7 @@ export default function Dashboard() {
             </p>
           </div>
 
-          <div className="flex items-center gap-2.5">
+          <div className="dashboard-actions flex items-center gap-2.5">
             <button
               onClick={() => setAiModalOpen(true)}
               className="inline-flex items-center gap-2 bg-[#eff6ff] hover:bg-blue-100 text-[#1e3a8a] text-xs sm:text-sm font-semibold px-4 py-2.5 rounded-xl border border-[#bfdbfe] transition cursor-pointer"
@@ -234,7 +235,7 @@ export default function Dashboard() {
             {/* World-Class Dotted / Dashed "Create New Course" Card */}
             <div
               onClick={() => navigate("/builder/new")}
-              className="group relative flex flex-col justify-between p-6 sm:p-7 rounded-2xl border-2 border-dashed border-[#d6d3d1] hover:border-[#1e3a8a] bg-white/60 hover:bg-white transition-all duration-300 hover:-translate-y-1 hover:shadow-xl hover:shadow-[#1e3a8a]/5 cursor-pointer min-h-[320px]"
+              className="dashboard-create-card group relative flex flex-col justify-between p-6 sm:p-7 rounded-2xl border-2 border-dashed border-[#d6d3d1] hover:border-[#1e3a8a] bg-white/60 hover:bg-white transition-all duration-300 hover:-translate-y-1 hover:shadow-xl hover:shadow-[#1e3a8a]/5 cursor-pointer min-h-[320px]"
             >
               <div className="space-y-4">
                 <div className="w-14 h-14 rounded-2xl bg-[#eff6ff] text-[#1e3a8a] group-hover:bg-[#1e3a8a] group-hover:text-white transition-all duration-300 group-hover:scale-108 group-hover:rotate-90 flex items-center justify-center shadow-xs">

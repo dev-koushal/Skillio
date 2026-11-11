@@ -20,7 +20,6 @@ import {
   X,
   AlertTriangle,
   RefreshCw,
-  Link2,
   Copy,
   Check,
 } from "lucide-react";
@@ -73,7 +72,6 @@ export default function InstitutionStudents() {
   const [inviteLoading, setInviteLoading] = useState(false);
   const [generatedInviteUrl, setGeneratedInviteUrl] = useState("");
   const [linkCopied, setLinkCopied] = useState(false);
-  const [generatingLink, setGeneratingLink] = useState(false);
 
   // Institution courses list for grant/invite dropdown
   const [institutionCourses, setInstitutionCourses] = useState([]);
@@ -81,7 +79,7 @@ export default function InstitutionStudents() {
   // Fetch educator courses on mount for dropdown
   useEffect(() => {
     api
-      .get("/api/course/getcreatorcourse")
+      .get("/api/course/getcreator")
       .then(({ data }) => {
         const list = Array.isArray(data.courses) ? data.courses : [];
         if (list.length > 0) {
@@ -92,36 +90,6 @@ export default function InstitutionStudents() {
       })
       .catch(() => { });
   }, []);
-
-  const handleGenerateLink = async (targetCourseId) => {
-    const courseId = targetCourseId || inviteCourseId;
-    if (!courseId) {
-      toast.error("Please select a course to generate an invitation link");
-      return;
-    }
-
-    try {
-      setGeneratingLink(true);
-      const { data } = await api.post("/api/invitations/create", {
-        courseId,
-        invitedEmail: inviteEmail.trim() || undefined,
-        expiresInHours: 168, // 7 days
-      });
-
-      if (data.success && data.inviteUrl) {
-        setGeneratedInviteUrl(data.inviteUrl);
-        navigator.clipboard?.writeText(data.inviteUrl);
-        setLinkCopied(true);
-        setTimeout(() => setLinkCopied(false), 3000);
-        toast.success("Invitation link generated and copied to clipboard!");
-      }
-    } catch (err) {
-      console.error("[GenerateLink Error]", err);
-      toast.error(err?.response?.data?.message || "Failed to generate invitation link");
-    } finally {
-      setGeneratingLink(false);
-    }
-  };
 
   // Fetch Stats
   const fetchStats = useCallback(async () => {
@@ -249,11 +217,13 @@ export default function InstitutionStudents() {
         email: inviteEmail,
         courseId: inviteCourseId || undefined,
       });
-      toast.success(data.message || `Student invited to ${tenant?.name || "Academy"}!`);
-      setInviteModalOpen(false);
-      setInviteName("");
-      setInviteEmail("");
-      setInviteCourseId("");
+      setGeneratedInviteUrl(data.inviteUrl || "");
+      if (data.inviteUrl && navigator.clipboard?.writeText) {
+        await navigator.clipboard.writeText(data.inviteUrl).catch(() => {});
+        setLinkCopied(true);
+        setTimeout(() => setLinkCopied(false), 3000);
+      }
+      toast.success(data.message || `Invitation created for ${tenant?.name || "Academy"}.`);
       fetchStudents();
       fetchStats();
     } catch (err) {
@@ -307,7 +277,13 @@ export default function InstitutionStudents() {
             <Button
               variant="primary"
               size="md"
-              onClick={() => setInviteModalOpen(true)}
+              onClick={() => {
+                setGeneratedInviteUrl("");
+                setInviteName("");
+                setInviteEmail("");
+                setInviteCourseId("");
+                setInviteModalOpen(true);
+              }}
               className="font-bold shadow-xs pressable gap-2"
             >
               <UserPlus className="inline-block mr-2" size={16} />
@@ -457,7 +433,13 @@ export default function InstitutionStudents() {
                 : "Students will appear here as soon as they purchase a course or are granted access."
             }
             primaryActionText="Invite First Student"
-            onPrimaryAction={() => setInviteModalOpen(true)}
+            onPrimaryAction={() => {
+              setGeneratedInviteUrl("");
+              setInviteName("");
+              setInviteEmail("");
+              setInviteCourseId("");
+              setInviteModalOpen(true);
+            }}
           />
         ) : (
           <div className="space-y-4">
@@ -538,7 +520,7 @@ export default function InstitutionStudents() {
                           onClick={() => openAccessManager(student)}
                           className="font-bold text-xs pressable gap-1.5"
                         >
-                          <Shield size={13} />
+                          <Shield className="inline-flex mr-2" size={13} />
                           <span>Manage Access</span>
                         </Button>
                       </td>
@@ -851,9 +833,8 @@ export default function InstitutionStudents() {
 
             <form onSubmit={handleInviteStudent} className="p-6 space-y-4">
               <p className="text-xs text-[#78716c]">
-                Send an invitation to a student to join{" "}
-                <strong>{tenant?.name || "your institution"}</strong>. They will securely receive
-                an invitation link to set up their password.
+                Send a secure, single-use acceptance link for{" "}
+                <strong>{tenant?.name || "your institution"}</strong>. The student creates or signs in to their own account before access is activated.
               </p>
 
               <div>
@@ -905,18 +886,6 @@ export default function InstitutionStudents() {
                     ))}
                   </select>
 
-                  {inviteCourseId && (
-                    <button
-                      type="button"
-                      disabled={generatingLink}
-                      onClick={() => handleGenerateLink(inviteCourseId)}
-                      className="px-3.5 py-2 bg-[#eff6ff] hover:bg-blue-100 text-[#1e3a8a] border border-[#bfdbfe] rounded-xl text-xs font-semibold flex items-center gap-1.5 shrink-0 transition cursor-pointer pressable"
-                      title="Generate a direct invitation link for this course"
-                    >
-                      <Link2 size={14} />
-                      <span className="hidden sm:inline">Get Link</span>
-                    </button>
-                  )}
                 </div>
               </div>
 
@@ -926,7 +895,7 @@ export default function InstitutionStudents() {
                   <div className="flex items-center justify-between text-xs text-[#1e3a8a] font-semibold">
                     <span className="flex items-center gap-1.5">
                       <CheckCircle2 size={14} />
-                      <span>Single-Use Course Invite Link</span>
+                      <span>Single-Use Student Invitation Link</span>
                     </span>
                     <span className="text-[11px] text-[#78716c]">Expires in 7 days</span>
                   </div>
@@ -973,9 +942,10 @@ export default function InstitutionStudents() {
                   variant="primary"
                   size="md"
                   loading={inviteLoading}
+                  disabled={Boolean(generatedInviteUrl)}
                   className="text-xs font-bold pressable"
                 >
-                  Send Invitation
+                  {generatedInviteUrl ? "Invitation Created" : "Send Invitation"}
                 </Button>
               </div>
             </form>

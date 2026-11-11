@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useEffect, useState } from "react";
 import api, { getActiveTenantSlug } from "../services/api";
+import { clearStoredTenantSlug, setStoredTenantSlug } from "../services/tenantStorage";
 
 const TenantContext = createContext({
   tenant: null,
@@ -100,12 +101,12 @@ export const TenantProvider = ({ children }) => {
   const switchTenant = (slug) => {
     if (typeof window !== "undefined") {
       if (!slug || slug === "platform") {
-        localStorage.removeItem("skillio_active_tenant");
+        clearStoredTenantSlug();
         window.location.href = "/";
         return;
       }
 
-      localStorage.setItem("skillio_active_tenant", slug);
+      setStoredTenantSlug(slug);
       const hostname = window.location.hostname;
       if (hostname.endsWith(".lvh.me")) {
         const port = window.location.port ? `:${window.location.port}` : "";

@@ -1,5 +1,6 @@
 import Course from "../models/coursesModel.js";
 import Review from "../models/reviewModel.js";
+import { verifyCourseAccess } from "../utils/courseAccess.js";
 
 export const createReview = async (req, res) => {
   try {
@@ -12,7 +13,7 @@ export const createReview = async (req, res) => {
     }
 
     const numericRating = Number(rating);
-    if (numericRating < 1 || numericRating > 5) {
+    if (!Number.isFinite(numericRating) || numericRating < 1 || numericRating > 5) {
       return res.status(400).json({ success: false, message: "Rating must be between 1 and 5" });
     }
 
@@ -20,6 +21,11 @@ export const createReview = async (req, res) => {
     const course = await Course.findOne({ _id: courseId, tenantId });
     if (!course) {
       return res.status(404).json({ success: false, message: "Course not found in this organization!" });
+    }
+
+    const access = await verifyCourseAccess({ courseId, userId, userRole: req.userRole, tenantId });
+    if (req.userRole === "student" && !access.isEnrolled) {
+      return res.status(403).json({ success: false, message: "Enroll in this course before leaving a review." });
     }
 
     const alreadyReview = await Review.findOne({

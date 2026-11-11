@@ -1,0 +1,86 @@
+.home-story { color: #1d2922; }
+.home-story-wrap { width: min(100% - 48px, 1200px); margin-inline: auto; }
+.home-story-audiences { padding: clamp(64px, 8vw, 104px) 0; background: #fff; border-bottom: 1px solid #e7e1f2; }
+.home-story-heading { max-width: 660px; margin-bottom: 38px; }
+.home-story-kicker { margin: 0 0 11px; color: #5940b8; font-size: 11px; font-weight: 750; letter-spacing: .07em; }
+.home-story-heading h2, .home-story-security-copy h2 { margin: 0; color: #1d2922; font-size: clamp(30px, 3.4vw, 42px); font-weight: 700; letter-spacing: -.05em; line-height: 1.12; }
+.home-story-heading > p:last-child, .home-story-security-copy > p:last-child { max-width: 580px; margin: 13px 0 0; color: #59635d; font-size: 15px; line-height: 1.7; }
+.home-story-audience-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 40px; }
+.home-story-audience { min-width: 0; padding-top: 20px; border-top: 1px solid #d9d0ee; }
+.home-story-audience-copy { min-height: 160px; }
+.home-story-audience-label { display: inline-flex; align-items: center; gap: 8px; color: #5b3cc4; font-size: 11px; font-weight: 700; }
+.home-story-audience-copy h3 { max-width: 410px; margin: 16px 0 8px; color: #1d2922; font-size: clamp(21px, 2vw, 26px); font-weight: 700; letter-spacing: -.035em; line-height: 1.2; }
+.home-story-audience-copy p { max-width: 500px; margin: 0; color: #59635d; font-size: 14px; line-height: 1.7; }
+.home-story-window { overflow: hidden; min-height: 300px; margin-top: 20px; border: 1px solid #ddd8e8; background: #fff; }
+.home-story-window-bar { display: flex; min-height: 48px; align-items: center; gap: 10px; padding: 0 15px; border-bottom: 1px solid #e8e4ef; color: #354139; font-size: 12px; font-weight: 650; }
+.home-story-window-mark { display: grid; width: 25px; height: 25px; place-items: center; background: #f1edff; color: #5b3cc4; }
+.home-story-status { margin-left: auto; padding: 4px 8px; border: 1px solid #e4dfed; color: #667069; font-size: 10px; font-weight: 600; }
+.home-story-window-context { display: inline-flex; align-items: center; gap: 5px; margin-left: auto; color: #5c4a99; font-size: 10px; font-weight: 600; }
+.home-story-window-body { display: grid; min-height: 252px; grid-template-columns: 122px minmax(0, 1fr); }
+.home-story-window-nav { display: flex; flex-direction: column; gap: 5px; padding: 17px 10px; border-right: 1px solid #eeeaf4; background: #fbfafc; }
+.home-story-window-nav > span { display: flex; align-items: center; gap: 8px; min-height: 34px; padding: 0 8px; color: #68716c; font-size: 10px; font-weight: 550; }
+.home-story-window-nav .home-story-nav-active { background: #f1edff; color: #5037a8; font-weight: 700; }
+.home-story-window-content { min-width: 0; padding: 20px clamp(14px, 2.5vw, 27px); }
+.home-story-window-kicker { margin: 0 0 5px; color: #777184; font-size: 9px; font-weight: 700; letter-spacing: .07em; }
+.home-story-window-content h3, .home-story-student-title h3 { margin: 0; color: #222b25; font-size: 17px; font-weight: 700; letter-spacing: -.025em; }
+.home-story-setup-steps { display: grid; grid-template-columns: 1fr; margin-top: 14px; border-top: 1px solid #eeeaf4; }
+.home-story-setup-step { display: grid; min-height: 38px; grid-template-columns: 28px 1fr 16px; align-items: center; gap: 6px; border-bottom: 1px solid #eeeaf4; color: #56615a; }
+.home-story-setup-step > span { color: #807a8c; font-size: 9px; }
+.home-story-setup-step strong { font-size: 10px; font-weight: 600; }
+.home-story-setup-step svg { color: #7163a2; }
+.home-story-setup-step-active strong, .home-story-setup-step-active svg { color: #5b3cc4; }
+.home-story-lesson-tools { display: flex; flex-wrap: wrap; gap: 8px 17px; padding: 12px 0; color: #59635d; font-size: 10px; }
+.home-story-lesson-tools span { display: inline-flex; align-items: center; gap: 6px; }
+.home-story-lesson-tools svg { color: #5b3cc4; }
+.home-story-window-action { display: flex; width: fit-content; min-height: 32px; align-items: center; gap: 8px; padding: 0 11px; background: #5b3cc4; color: #fff; font-size: 10px; font-weight: 650; }
+.home-story-student-content { padding: 20px clamp(15px, 2.7vw, 28px); }
+.home-story-student-title { display: flex; align-items: center; justify-content: space-between; gap: 14px; padding: 7px 0 15px; }
+.home-story-student-title p { margin: 5px 0 0; color: #667069; font-size: 11px; line-height: 1.5; }
+.home-story-play-mark { display: grid; width: 39px; height: 39px; flex: 0 0 auto; place-items: center; background: #f1edff; color: #5b3cc4; }
+.home-story-course-tabs { display: flex; gap: clamp(10px, 2vw, 22px); overflow: hidden; border-bottom: 1px solid #e8e4ef; white-space: nowrap; }
+.home-story-course-tabs span { padding: 10px 0; color: #67716b; font-size: 10px; }
+.home-story-course-tabs .is-active { border-bottom: 2px solid #5b3cc4; color: #5037a8; font-weight: 700; }
+.home-story-learning-row { display: flex; min-height: 48px; align-items: center; gap: 10px; border-bottom: 1px solid #eeeaf4; color: #364139; }
+.home-story-learning-row > span { display: grid; width: 27px; height: 27px; place-items: center; background: #f6f4fa; color: #5b3cc4; }
+.home-story-learning-row strong { flex: 1; font-size: 10px; font-weight: 600; }
+.home-story-learning-row > svg { color: #7c748d; }
+.home-story-security { padding: clamp(64px, 8vw, 96px) 0; background: #f5f2fa; }
+.home-story-security-grid { display: grid; grid-template-columns: minmax(0, .8fr) minmax(400px, 1fr); align-items: center; gap: clamp(40px, 8vw, 110px); }
+.home-story-security-copy { max-width: 490px; }
+.home-story-access-visual { display: grid; max-width: 560px; gap: 0; justify-self: end; width: 100%; padding: 22px 24px; border: 1px solid #dfd8ec; background: #fff; }
+.home-story-access-node { display: flex; min-height: 56px; align-items: center; gap: 12px; color: #353d38; }
+.home-story-access-node > span:nth-child(2) { display: grid; gap: 3px; }
+.home-story-access-node small { color: #777184; font-size: 9px; font-weight: 650; letter-spacing: .05em; }
+.home-story-access-node strong { font-size: 12px; font-weight: 650; }
+.home-story-access-icon { display: grid; width: 36px; height: 36px; flex: 0 0 auto; place-items: center; background: #f2eff8; color: #5b3cc4; }
+.home-story-access-link { display: flex; height: 27px; flex-direction: column; align-items: center; color: #765be8; }
+.home-story-access-link span { height: 10px; border-left: 1px solid #c8bce1; }
+.home-story-access-boundary { padding: 12px 15px 14px; border: 1px solid #cfc4e6; background: #fbfaff; }
+.home-story-boundary-label { display: flex; align-items: center; gap: 6px; margin-bottom: 8px; color: #5b3cc4; font-size: 9px; font-weight: 700; letter-spacing: .045em; }
+.home-story-access-node-selected > svg { margin-left: auto; color: #5b3cc4; }
+.home-story-access-denied { display: flex; min-height: 41px; align-items: center; gap: 9px; margin-top: 12px; padding-top: 11px; border-top: 1px solid #eeeaf4; color: #777184; font-size: 10px; }
+.home-story-access-denied > svg { color: #7d768a; }
+.home-story-denied-label { margin-left: auto; color: #777184; font-size: 9px; }
+
+@media (max-width: 850px) {
+  .home-story-audience-grid { grid-template-columns: 1fr; gap: 42px; }
+  .home-story-audience-copy { min-height: 0; }
+  .home-story-window { max-width: 620px; }
+  .home-story-security-grid { grid-template-columns: 1fr; gap: 28px; }
+  .home-story-access-visual { justify-self: start; max-width: 650px; }
+}
+@media (max-width: 650px) {
+  .home-story-wrap { width: min(100% - 36px, 1200px); }
+  .home-story-heading { margin-bottom: 28px; }
+  .home-story-heading > p:last-child, .home-story-security-copy > p:last-child { font-size: 14px; }
+  .home-story-window-body { grid-template-columns: 82px minmax(0, 1fr); }
+  .home-story-window-nav { padding-inline: 6px; }
+  .home-story-window-nav > span { gap: 5px; padding-inline: 5px; font-size: 9px; }
+  .home-story-window-nav svg { width: 12px; }
+  .home-story-lesson-tools { flex-direction: column; gap: 8px; }
+  .home-story-course-tabs { gap: 13px; }
+  .home-story-course-tabs span { font-size: 9px; }
+  .home-story-access-visual { padding: 17px 14px; }
+  .home-story-access-denied { gap: 6px; }
+  .home-story-denied-label { font-size: 8px; }
+}

@@ -2,6 +2,8 @@ import jwt from "jsonwebtoken";
 import User from "../models/userModel.js";
 import InstitutionMembership from "../models/institutionMembershipModel.js";
 import sessionService from "../services/session/sessionService.js";
+import { apiError } from "../utils/apiErrors.js";
+import { normalizeRole, ROLES } from "../utils/permissions.js";
 
 const isAuth = async (req, res, next) => {
   try {
@@ -11,28 +13,26 @@ const isAuth = async (req, res, next) => {
     }
 
     if (!token) {
-      return res.status(401).json({ success: false, message: "Authentication required! No token provided." });
+      return apiError(res, 401, "UNAUTHENTICATED");
     }
 
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
     if (!decoded || !decoded.userId) {
-      return res.status(401).json({ success: false, message: "Invalid authentication token!" });
+      return apiError(res, 401, "UNAUTHENTICATED");
     }
 
     // Attach decoded user info
     req.userId = decoded.userId;
-    req.userRole = decoded.role;
+    // Allow sessions issued before the educator/ownership permission migration to
+    // continue with the canonical educator role until the next sign-in.
+    req.userRole = normalizeRole(decoded.role);
     req.sessionId = decoded.sessionId;
 
     // Server-side Session Management: Maximum 2 Active Devices Enforcement
     if (decoded.sessionId) {
       const sessionValidation = await sessionService.validateSession(decoded.userId, decoded.sessionId);
       if (sessionValidation.isRevoked) {
-        return res.status(401).json({
-          success: false,
-          code: "SESSION_REVOKED",
-          message: "Your account was signed in on another device.",
-        });
+        return apiError(res, 401, "SESSION_REVOKED", "Your account was signed in on another device.");
       }
     }
 
@@ -49,13 +49,13 @@ const isAuth = async (req, res, next) => {
     }
 
     // Multi-tenant context and security check:
-    if (decoded.role === "platform_admin") {
+    if (req.userRole === ROLES.PLATFORM_ADMIN) {
       // Platform admin has global access across all tenants
       return next();
     }
 
-    // For educators & tenant admins: their assigned institution is their operating tenant context
-    if (decoded.role === "educator" || decoded.role === "tenant_admin") {
+    // Educators operate within their assigned institution context.
+    if (req.userRole === ROLES.EDUCATOR) {
       const explicitHeaderSlug = req.headers["x-tenant-slug"]?.toString().trim().toLowerCase();
       const hasExplicitTargetTenant = explicitHeaderSlug && !["platform", "default"].includes(explicitHeaderSlug);
 
@@ -68,17 +68,14 @@ const isAuth = async (req, res, next) => {
       // If educator explicitly targeted another tenant that doesn't match their assigned institution
       if (hasExplicitTargetTenant && decoded.tenantId && req.tenantId &&
           decoded.tenantId.toString() !== req.tenantId.toString()) {
-        return res.status(403).json({
-          success: false,
-          message: "Cross-tenant access forbidden. Please sign in to your assigned organization.",
-          code: "CROSS_TENANT_FORBIDDEN",
-        });
+        console.warn(`[Authorization] cross-tenant request denied user=${req.userId} tenant=${req.tenantId}`);
+        return apiError(res, 403, "INSTITUTION_ACCESS_DENIED");
       }
       return next();
     }
 
     // For students: students are users who can browse, enroll, and learn across institutions
-    if (decoded.role === "student") {
+    if (req.userRole === ROLES.STUDENT) {
       if (decoded.tenantId && req.tenantId && decoded.tenantId.toString() !== req.tenantId.toString()) {
         const membership = await InstitutionMembership.findOne({
           userId: decoded.userId,
@@ -89,11 +86,8 @@ const isAuth = async (req, res, next) => {
         // Enforce cross-tenant isolation on private student enrolled/management routes
         const isPrivateInstitutionRoute = requestUrl.includes("/enrolled-courses") || requestUrl.includes("/institution-private");
         if (isPrivateInstitutionRoute && !membership) {
-          return res.status(403).json({
-            success: false,
-            message: "Cross-tenant access forbidden. You are not an enrolled member of this institution.",
-            code: "CROSS_TENANT_FORBIDDEN",
-          });
+          console.warn(`[Authorization] student membership denied user=${req.userId} tenant=${req.tenantId}`);
+          return apiError(res, 403, "INSTITUTION_ACCESS_DENIED");
         }
       }
       return next();
@@ -101,10 +95,8 @@ const isAuth = async (req, res, next) => {
 
     next();
   } catch (error) {
-    return res.status(401).json({
-      success: false,
-      message: `Authentication failed: ${error.message || error}`,
-    });
+    console.warn("[Authentication] token/session verification failed", error.message);
+    return apiError(res, 401, "UNAUTHENTICATED");
   }
 };
 

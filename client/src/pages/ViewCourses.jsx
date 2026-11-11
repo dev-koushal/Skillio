@@ -25,11 +25,15 @@ import { setUserData } from "../redux/userSlice";
 import api from "../services/api";
 import { toast } from "react-toastify";
 import { useTenant } from "../context/TenantContext";
+import { canManageCourse } from "../auth/permissions";
 import Button from "../components/common/Button";
+import { getStoredTenantSlug } from "../services/tenantStorage";
+import { mergeEnrollmentUser } from "../services/enrollmentUser";
 import Navbar from "../components/Navbar";
 import Footer from "../components/Footer";
 import { optimizeImage } from "../utils/imageOptimizer";
 import SecureVideoPlayer from "../components/video/SecureVideoPlayer";
+import "./InstitutionStudentPages.css";
 
 // Helper to load Razorpay checkout script dynamically
 const loadRazorpayScript = () => {
@@ -62,7 +66,11 @@ function ViewCourses() {
   const { userData } = useSelector((state) => state.user);
   const { tenant } = useTenant();
 
-  const targetSlug = slug || (tenant && !tenant.isPlatform ? tenant.slug : localStorage.getItem("skillio_active_tenant"));
+  const targetSlug = slug || (tenant && !tenant.isPlatform ? tenant.slug : getStoredTenantSlug());
+  const accent = /^#(?:[\da-f]{3}|[\da-f]{6})$/i.test(tenant?.primaryColor || "")
+    ? tenant.primaryColor
+    : "#5b3cc4";
+  const tenantStyle = { "--institution-accent": accent };
 
   const [course, setCourse] = useState(null);
   const [selectedLecture, setSelectedLecture] = useState(null);
@@ -115,29 +123,18 @@ function ViewCourses() {
     loadCourse();
   }, [courseId]);
 
-  // Check if current user is creator or tenant admin
-  const isCreator = Boolean(
-    userData?._id &&
-    course?.creator &&
-    ((typeof course.creator === "string" ? course.creator : course.creator?._id)?.toString() === userData._id.toString())
-  );
-  const isTenantAdmin = Boolean(
-    userData && (userData.role === "admin" || userData.role === "tenant_admin" || userData.role === "platform_admin")
-  );
-  const hasFullAccess = Boolean(isEnrolled || isCreator || isTenantAdmin);
+  // Check if the current educator created this course.
+  const hasManagementAccess = canManageCourse(userData, course);
+  const hasFullAccess = Boolean(isEnrolled || hasManagementAccess);
 
   // Check enrollment & ownership from user data
   useEffect(() => {
     if (userData && courseId) {
-      const isCreatorUser = Boolean(
-        course?.creator &&
-        ((typeof course.creator === "string" ? course.creator : course.creator?._id)?.toString() === userData._id?.toString())
-      );
-      const isAdminUser = userData.role === "admin" || userData.role === "tenant_admin" || userData.role === "platform_admin";
+      const canManageThisCourse = canManageCourse(userData, course);
       const enrolled = userData.enrolledCourses?.some(
         (c) => (typeof c === "string" ? c : c._id)?.toString() === courseId.toString()
       );
-      if (isCreatorUser || isAdminUser || enrolled) {
+      if (canManageThisCourse || enrolled) {
         setIsEnrolled(true);
       }
     }
@@ -189,6 +186,15 @@ function ViewCourses() {
     }
   }, [activeTab, isEnrolled, courseId]);
 
+  const applyVerifiedEnrollment = (updatedUser) => {
+    if (updatedUser) {
+      // Payment verification returns enrollment fields, not a fresh auth
+      // session. Preserve institution context for route guards.
+      dispatch(setUserData(mergeEnrollmentUser(userData, updatedUser)));
+    }
+    setIsEnrolled(true);
+  };
+
   // Handle Enrollment
   const handleEnroll = async () => {
     if (!userData) {
@@ -197,7 +203,7 @@ function ViewCourses() {
       return;
     }
 
-    if (isCreator) {
+    if (hasManagementAccess) {
       toast.info("You are the instructor of this course. Full access is granted.");
       setIsEnrolled(true);
       return;
@@ -211,12 +217,9 @@ function ViewCourses() {
           courseId,
           freeEnrollment: true,
         });
-        setIsEnrolled(true);
-        if (verifyRes.data.user) {
-          dispatch(setUserData(verifyRes.data.user));
-        }
+        applyVerifiedEnrollment(verifyRes.data.user);
         toast.success(verifyRes.data.message || "Enrolled successfully in free course!");
-        loadCourse();
+        await loadCourse();
         return;
       }
 
@@ -229,16 +232,18 @@ function ViewCourses() {
           courseId,
           razorpay_order_id: orderData.id,
         });
-        setIsEnrolled(true);
-        if (verifyRes.data.user) {
-          dispatch(setUserData(verifyRes.data.user));
-        }
+        applyVerifiedEnrollment(verifyRes.data.user);
         toast.success(verifyRes.data.message || "Enrolled successfully!");
-        loadCourse();
+        await loadCourse();
         return;
       }
 
       // 4. Ensure Razorpay Checkout SDK is loaded
+      if (!orderData.key) {
+        toast.error("Payments are not configured for this institution. Please contact support.");
+        return;
+      }
+
       const isLoaded = await loadRazorpayScript();
       if (!isLoaded || !window.Razorpay) {
         toast.error("Razorpay SDK could not be loaded. Please check your internet connection.");
@@ -247,7 +252,7 @@ function ViewCourses() {
 
       // 5. Open Razorpay Checkout modal
       const options = {
-        key: orderData.key || import.meta.env.VITE_RAZORPAY_KEY_ID || "rzp_test_STpcnn96tSDaDI",
+        key: orderData.key,
         amount: orderData.amount,
         currency: orderData.currency || "INR",
         name: tenant?.name || "Skillio Academy",
@@ -266,12 +271,9 @@ function ViewCourses() {
               ...res,
               courseId,
             });
-            setIsEnrolled(true);
-            if (verifyRes.data.user) {
-              dispatch(setUserData(verifyRes.data.user));
-            }
+            applyVerifiedEnrollment(verifyRes.data.user);
             toast.success(verifyRes.data.message || "Payment verified and enrolled!");
-            loadCourse();
+            await loadCourse();
           } catch (err) {
             toast.error(err?.response?.data?.message || "Payment verification failed");
           }
@@ -322,7 +324,7 @@ function ViewCourses() {
   };
 
   const calculateAvgReview = (reviews) => {
-    if (!reviews || reviews.length === 0) return 0;
+    if (!reviews || reviews.length === 0) return null;
     const total = reviews.reduce((sum, r) => sum + (r.rating || 0), 0);
     return (total / reviews.length).toFixed(1);
   };
@@ -344,8 +346,8 @@ function ViewCourses() {
 
   if (fetching && !course) {
     return (
-      <div className="min-h-screen bg-[#f8f7f4] text-[#1c1917]">
-        <Navbar />
+      <div className="institution-student-page min-h-screen text-[#1c1917]" style={tenantStyle}>
+        <Navbar currentInstitution={tenant?.isPlatform ? null : tenant} />
         <div className="max-w-5xl mx-auto px-4 py-20 text-center space-y-4">
           <div className="w-10 h-10 border-4 border-[#1e3a8a] border-t-transparent rounded-full animate-spin mx-auto" />
           <p className="text-[#78716c] text-xs font-semibold uppercase tracking-wider">
@@ -357,8 +359,8 @@ function ViewCourses() {
   }
 
   return (
-    <div className="min-h-screen bg-[#f8f7f4] text-[#1c1917] flex flex-col font-sans">
-      <Navbar />
+    <div className="institution-student-page min-h-screen text-[#1c1917] flex flex-col font-sans" style={tenantStyle}>
+      <Navbar currentInstitution={tenant?.isPlatform ? null : tenant} />
 
       <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8 space-y-6 sm:space-y-8 pb-36 md:pb-12">
         {/* Back Link */}
@@ -405,19 +407,11 @@ function ViewCourses() {
                     ₹{(course?.price || 0).toLocaleString("en-IN")}
                   </span>
                 )}
-                {!isFree && course?.price > 0 && (
-                  <span className="line-through text-xs text-[#78716c] ml-2">
-                    ₹{Math.round(course.price * 1.4).toLocaleString("en-IN")}
-                  </span>
-                )}
               </div>
-              <span className="text-[11px] font-semibold text-emerald-700 bg-emerald-50 px-2.5 py-1 rounded-md border border-emerald-200">
-                100% Guaranteed Access
-              </span>
             </div>
 
             {/* Desktop / In-card Enrollment CTA */}
-            {isCreator ? (
+            {hasManagementAccess ? (
               <div className="flex flex-col gap-2.5">
                 <div className="p-3 bg-blue-50 border border-blue-200 rounded-xl text-blue-950 text-xs flex items-center gap-2">
                   <CheckCircle className="w-4 h-4 text-blue-600 shrink-0" />
@@ -504,11 +498,11 @@ function ViewCourses() {
 
             {/* Stats Meta */}
             <div className="flex flex-wrap items-center gap-4 text-xs sm:text-sm text-[#57534e] pt-2">
-              <div className="flex items-center gap-1.5 text-amber-500 font-bold">
+              {reviewCount > 0 && <div className="flex items-center gap-1.5 text-amber-500 font-bold">
                 <Star size={16} className="fill-amber-400 text-amber-400" />
                 <span className="text-[#1c1917]">{avgRating}</span>
                 <span className="text-[#78716c] font-normal">({reviewCount} reviews)</span>
-              </div>
+              </div>}
               <div className="flex items-center gap-1.5 text-[#57534e]">
                 <Video size={16} className="text-[#1e3a8a]" />
                 <span>{course?.lectures?.length || 0} Lectures</span>
@@ -552,7 +546,7 @@ function ViewCourses() {
               { id: "overview", label: "Overview", icon: BookOpen },
               { id: "curriculum", label: `Curriculum (${course?.lectures?.length || 0})`, icon: Video },
               { id: "resources", label: `Notes & Resources (${resources.length})`, icon: FileText },
-              { id: "reviews", label: `Reviews (${reviewCount})`, icon: Star },
+              { id: "reviews", label: `Reviews${reviewCount ? ` (${reviewCount})` : ""}`, icon: Star },
             ].map((tab) => {
               const Icon = tab.icon;
               const isActive = activeTab === tab.id;
@@ -654,6 +648,7 @@ function ViewCourses() {
                             <p className="text-xs sm:text-sm font-semibold text-[#1c1917]">
                               {lec.lectureTitle}
                             </p>
+                            {lec.videoProvider && <span className="text-[10px] font-medium text-[#78716c]">{lec.videoProvider === "youtube" ? "YouTube" : lec.videoProvider === "bunny" ? "Native video" : "Video"}</span>}
                           </div>
                         </div>
 
@@ -793,10 +788,10 @@ function ViewCourses() {
                   <h2 className="text-base font-bold text-[#1c1917]">Student Reviews</h2>
                   <p className="text-xs text-[#78716c]">Feedback from enrolled students</p>
                 </div>
-                <div className="flex items-center gap-1.5 text-amber-500 font-bold text-sm">
+                {reviewCount > 0 && <div className="flex items-center gap-1.5 text-amber-500 font-bold text-sm">
                   <Star size={16} className="fill-amber-400" />
                   <span>{avgRating} / 5</span>
-                </div>
+                </div>}
               </div>
 
               {/* Review Submission Form (if enrolled) */}

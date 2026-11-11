@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { useSelector } from "react-redux";
-import { X, Sparkles, Building2, LogIn, UserPlus } from "lucide-react";
+import { X, Sparkles, LogIn, UserPlus } from "lucide-react";
 import Button from "./Button";
 
 export default function WelcomeModal() {
@@ -41,7 +41,7 @@ export default function WelcomeModal() {
     <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-black/40 backdrop-blur-2xs animate-in fade-in duration-200">
       <div className="bg-white border border-[#e8e5dc] rounded-t-3xl sm:rounded-3xl w-full max-w-sm sm:max-w-md p-6 sm:p-8 shadow-2xl space-y-6 relative overflow-hidden animate-in slide-in-from-bottom-4 duration-300">
         {/* Subtle decorative glow */}
-        <div className="absolute top-0 right-0 w-32 h-32 bg-blue-100/40 rounded-full blur-2xl -mr-10 -mt-10 pointer-events-none" />
+        <div className="absolute top-0 right-0 w-32 h-32 bg-[#e5defc]/40 rounded-full blur-2xl -mr-10 -mt-10 pointer-events-none" />
 
         {/* Close Button */}
         <button
@@ -54,7 +54,7 @@ export default function WelcomeModal() {
 
         {/* Welcome Badge & Title */}
         <div className="space-y-2 text-center pt-2">
-          <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#eff6ff] text-[#1e3a8a] border border-[#bfdbfe] text-xs font-bold uppercase tracking-wider mx-auto">
+          <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#f1edff] text-[#5b3cc4] border border-[#d8cdf7] text-xs font-bold uppercase tracking-wider mx-auto">
             <Sparkles size={13} />
             <span>Welcome to Skillio</span>
           </div>
@@ -64,7 +64,7 @@ export default function WelcomeModal() {
           </h2>
 
           <p className="text-xs sm:text-sm text-[#78716c] max-w-xs mx-auto leading-relaxed">
-            Discover real academies, learn industry-vetted skills, or access your existing student courses.
+            Sign in to continue with your institution, or create an account and choose your learning space.
           </p>
         </div>
 
@@ -90,13 +90,6 @@ export default function WelcomeModal() {
             <span>Create Free Account</span>
           </Button>
 
-          <button
-            onClick={() => handleAction("/institutions")}
-            className="w-full py-3 px-4 rounded-xl text-xs sm:text-sm font-bold text-[#1e3a8a] hover:bg-blue-50/70 transition flex items-center justify-center gap-2 cursor-pointer"
-          >
-            <Building2 size={16} />
-            <span>Explore Institutions First</span>
-          </button>
         </div>
 
         {/* Dismiss Notice */}

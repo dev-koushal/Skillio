@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { ArrowLeft, Trash2, Video, UploadCloud, CheckCircle, FileText, Download } from "lucide-react";
+import { ArrowLeft, Trash2, FileText } from "lucide-react";
 import { useDispatch, useSelector } from "react-redux";
 import { useNavigate, useParams } from "react-router-dom";
 import api from "../../services/api";
@@ -8,6 +8,7 @@ import { setLectureData } from "../../redux/lectureSlice";
 import Button from "../../components/common/Button";
 import Navbar from "../../components/Navbar";
 import Footer from "../../components/Footer";
+import LectureVideoSourceFields from "../../components/video/LectureVideoSourceFields";
 
 function EditLecture() {
   const { courseId, lectureId } = useParams();
@@ -19,6 +20,10 @@ function EditLecture() {
   const [lectureTitle, setLectureTitle] = useState("");
   const [videoFile, setVideoFile] = useState(null);
   const [existingVideoUrl, setExistingVideoUrl] = useState("");
+  const [currentVideoProvider, setCurrentVideoProvider] = useState("");
+  const [videoProvider, setVideoProvider] = useState("upload");
+  const [youtubeUrl, setYoutubeUrl] = useState("");
+  const [youtubeVideoId, setYoutubeVideoId] = useState("");
   const [isPreviewFree, setIsPreviewFree] = useState(false);
   const [loading, setLoading] = useState(false);
   const [deleteLoading, setDeleteLoading] = useState(false);
@@ -37,6 +42,10 @@ function EditLecture() {
         setLectureTitle(found.lectureTitle || "");
         setIsPreviewFree(Boolean(found.isPreviewFree));
         setExistingVideoUrl(found.videoUrl || "");
+        setCurrentVideoProvider(found.videoProvider || "cloudinary");
+        setVideoProvider(found.videoProvider === "youtube" ? "youtube" : "upload");
+        setYoutubeUrl(found.youtubeUrl || (found.youtubeVideoId ? `https://www.youtube.com/watch?v=${found.youtubeVideoId}` : ""));
+        setYoutubeVideoId(found.youtubeVideoId || "");
         setFetching(false);
       } else {
         try {
@@ -49,6 +58,10 @@ function EditLecture() {
             setLectureTitle(current.lectureTitle || "");
             setIsPreviewFree(Boolean(current.isPreviewFree));
             setExistingVideoUrl(current.videoUrl || "");
+            setCurrentVideoProvider(current.videoProvider || "cloudinary");
+            setVideoProvider(current.videoProvider === "youtube" ? "youtube" : "upload");
+            setYoutubeUrl(current.youtubeUrl || (current.youtubeVideoId ? `https://www.youtube.com/watch?v=${current.youtubeVideoId}` : ""));
+            setYoutubeVideoId(current.youtubeVideoId || "");
           }
         } catch (err) {
           console.warn("[EditLecture Fetch Error]", err);
@@ -77,12 +90,23 @@ function EditLecture() {
       toast.error("Lecture title is required");
       return;
     }
+    if (videoProvider === "youtube" && !youtubeVideoId) {
+      toast.error("Validate the YouTube video URL before saving this lecture.");
+      return;
+    }
+    if (videoProvider === "upload" && currentVideoProvider === "youtube" && !videoFile) {
+      toast.error("Choose a video file to replace the current YouTube source.");
+      return;
+    }
 
     const formData = new FormData();
     formData.append("lectureTitle", lectureTitle.trim());
     formData.append("isPreviewFree", isPreviewFree);
 
-    if (videoFile) {
+    if (videoProvider === "youtube") {
+      formData.append("videoProvider", "youtube");
+      formData.append("youtubeUrl", youtubeUrl.trim());
+    } else if (videoFile) {
       formData.append("videoUrl", videoFile);
     }
 
@@ -92,7 +116,7 @@ function EditLecture() {
         headers: { "Content-Type": "multipart/form-data" },
       });
 
-      const updated = res.data;
+      const updated = res.data.lecture || res.data;
       if (Array.isArray(lectureData)) {
         dispatch(
           setLectureData(lectureData.map((l) => (l._id === lectureId ? updated : l)))
@@ -198,39 +222,25 @@ function EditLecture() {
             />
           </div>
 
-          {/* Video Preview / Upload */}
+          {/* Source picker and preview */}
           <div className="space-y-2">
-            <label className="block text-xs font-bold uppercase tracking-wider text-[#44403c]">
-              Video Stream File (MP4, WebM, MOV)
-            </label>
-
-            {existingVideoUrl && (
+            {currentVideoProvider === "cloudinary" && existingVideoUrl && (
               <div className="mb-4 aspect-video rounded-2xl bg-black border border-[#e8e5dc] overflow-hidden max-w-lg">
                 <video src={existingVideoUrl} controls className="w-full h-full object-cover" />
               </div>
             )}
-
-            <div className="flex items-center gap-3">
-              <label
-                htmlFor="video-upload"
-                className="inline-flex items-center gap-2 bg-[#f2efe9] hover:bg-[#ebe7df] text-[#1c1917] text-xs sm:text-sm font-bold px-4 py-2.5 rounded-xl border border-[#d6d3c9] transition cursor-pointer"
-              >
-                <UploadCloud size={16} />
-                <span>{videoFile ? videoFile.name : "Select New Video File"}</span>
-              </label>
-              <input
-                id="video-upload"
-                type="file"
-                accept="video/*"
-                onChange={(e) => setVideoFile(e.target.files[0])}
-                className="sr-only"
-              />
-            </div>
-            {videoFile && (
-              <p className="text-xs text-[#1e3a8a] font-medium mt-1.5">
-                Ready to upload: {videoFile.name} ({(videoFile.size / 1024 / 1024).toFixed(1)} MB)
-              </p>
-            )}
+            <LectureVideoSourceFields
+              idPrefix="edit-lecture"
+              provider={videoProvider}
+              onProviderChange={setVideoProvider}
+              youtubeUrl={youtubeUrl}
+              onYoutubeUrlChange={setYoutubeUrl}
+              videoFile={videoFile}
+              onVideoFileChange={setVideoFile}
+              onValidatedVideoIdChange={setYoutubeVideoId}
+              currentProvider={currentVideoProvider}
+              currentVideoId={youtubeVideoId}
+            />
           </div>
 
           {/* Free Preview Toggle */}

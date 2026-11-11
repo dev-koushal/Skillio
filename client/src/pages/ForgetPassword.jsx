@@ -5,6 +5,7 @@ import api from "../services/api";
 import { toast } from "react-toastify";
 import { useTenant } from "../context/TenantContext";
 import Button from "../components/common/Button";
+import "./AuthPages.css";
 
 export default function ForgotPassword() {
   const [step, setStep] = useState(1);
@@ -113,31 +114,31 @@ export default function ForgotPassword() {
   };
 
   return (
-    <div className="min-h-screen bg-[#f8f7f4] text-[#1c1917] flex flex-col justify-center items-center px-4 py-8 sm:px-6 font-sans selection:bg-[#1e3a8a] selection:text-white">
-      <div className="w-full max-w-md bg-white border border-[#e8e5dc] rounded-3xl shadow-sm p-6 sm:p-10 space-y-6">
+    <div className="auth-page bg-[#f8f7f4] text-[#1c1917] font-sans selection:bg-[#5b3cc4] selection:text-white">
+      <div className="auth-card auth-card-forgot bg-white border border-[#e8e5dc]">
         {/* Header Bar */}
-        <div className="flex items-center justify-between">
+        <div className="auth-topbar flex items-center justify-between">
           <button
             onClick={() => navigate("/login")}
             className="inline-flex items-center gap-1.5 text-xs font-semibold text-[#78716c] hover:text-[#1c1917] transition cursor-pointer pressable p-1 rounded-lg"
           >
             <ArrowLeft size={15} /> Back to Sign In
           </button>
-          <div className="flex items-center gap-1.5 text-[11px] font-bold px-2.5 py-1 rounded-full bg-[#eff6ff] text-[#1e3a8a] border border-[#bfdbfe]">
+          <div className="auth-tenant-pill flex items-center gap-1.5 text-[11px] font-bold px-2.5 py-1 bg-[#f1edff] text-[#5b3cc4] border border-[#d8cdf7]">
             <Building2 size={12} />
             <span className="truncate max-w-[130px]">{tenantName}</span>
           </div>
         </div>
 
         {/* Title & Icon */}
-        <div className="text-center space-y-2">
-          <div className="w-12 h-12 rounded-2xl bg-[#eff6ff] text-[#1e3a8a] flex items-center justify-center mx-auto shadow-2xs">
+        <div className="auth-heading text-center">
+          <div className="auth-forgot-icon bg-[#f1edff] text-[#5b3cc4] flex items-center justify-center mx-auto">
             <KeyRound size={22} />
           </div>
-          <h1 className="text-2xl font-extrabold tracking-tight text-[#1c1917]">
+          <h1 className="auth-title font-extrabold tracking-tight text-[#1c1917]">
             Reset Your Password
           </h1>
-          <p className="text-xs sm:text-sm text-[#78716c] leading-relaxed">
+          <p className="auth-subtitle text-[#78716c] leading-relaxed">
             {step === 1 && "Enter your email to receive a secure one-time verification code."}
             {step === 2 && `Enter the verification code sent to ${email}`}
             {step === 3 && "Create a new secure password for your account."}
@@ -145,13 +146,13 @@ export default function ForgotPassword() {
         </div>
 
         {/* Step Indicator */}
-        <div className="flex items-center justify-center gap-2 pt-1">
+        <div className="auth-progress flex items-center justify-center gap-2">
           {[1, 2, 3].map((s) => (
             <div
               key={s}
               className={`h-1.5 rounded-full transition-all duration-300 ${
                 s === step
-                  ? "w-8 bg-[#1e3a8a]"
+                  ? "w-8 bg-[#5b3cc4]"
                   : s < step
                   ? "w-4 bg-emerald-600"
                   : "w-4 bg-[#e8e5dc]"
@@ -162,7 +163,7 @@ export default function ForgotPassword() {
 
         {/* Step 1: Send OTP */}
         {step === 1 && (
-          <form onSubmit={handleSendOtp} className="space-y-4">
+          <form onSubmit={handleSendOtp} className="auth-form space-y-4">
             <div>
               <label className="block text-xs sm:text-sm font-semibold text-[#44403c] mb-1.5">
                 Registered Email Address
@@ -175,7 +176,7 @@ export default function ForgotPassword() {
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   placeholder="name@example.com"
-                  className="w-full bg-[#fcfbf9] border border-[#d6d3d1] rounded-xl pl-10 pr-4 py-3 text-[#1c1917] placeholder-[#a8a29e] text-sm focus:outline-none focus:border-[#1e3a8a] focus:ring-1 focus:ring-[#1e3a8a] min-h-[44px]"
+                  className="w-full bg-[#fcfbf9] border border-[#d6d3d1] rounded-xl pl-10 pr-4 py-3 text-[#1c1917] placeholder-[#a8a29e] text-sm focus:outline-none focus:border-[#5b3cc4] focus:ring-1 focus:ring-[#5b3cc4] min-h-[44px]"
                 />
               </div>
             </div>
@@ -194,7 +195,7 @@ export default function ForgotPassword() {
 
         {/* Step 2: Verify OTP */}
         {step === 2 && (
-          <form onSubmit={handleVerifyOtp} className="space-y-4">
+          <form onSubmit={handleVerifyOtp} className="auth-form space-y-4">
             <div>
               <div className="flex items-center justify-between mb-1.5">
                 <label className="block text-xs sm:text-sm font-semibold text-[#44403c]">
@@ -211,7 +212,7 @@ export default function ForgotPassword() {
                 value={otp}
                 onChange={(e) => setOtp(e.target.value.replace(/\D/g, ""))}
                 placeholder="123456"
-                className="w-full bg-[#fcfbf9] border border-[#d6d3d1] rounded-xl text-center tracking-[0.4em] sm:tracking-[0.6em] text-2xl font-mono py-3 text-[#1e3a8a] placeholder-[#d6d3c9] focus:outline-none focus:border-[#1e3a8a] focus:ring-1 focus:ring-[#1e3a8a] min-h-[48px] font-bold"
+                className="w-full bg-[#fcfbf9] border border-[#d6d3d1] rounded-xl text-center tracking-[0.4em] sm:tracking-[0.6em] text-2xl font-mono py-3 text-[#5b3cc4] placeholder-[#d6d3c9] focus:outline-none focus:border-[#5b3cc4] focus:ring-1 focus:ring-[#5b3cc4] min-h-[48px] font-bold"
               />
             </div>
 
@@ -231,7 +232,7 @@ export default function ForgotPassword() {
                 type="button"
                 disabled={cooldown > 0 || loading}
                 onClick={handleSendOtp}
-                className="inline-flex items-center gap-1 font-semibold text-[#1e3a8a] hover:underline disabled:text-[#a8a29e] disabled:no-underline cursor-pointer"
+                className="inline-flex items-center gap-1 font-semibold text-[#5b3cc4] hover:underline disabled:text-[#a8a29e] disabled:no-underline cursor-pointer"
               >
                 <RefreshCw size={12} className={cooldown > 0 ? "animate-spin" : ""} />
                 <span>{cooldown > 0 ? `Resend Code (${cooldown}s)` : "Resend Code"}</span>
@@ -252,7 +253,7 @@ export default function ForgotPassword() {
 
         {/* Step 3: Set New Password */}
         {step === 3 && (
-          <form onSubmit={handleResetPassword} className="space-y-4">
+          <form onSubmit={handleResetPassword} className="auth-form auth-form-reset space-y-4">
             <div>
               <label className="block text-xs sm:text-sm font-semibold text-[#44403c] mb-1.5">
                 New Password (minimum 8 characters)
@@ -265,7 +266,7 @@ export default function ForgotPassword() {
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   placeholder="••••••••"
-                  className="w-full bg-[#fcfbf9] border border-[#d6d3d1] rounded-xl pl-10 pr-10 py-3 text-[#1c1917] placeholder-[#a8a29e] text-sm focus:outline-none focus:border-[#1e3a8a] focus:ring-1 focus:ring-[#1e3a8a] min-h-[44px]"
+                  className="w-full bg-[#fcfbf9] border border-[#d6d3d1] rounded-xl pl-10 pr-10 py-3 text-[#1c1917] placeholder-[#a8a29e] text-sm focus:outline-none focus:border-[#5b3cc4] focus:ring-1 focus:ring-[#5b3cc4] min-h-[44px]"
                 />
                 <button
                   type="button"
@@ -290,7 +291,7 @@ export default function ForgotPassword() {
                   value={confirmPassword}
                   onChange={(e) => setConfirmPassword(e.target.value)}
                   placeholder="••••••••"
-                  className="w-full bg-[#fcfbf9] border border-[#d6d3d1] rounded-xl pl-10 pr-10 py-3 text-[#1c1917] placeholder-[#a8a29e] text-sm focus:outline-none focus:border-[#1e3a8a] focus:ring-1 focus:ring-[#1e3a8a] min-h-[44px]"
+                  className="w-full bg-[#fcfbf9] border border-[#d6d3d1] rounded-xl pl-10 pr-10 py-3 text-[#1c1917] placeholder-[#a8a29e] text-sm focus:outline-none focus:border-[#5b3cc4] focus:ring-1 focus:ring-[#5b3cc4] min-h-[44px]"
                 />
                 <button
                   type="button"

@@ -29,6 +29,8 @@ import AIAssistantButton from "../../components/AIAssistantButton";
 import { useTenant } from "../../context/TenantContext";
 import { optimizeImage } from "../../utils/imageOptimizer";
 import api from "../../services/api";
+import EducatorLiveClassPanel from "../../components/video/EducatorLiveClassPanel";
+import "./EducatorHome.css";
 
 export default function EducatorHome() {
   const navigate = useNavigate();
@@ -49,6 +51,9 @@ export default function EducatorHome() {
 
   const educatorName = userData?.name ? userData.name.split(" ")[0] : "Educator";
   const tenantName = tenant?.name || overview?.institution?.name || "Your Academy";
+  const educatorAccent = /^#(?:[\da-f]{3}|[\da-f]{6})$/i.test(tenant?.primaryColor || "")
+    ? tenant.primaryColor
+    : "#5b3cc4";
 
   useEffect(() => {
     let mounted = true;
@@ -90,15 +95,15 @@ export default function EducatorHome() {
   const trend = overview?.trend || [];
 
   return (
-    <div className="min-h-screen bg-[#f8f7f4] text-[#1c1917] flex flex-col font-sans selection:bg-[#1e3a8a] selection:text-white pb-20 md:pb-0">
+    <div className="institution-educator-home min-h-screen text-[#1c1917] flex flex-col font-sans pb-20 md:pb-0" style={{ "--educator-accent": educatorAccent }}>
       {/* 1. Global Navigation Bar */}
-      <Navbar />
+      <Navbar currentInstitution={tenant} />
 
-      <main className="max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8 space-y-8 flex-1">
+      <main className="max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8 space-y-8 flex-1 ">
         {/* ============================================================== */}
         {/* 2. WELCOMING HERO & GREETING SECTION                            */}
         {/* ============================================================== */}
-        <section className="relative rounded-3xl bg-gradient-to-br from-white via-[#fcfbf9] to-[#f8f7f4] border border-[#e8e5dc] p-6 sm:p-8 lg:p-10 shadow-sm overflow-hidden">
+        <section className="relative rounded-3xl bg-gradient-to-br from-white via-[#fcfbf9] to-[#f8f7f4] border border-[#e8e5dc] p-2 sm:p-8 lg:p-10 shadow-sm overflow-hidden">
           {/* Subtle Technical Grid Background */}
           <div className="absolute inset-0 opacity-40 pointer-events-none overflow-hidden rounded-3xl">
             <svg className="w-full h-full" xmlns="http://www.w3.org/2000/svg">
@@ -134,13 +139,7 @@ export default function EducatorHome() {
 
               {/* Quick Action Navigation Buttons */}
               <div className="pt-2 flex flex-wrap gap-2.5 items-center">
-                <button
-                  onClick={() => navigate("/builder/new")}
-                  className="inline-flex items-center gap-2 bg-[#1e3a8a] hover:bg-[#172554] text-white font-bold text-xs sm:text-sm px-4 sm:px-5 py-2.5 rounded-xl shadow-xs transition active:scale-98 cursor-pointer touch-target pressable"
-                >
-                  <PlusCircle size={16} />
-                  <span>Create Course</span>
-                </button>
+
 
                 <button
                   onClick={() => navigate("/students")}
@@ -155,7 +154,7 @@ export default function EducatorHome() {
                   className="inline-flex items-center gap-2 bg-[#eff6ff] hover:bg-blue-100/70 border border-[#bfdbfe] text-[#1e3a8a] font-bold text-xs sm:text-sm px-4 sm:px-5 py-2.5 rounded-xl transition active:scale-98 cursor-pointer touch-target pressable"
                 >
                   <LayoutDashboard size={16} />
-                  <span>Detailed Dashboard</span>
+                  <span>Dashboard</span>
                 </button>
               </div>
             </div>
@@ -166,12 +165,12 @@ export default function EducatorHome() {
                 {/* Visual Header */}
                 <div className="flex items-center justify-between pb-3 border-b border-[#f2efe9]">
                   <div className="flex items-center gap-2.5">
-                    <div className="w-8 h-8 rounded-lg bg-[#1e3a8a] text-white flex items-center justify-center font-bold text-xs shadow-2xs">
-                      {tenantName.charAt(0).toUpperCase()}
+                    <div className="educator-home-mark w-8 h-8 rounded-lg bg-[#1e3a8a] text-white flex items-center justify-center font-bold text-xs shadow-2xs">
+                      {tenant?.logo ? <img className="educator-home-logo" src={tenant.logo} alt="" onError={(event) => { event.currentTarget.style.display = "none"; }} /> : tenantName.charAt(0).toUpperCase()}
                     </div>
                     <div className="min-w-0">
                       <p className="text-xs font-bold text-[#1c1917] truncate">{tenantName}</p>
-                      <p className="text-[10px] text-[#78716c] font-medium">Independent Tenant</p>
+                      <p className="text-[10px] text-[#78716c] font-medium">Learning institution</p>
                     </div>
                   </div>
                   <span className="inline-flex items-center gap-1 text-[10px] font-bold text-emerald-800 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200">
@@ -209,6 +208,8 @@ export default function EducatorHome() {
             </div>
           </div>
         </section>
+
+        <EducatorLiveClassPanel />
 
         {/* ============================================================== */}
         {/* 3. QUICK GLANCE STATS (4 HIGH-LEVEL METRICS)                   */}

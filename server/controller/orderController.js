@@ -1,10 +1,10 @@
 import Razorpay from "razorpay";
-import crypto from "crypto";
 import dotenv from "dotenv";
 import Course from "../models/coursesModel.js";
 import User from "../models/userModel.js";
 import CourseAccess from "../models/courseAccessModel.js";
 import InstitutionMembership from "../models/institutionMembershipModel.js";
+import { verifyRazorpayCoursePayment } from "../utils/razorpayPaymentVerification.js";
 
 dotenv.config();
 
@@ -36,6 +36,42 @@ export const RazorpayOrder = async (req, res) => {
       return res.status(404).json({ success: false, message: "Course not found in this organization" });
     }
 
+    const coursePrice = Number(course.price || 0);
+    if (!Number.isFinite(coursePrice) || coursePrice < 0) {
+      return res.status(400).json({ success: false, message: "This course has an invalid price and cannot be purchased." });
+    }
+
+    const isCreator = userId && course.creator.toString() === userId.toString();
+    if (req.userRole !== "student" && !isCreator) {
+      return res.status(403).json({ success: false, message: "Only students can enroll in courses." });
+    }
+    if (!course.isPublished && !isCreator) {
+      return res.status(404).json({ success: false, message: "Course not found in this organization" });
+    }
+    if (!isCreator) {
+      const membership = await InstitutionMembership.findOne({
+        userId,
+        tenantId,
+        role: "student",
+        status: { $in: ["active", "enrolled", "ACTIVE", "ENROLLED"] },
+      });
+      if (!membership) {
+        return res.status(403).json({
+          success: false,
+          code: "INSTITUTION_MEMBERSHIP_REQUIRED",
+          message: "Join this institution before enrolling in its courses.",
+        });
+      }
+    }
+
+    if (!isCreator && course.enrolledStudents?.some((id) => id.toString() === userId?.toString())) {
+      return res.status(409).json({
+        success: false,
+        code: "COURSE_ALREADY_ENROLLED",
+        message: "You already have access to this course.",
+      });
+    }
+
     // Course creator bypass: Instructor never needs to purchase own course
     if (userId && course.creator.toString() === userId.toString()) {
       return res.status(200).json({
@@ -49,7 +85,7 @@ export const RazorpayOrder = async (req, res) => {
     }
 
     // Free course handling
-    if (!course.price || Number(course.price) <= 0) {
+    if (coursePrice === 0) {
       return res.status(200).json({
         id: `free_${courseId}_${Date.now()}`,
         amount: 0,
@@ -60,11 +96,14 @@ export const RazorpayOrder = async (req, res) => {
     }
 
     const instance = getRazorpayInstance();
+    if (!instance && process.env.NODE_ENV === "production") {
+      return res.status(503).json({ success: false, message: "Course payments are temporarily unavailable." });
+    }
     if (!instance) {
       // Return simulated mock order for testing/development if keys not provided
       return res.status(200).json({
         id: `order_mock_${Date.now()}`,
-        amount: (course.price || 0) * 100,
+        amount: Math.round(coursePrice * 100),
         currency: "INR",
         receipt: courseId.toString(),
         mock: true,
@@ -72,7 +111,7 @@ export const RazorpayOrder = async (req, res) => {
     }
 
     const options = {
-      amount: Math.round((course.price || 0) * 100),
+      amount: Math.round(coursePrice * 100),
       currency: "INR",
       receipt: `rcpt_${courseId.toString().slice(-10)}_${Date.now().toString().slice(-6)}`,
       notes: {
@@ -118,66 +157,76 @@ export const verifyPayment = async (req, res) => {
       return res.status(404).json({ success: false, message: "Course not found in this organization" });
     }
 
-    const instance = getRazorpayInstance();
-
-    const isFreeCourse = !course.price || Number(course.price) <= 0;
-    const isCreator = userId && course.creator && course.creator.toString() === userId.toString();
-    const isDev = process.env.NODE_ENV !== "production";
-
-    // 1. Creator enrollment requires no payment
-    if (isCreator || (razorpay_order_id && razorpay_order_id.startsWith("creator_"))) {
-      // Creator allowed
+    const coursePrice = Number(course.price || 0);
+    if (!Number.isFinite(coursePrice) || coursePrice < 0) {
+      return res.status(400).json({ success: false, message: "This course has an invalid price and cannot be purchased." });
     }
-    // 2. Free enrollment check - STRICTLY only allowed if course.price is 0
-    else if (freeEnrollment || isFreeCourse) {
-      if (!isFreeCourse) {
-        return res.status(400).json({
+    const isFreeCourse = coursePrice === 0;
+    const user = await User.findById(userId);
+    if (!user) {
+      return res.status(404).json({ success: false, message: "User account not found" });
+    }
+    const isCreator = course.creator?.toString() === userId.toString();
+    if (!isCreator && user.role !== "student") {
+      return res.status(403).json({ success: false, message: "Only students can enroll in courses." });
+    }
+    if (!course.isPublished && !isCreator) {
+      return res.status(404).json({ success: false, message: "Course not found in this organization" });
+    }
+
+    if (!isCreator) {
+      const membership = await InstitutionMembership.findOne({
+        userId,
+        tenantId,
+        role: "student",
+        status: { $in: ["active", "enrolled", "ACTIVE", "ENROLLED"] },
+      });
+      if (!membership) {
+        return res.status(403).json({
           success: false,
-          message: "Free enrollment bypass is not allowed on paid courses. Complete payment to enroll.",
+          code: "INSTITUTION_MEMBERSHIP_REQUIRED",
+          message: "Join this institution before enrolling in its courses.",
         });
       }
     }
-    // 3. Simulated mock order (dev/test mode strictly)
-    else if (razorpay_order_id && razorpay_order_id.startsWith("order_mock_")) {
+
+    const instance = getRazorpayInstance();
+    const isDev = process.env.NODE_ENV !== "production";
+    let accessSource = isFreeCourse || isCreator ? "FREE" : "PURCHASED";
+
+    if (isCreator || isFreeCourse) {
+      // No payment is needed for the creator or a genuinely free course.
+    } else if (freeEnrollment) {
+      return res.status(400).json({
+        success: false,
+        message: "Free enrollment bypass is not allowed on paid courses. Complete payment to enroll.",
+      });
+    } else if (razorpay_order_id?.startsWith("creator_")) {
+      return res.status(400).json({ success: false, message: "Creator enrollment is not valid for this account." });
+    } else if (razorpay_order_id?.startsWith("order_mock_")) {
       if (!isDev) {
         return res.status(403).json({
           success: false,
           message: "Mock payment orders are strictly forbidden in production mode.",
         });
       }
-    }
-    // 3. Signature verification with Razorpay credentials
-    else if (instance && razorpay_signature && razorpay_order_id && razorpay_payment_id) {
-      const generatedSignature = crypto
-        .createHmac("sha256", process.env.RAZORPAY_KEY_SECRET.trim())
-        .update(`${razorpay_order_id}|${razorpay_payment_id}`)
-        .digest("hex");
-
-      if (generatedSignature !== razorpay_signature) {
-        return res.status(400).json({ success: false, message: "Payment signature verification failed!" });
-      }
-    }
-    // 4. Fallback verification via Razorpay payment ID
-    else if (instance && razorpay_payment_id) {
-      const paymentInfo = await instance.payments.fetch(razorpay_payment_id);
-      if (paymentInfo.status !== "captured" && paymentInfo.status !== "authorized") {
-        return res.status(400).json({ success: false, message: `Payment not completed: status is ${paymentInfo.status}` });
-      }
-    }
-    // 5. Fallback status verification from Razorpay order API
-    else if (instance && razorpay_order_id) {
-      const orderInfo = await instance.orders.fetch(razorpay_order_id);
-      if (orderInfo.status !== "paid") {
-        return res.status(400).json({ success: false, message: "Payment status is not paid" });
+    } else if (instance && razorpay_signature && razorpay_order_id && razorpay_payment_id) {
+      const verification = await verifyRazorpayCoursePayment({
+        instance,
+        orderId: razorpay_order_id,
+        paymentId: razorpay_payment_id,
+        signature: razorpay_signature,
+        secret: process.env.RAZORPAY_KEY_SECRET?.trim(),
+        userId,
+        tenantId,
+        courseId,
+        amountPaise: Math.round(coursePrice * 100),
+      });
+      if (!verification.valid) {
+        return res.status(400).json({ success: false, message: verification.reason });
       }
     } else {
       return res.status(400).json({ success: false, message: "Incomplete payment verification parameters" });
-    }
-
-    // USER UPDATE (Scoped to tenant)
-    const user = await User.findOne({ _id: userId, tenantId });
-    if (!user) {
-      return res.status(404).json({ success: false, message: "User not found in this organization" });
     }
 
     if (!user.enrolledCourses.some((id) => id.toString() === courseId.toString())) {
@@ -192,7 +241,6 @@ export const verifyPayment = async (req, res) => {
     }
 
     // Record formal CourseAccess with accurate source tracking
-    const accessSource = (course.price > 0 && !freeEnrollment) ? "PURCHASED" : "FREE";
     await CourseAccess.findOneAndUpdate(
       { userId, courseId, tenantId },
       {
@@ -209,16 +257,17 @@ export const verifyPayment = async (req, res) => {
     );
 
     // Register or refresh student's InstitutionMembership
-    await InstitutionMembership.findOneAndUpdate(
-      { userId, tenantId },
+    if (user.role === "student") await InstitutionMembership.findOneAndUpdate(
       {
         userId,
         tenantId,
         role: "student",
-        status: "active",
-        lastActiveAt: new Date(),
+        status: { $in: ["active", "enrolled", "ACTIVE", "ENROLLED"] },
       },
-      { upsert: true, new: true, setDefaultsOnInsert: true }
+      {
+        $set: { lastActiveAt: new Date() },
+      },
+      { new: true }
     );
 
     return res.status(200).json({

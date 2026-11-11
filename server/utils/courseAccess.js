@@ -1,12 +1,13 @@
 import Course from "../models/coursesModel.js";
 import CourseAccess from "../models/courseAccessModel.js";
+import { isInstitutionOwner } from "./permissions.js";
 
 /**
  * Verifies whether a given user has full access to view course lectures and protected resources.
  * 
  * Access is granted if:
  * 1. The user is the creator of the course
- * 2. The user has role "tenant_admin" or "platform_admin" within the tenant
+ * 2. The user owns the institution or is a platform administrator
  * 3. The user is enrolled in the course (either paid or free enrollment)
  * 4. The course is free AND public free-view is enabled
  * 
@@ -24,7 +25,7 @@ export const verifyCourseAccess = async ({ courseId, userId, userRole, tenantId 
 
   // Creator or Admin always has full access
   const isCreator = userId && course.creator.toString() === userId.toString();
-  const isAdmin = userRole === "tenant_admin" || userRole === "platform_admin";
+  const isAdmin = await isInstitutionOwner({ tenantId, userId, userRole });
 
   if (isCreator || isAdmin) {
     return {

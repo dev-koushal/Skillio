@@ -9,6 +9,7 @@ import CourseAccess from "./courseAccessModel.js";
 import Invitation from "./invitationModel.js";
 import Session from "./sessionModel.js";
 import AiActionLog from "./aiActionLogModel.js";
+import LiveClass from "./liveClassModel.js";
 
 // Ensure all Mongoose schemas are pre-registered on app startup
 export {
@@ -23,5 +24,6 @@ export {
   Invitation,
   Session,
   AiActionLog,
+  LiveClass,
 };
 

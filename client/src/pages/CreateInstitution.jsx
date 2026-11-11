@@ -25,6 +25,7 @@ import { useTenant } from "../context/TenantContext";
 import { toast } from "react-toastify";
 import Navbar from "../components/Navbar";
 import Footer from "../components/Footer";
+import "./CreateInstitution.css";
 
 function CreateInstitution() {
   const navigate = useNavigate();
@@ -536,7 +537,7 @@ function CreateInstitution() {
               </div>
 
               {/* Submit Action */}
-              <div className="pt-6 border-t border-[#f2efe9] flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+              <div className="institution-form-actions pt-6 border-t border-[#f2efe9] flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                 <p className="text-xs text-[#78716c]">
                   Changes are applied immediately to all public academy pages and course viewers.
                 </p>

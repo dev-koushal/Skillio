@@ -1,26 +1,44 @@
 import React, { useEffect } from "react";
-import { ArrowLeft, SquarePen, Plus, BookOpen } from "lucide-react";
+import { ArrowLeft, SquarePen, Plus, BookOpen, Trash2 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useDispatch, useSelector } from "react-redux";
 import api from "../../services/api";
-import { setCreatorCourseData } from "../../redux/courseSlice";
+import { setCreatorCourseData, setCourseData } from "../../redux/courseSlice";
 import Navbar from "../../components/Navbar";
 import Footer from "../../components/Footer";
+import { toast } from "react-toastify";
+import "./Courses.css";
+import { canUseEducatorWorkspace } from "../../auth/permissions";
 
 function Courses() {
   const navigate = useNavigate();
   const dispatch = useDispatch();
-  const { creatorCourseData } = useSelector((state) => state.course);
+  const { creatorCourseData, courseData } = useSelector((state) => state.course);
   const { userData } = useSelector((state) => state.user);
+  const [deletingCourseId, setDeletingCourseId] = React.useState(null);
+  const [coursesLoading, setCoursesLoading] = React.useState(true);
 
   const courses = Array.isArray(creatorCourseData)
     ? creatorCourseData
     : creatorCourseData?.courses || [];
 
-  const isEducator =
-    userData?.role === "educator" ||
-    userData?.role === "tenant_admin" ||
-    userData?.role === "platform_admin";
+  const isEducator = canUseEducatorWorkspace(userData);
+
+  const deleteCourse = async (course) => {
+    if (!window.confirm(`Delete “${course.title}”? This also removes its lessons and cannot be undone.`)) return;
+    setDeletingCourseId(course._id);
+    try {
+      await api.delete(`/api/course/remove/${course._id}`);
+      const next = courses.filter((item) => item._id !== course._id);
+      dispatch(setCreatorCourseData(Array.isArray(creatorCourseData) ? next : { ...creatorCourseData, courses: next }));
+      dispatch(setCourseData(Array.isArray(courseData) ? courseData.filter((item) => item._id !== course._id) : []));
+      toast.success("Course deleted");
+    } catch (error) {
+      toast.error(error.response?.data?.message || "Could not delete this course");
+    } finally {
+      setDeletingCourseId(null);
+    }
+  };
 
   useEffect(() => {
     const fetchCreatorCourses = async () => {
@@ -29,19 +47,21 @@ function Courses() {
         dispatch(setCreatorCourseData(data));
       } catch (error) {
         console.warn("[Courses] Error fetching courses:", error.message);
+      } finally {
+        setCoursesLoading(false);
       }
     };
 
     if (isEducator) {
       fetchCreatorCourses();
-    }
-  }, [userData, isEducator, dispatch]);
+    } else setCoursesLoading(false);
+  }, [userData?._id, userData?.role, isEducator, dispatch]);
 
   return (
     <div className="min-h-screen bg-[#f8f7f4] text-[#1c1917] flex flex-col">
       <Navbar />
 
-      <main className="max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-10 space-y-6 flex-1 pb-28 md:pb-12">
+      <main className="educator-courses-main max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-6 space-y-4 flex-1 pb-28 md:pb-12">
         {/* Header */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div className="flex items-center gap-3">
@@ -70,7 +90,9 @@ function Courses() {
         </div>
 
         {/* Empty State */}
-        {courses.length === 0 ? (
+        {coursesLoading ? (
+          <div className="course-list-loading" role="status"><span className="course-loading-spinner" />Loading your courses…</div>
+        ) : courses.length === 0 ? (
           <div className="max-w-md mx-auto text-center py-16 px-6 rounded-3xl bg-white border border-[#e8e5dc] space-y-4 shadow-xs">
             <BookOpen size={44} className="mx-auto text-[#a8a29e]" />
             <h2 className="text-base font-bold text-[#1c1917]">No courses created yet</h2>
@@ -95,7 +117,7 @@ function Courses() {
                     <th className="py-3.5 px-6">Category</th>
                     <th className="py-3.5 px-6">Price</th>
                     <th className="py-3.5 px-6">Status</th>
-                    <th className="py-3.5 px-6 text-right">Actions</th>
+            <th className="py-3.5 px-6 text-right">Actions</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-[#f2efe9]">
@@ -135,12 +157,15 @@ function Courses() {
                         </span>
                       </td>
                       <td className="py-4 px-6 text-right">
+                        <div className="inline-flex items-center gap-2">
                         <button
                           onClick={() => navigate(`/builder/${course._id}`)}
                           className="inline-flex items-center gap-1.5 text-xs font-bold text-[#1e3a8a] hover:bg-blue-50 border border-[#d6d3c9] px-3 py-1.5 rounded-xl transition cursor-pointer"
                         >
                           <SquarePen size={14} /> Edit in Builder
                         </button>
+                        <button type="button" aria-label={`Delete ${course.title}`} title="Delete course" disabled={deletingCourseId === course._id} onClick={() => deleteCourse(course)} className="course-delete-button"><Trash2 size={15} /><span>Delete</span></button>
+                        </div>
                       </td>
                     </tr>
                   ))}
@@ -185,12 +210,15 @@ function Courses() {
                     </span>
                   </div>
 
+                  <div className="course-mobile-actions">
                   <button
                     onClick={() => navigate(`/builder/${course._id}`)}
-                    className="w-full text-center py-2.5 rounded-xl border border-[#d6d3c9] text-xs font-bold text-[#1e3a8a] bg-[#faf9f6] hover:bg-[#f2efe9] cursor-pointer"
+                    className="course-mobile-edit"
                   >
                     Open Course Builder
                   </button>
+                  <button type="button" aria-label={`Delete ${course.title}`} disabled={deletingCourseId === course._id} onClick={() => deleteCourse(course)} className="course-mobile-delete"><Trash2 size={16}/><span>{deletingCourseId === course._id ? "Deleting" : "Delete"}</span></button>
+                  </div>
                 </div>
               ))}
             </div>

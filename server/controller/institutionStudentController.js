@@ -1,11 +1,12 @@
 import Course from "../models/coursesModel.js";
 import User from "../models/userModel.js";
+import Invitation from "../models/invitationModel.js";
 import Tenant from "../models/tenantModel.js";
 import CourseAccess from "../models/courseAccessModel.js";
 import InstitutionMembership from "../models/institutionMembershipModel.js";
-import sendMail from "../config/sendMail.js";
+import { sendInvitationEmail } from "../config/sendMail.js";
 import crypto from "crypto";
-import bcrypt from "bcryptjs";
+import { can, PERMISSIONS, ROLES } from "../utils/permissions.js";
 
 /**
  * Resolves the authenticated educator's institution.
@@ -18,20 +19,43 @@ const resolveEducatorTenant = async (req) => {
   const educator = await User.findById(userId);
   if (!educator) return null;
 
-  // Educator or tenant_admin role check
-  if (educator.role !== "educator" && educator.role !== "tenant_admin" && educator.role !== "platform_admin") {
+  // Institution access is derived from the educator's tenant/ownership context.
+  if (![ROLES.EDUCATOR, ROLES.PLATFORM_ADMIN].includes(educator.role)) {
     return null;
   }
 
-  // 1. Check if user is the direct owner of a tenant
-  let tenant = await Tenant.findOne({ ownerId: userId, status: "active" });
+  // Platform admins operate on the server-resolved request tenant. Educators
+  // resolve their own institution relationship from the database.
+  let tenant = educator.role === ROLES.PLATFORM_ADMIN && req.tenantId
+    ? await Tenant.findOne({ _id: req.tenantId, status: "active" })
+    : await Tenant.findOne({ ownerId: userId, status: "active" });
 
   // 2. Fall back to user's assigned tenantId
   if (!tenant && educator.tenantId) {
     tenant = await Tenant.findOne({ _id: educator.tenantId, status: "active" });
   }
 
+  if (!tenant || !(await can({
+    permission: PERMISSIONS.MANAGE_STUDENTS,
+    userId,
+    userRole: educator.role,
+    userTenantId: educator.tenantId,
+    tenantId: tenant._id,
+  }))) return null;
+
   return { educator, tenant };
+};
+
+const isStudentInTenant = async (student, tenantId) => {
+  if (!student || student.role !== "student") return false;
+  if (student.tenantId?.toString() === tenantId.toString()) return true;
+  const membership = await InstitutionMembership.findOne({
+    userId: student._id,
+    tenantId,
+    role: "student",
+    status: "active",
+  });
+  return Boolean(membership);
 };
 
 /**
@@ -504,8 +528,9 @@ export const getInstitutionStudentDetail = async (req, res) => {
     const tenantId = authData.tenant._id;
     const { studentId } = req.params;
 
-    const student = await User.findById(studentId).select("name email profilePicture description createdAt");
-    if (!student) {
+    const student = await User.findOne({ _id: studentId, role: "student" })
+      .select("name email profilePicture description createdAt tenantId");
+    if (!student || !(await isStudentInTenant(student, tenantId))) {
       return res.status(404).json({ success: false, message: "Student not found" });
     }
 
@@ -623,8 +648,8 @@ export const grantCourseAccess = async (req, res) => {
     }
 
     // 2. Verify student exists
-    const student = await User.findById(studentId);
-    if (!student) {
+    const student = await User.findOne({ _id: studentId, role: "student" });
+    if (!student || !(await isStudentInTenant(student, tenantId))) {
       return res.status(404).json({ success: false, message: "Student not found" });
     }
 
@@ -720,8 +745,8 @@ export const revokeCourseAccess = async (req, res) => {
     }
 
     // 2. Find student
-    const student = await User.findById(studentId);
-    if (!student) {
+    const student = await User.findOne({ _id: studentId, role: "student" });
+    if (!student || !(await isStudentInTenant(student, tenantId))) {
       return res.status(404).json({ success: false, message: "Student not found" });
     }
 
@@ -775,8 +800,7 @@ export const revokeCourseAccess = async (req, res) => {
 
 /**
  * POST /api/institutions/me/students/invite
- * Teacher invites a student to join their institution (optionally with instant course access).
- * Security: NEVER returns or generates plaintext passwords to educators.
+ * Teacher creates an expiring student invitation (optionally scoped to one course).
  */
 export const inviteStudent = async (req, res) => {
   try {
@@ -798,94 +822,43 @@ export const inviteStudent = async (req, res) => {
     const cleanEmail = email.trim().toLowerCase();
     const cleanName = name.trim();
 
-    // Check if user already exists
-    let user = await User.findOne({ email: cleanEmail });
+    const course = courseId ? await Course.findOne({ _id: courseId, tenantId }) : null;
+    if (courseId && !course) return res.status(404).json({ success: false, message: "Course not found in your institution" });
 
-    if (!user) {
-      // Create student account with random secure password
-      const randomPassword = crypto.randomBytes(24).toString("hex");
-      const hashedPassword = await bcrypt.hash(randomPassword, 10);
-
-      user = await User.create({
-        name: cleanName,
-        email: cleanEmail,
-        password: hashedPassword,
-        role: "student",
-        tenantId,
-      });
-    }
-
-    // Register institution membership
-    await InstitutionMembership.findOneAndUpdate(
-      { userId: user._id, tenantId },
-      {
-        userId: user._id,
-        tenantId,
-        role: "student",
-        status: "active",
-        joinedAt: new Date(),
-        lastActiveAt: new Date(),
-      },
-      { upsert: true, new: true, setDefaultsOnInsert: true }
-    );
-
-    // If an initial course is selected, grant access immediately
-    let courseName = "";
-    if (courseId) {
-      const course = await Course.findOne({ _id: courseId, tenantId });
-      if (course) {
-        courseName = course.title;
-        await CourseAccess.findOneAndUpdate(
-          { userId: user._id, courseId: course._id, tenantId },
-          {
-            userId: user._id,
-            courseId: course._id,
-            tenantId,
-            source: "INSTITUTION_GRANTED",
-            status: "active",
-            grantedBy: req.userId,
-            grantedAt: new Date(),
-          },
-          { upsert: true, new: true, setDefaultsOnInsert: true }
-        );
-
-        if (!user.enrolledCourses.some((id) => id.toString() === course._id.toString())) {
-          user.enrolledCourses.push(course._id);
-          await user.save();
-        }
-        if (!course.enrolledStudents.some((id) => id.toString() === user._id.toString())) {
-          course.enrolledStudents.push(user._id);
-          await course.save();
-        }
-      }
-    }
-
-    // Send invitation email notice (using non-blocking background mail service)
-    try {
-      const inviteOtp = crypto.randomInt(100000, 1000000).toString();
-      user.resetOtp = crypto.createHash("sha256").update(inviteOtp).digest("hex");
-      user.otpExpires = new Date(Date.now() + 24 * 60 * 60 * 1000); // 24 hours
-      await user.save();
-
-      await sendMail(user.email, inviteOtp, authData.tenant.name);
-    } catch (mailErr) {
-      console.warn(`[InviteStudent Email Notice] Note: Email dispatch notification: ${mailErr.message}`);
-    }
+    const rawToken = crypto.randomBytes(32).toString("hex");
+    const invitation = await Invitation.create({
+      tokenHash: crypto.createHash("sha256").update(rawToken).digest("hex"),
+      tenantId,
+      courseId: course?._id || null,
+      invitedEmail: cleanEmail,
+      invitedBy: req.userId,
+      expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
+      status: "pending",
+    });
+    const origin = req.headers.origin || req.headers.referer || "http://localhost:5173";
+    const inviteUrl = `${origin.replace(/\/$/, "")}/accept-invite?token=${rawToken}`;
+    const emailResult = await sendInvitationEmail({
+      to: cleanEmail,
+      inviteUrl,
+      institutionName: authData.tenant.name,
+      inviteeName: cleanName,
+      courseTitle: course?.title || null,
+    });
 
     console.log(
-      `[STUDENT INVITED] Educator ${req.userId} invited student ${user.email} to ${authData.tenant.name}`
+      `[STUDENT INVITED] Educator ${req.userId} created an invitation for ${cleanEmail} to ${authData.tenant.name}`
     );
 
     return res.status(201).json({
       success: true,
-      message: `Student ${cleanName} invited successfully to ${authData.tenant.name}!`,
-      student: {
-        id: user._id,
-        name: user.name,
-        email: user.email,
-        role: "student",
-        enrolledCourse: courseName || null,
-      },
+      message: emailResult.delivered
+        ? `Invitation sent to ${cleanEmail}`
+        : "Invitation link created, but email delivery is not configured. Copy the link to share it.",
+      inviteUrl,
+      invitationId: invitation._id,
+      expiresAt: invitation.expiresAt,
+      emailDelivered: emailResult.delivered,
+      student: { name: cleanName, email: cleanEmail, role: "student", enrolledCourse: course?.title || null },
     });
   } catch (error) {
     console.error("[InviteStudent Error]", error);

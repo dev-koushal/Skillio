@@ -1,4 +1,5 @@
 import { verifyCourseAccess } from "../utils/courseAccess.js";
+import { AUTH_MESSAGES } from "../utils/apiErrors.js";
 
 /**
  * Middleware that strictly verifies course access before granting route execution.
@@ -25,8 +26,9 @@ export const requireCourseAccess = async (req, res, next) => {
     if (!access.hasAccess) {
       return res.status(403).json({
         success: false,
+        code: "RESOURCE_ACCESS_DENIED",
+        message: AUTH_MESSAGES.RESOURCE_ACCESS_DENIED,
         accessDenied: true,
-        message: access.reason || "Payment required: You do not have access to this course.",
         isEnrolled: false,
         isFree: access.isFree,
       });

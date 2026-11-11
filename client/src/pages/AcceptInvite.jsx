@@ -15,6 +15,7 @@ import { toast } from "react-toastify";
 import api from "../services/api";
 import Navbar from "../components/Navbar";
 import Button from "../components/common/Button";
+import { setStoredTenantSlug } from "../services/tenantStorage";
 
 export default function AcceptInvite() {
   const [searchParams] = useSearchParams();
@@ -26,6 +27,12 @@ export default function AcceptInvite() {
   const [accepting, setAccepting] = useState(false);
   const [invitationData, setInvitationData] = useState(null);
   const [error, setError] = useState(null);
+
+  const getAuthPath = (path) => {
+    const params = new URLSearchParams({ returnUrl: `/accept-invite?token=${token || ""}` });
+    if (invitationData?.institution?.slug) params.set("tenant", invitationData.institution.slug);
+    return `${path}?${params.toString()}`;
+  };
 
   useEffect(() => {
     if (!token) {
@@ -55,8 +62,8 @@ export default function AcceptInvite() {
 
   const handleAccept = async () => {
     if (!userData) {
-      toast.info("Please log in or create an account to activate your course access.");
-      navigate(`/login?returnUrl=/accept-invite?token=${token}`);
+      toast.info("Sign in or create a student account to accept your institution invitation.");
+      navigate(getAuthPath("/login"));
       return;
     }
 
@@ -67,10 +74,10 @@ export default function AcceptInvite() {
       toast.success(data.message || "Course access activated!");
 
       if (data.institutionSlug) {
-        localStorage.setItem("skillio_active_tenant", data.institutionSlug);
+        setStoredTenantSlug(data.institutionSlug);
       }
 
-      navigate(`/viewcourse/${data.courseId}`);
+      navigate(data.courseId ? `/viewcourse/${data.courseId}` : `/institution/${data.institutionSlug}`);
     } catch (err) {
       console.error("[Accept Invite Error]", err);
       toast.error(err.response?.data?.message || "Failed to activate course access");
@@ -131,19 +138,21 @@ export default function AcceptInvite() {
 
                 <div className="inline-flex items-center gap-1.5 text-xs font-semibold px-2.5 py-0.5 rounded-full bg-emerald-50 text-emerald-800 border border-emerald-300">
                   <CheckCircle2 size={13} />
-                  <span>Official Course Invitation</span>
+                  <span>{invitationData?.course ? "Official Course Invitation" : "Institution Invitation"}</span>
                 </div>
 
                 <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-[#1c1917]">
                   You're Invited by {invitationData?.institution?.name}
                 </h1>
                 <p className="text-xs sm:text-sm text-[#78716c]">
-                  Your instructor has granted you complimentary access to the curriculum below.
+                  {invitationData?.course
+                    ? "Your instructor invited you to the course below. Access activates after you accept."
+                    : "Your instructor invited you to join this institution. Course access is assigned separately by your teacher."}
                 </p>
               </div>
 
               {/* Course Card Preview */}
-              <div className="p-4 rounded-xl bg-[#faf8f5] border border-[#e8e5dc] flex items-center gap-4">
+              {invitationData?.course && <div className="p-4 rounded-xl bg-[#faf8f5] border border-[#e8e5dc] flex items-center gap-4">
                 <div className="w-16 h-16 rounded-xl bg-white border border-[#e8e5dc] overflow-hidden shrink-0 shadow-2xs">
                   {invitationData?.course?.thumbnail ? (
                     <img
@@ -169,7 +178,7 @@ export default function AcceptInvite() {
                     {invitationData?.course?.subTitle || "Full lifetime access granted"}
                   </p>
                 </div>
-              </div>
+              </div>}
 
               {/* Accept CTA */}
               <div className="space-y-3 pt-2">
@@ -182,23 +191,19 @@ export default function AcceptInvite() {
                     onClick={handleAccept}
                     className="w-full !bg-[#1e3a8a] hover:!bg-[#172554] text-white font-semibold py-3 rounded-xl transition shadow-xs min-h-[46px] flex items-center justify-center gap-2"
                   >
-                    <span>Accept Invitation & Enter Course</span>
+                    <span>{invitationData?.course ? "Accept Invitation & Enter Course" : "Join Institution"}</span>
                     <ArrowRight size={16} />
                   </Button>
                 ) : (
                   <div className="space-y-2">
                     <button
-                      onClick={() =>
-                        navigate(`/login?returnUrl=${encodeURIComponent(`/accept-invite?token=${token}`)}`)
-                      }
+                      onClick={() => navigate(getAuthPath("/login"))}
                       className="w-full py-3 px-4 rounded-xl bg-[#1e3a8a] hover:bg-[#172554] text-white text-xs sm:text-sm font-semibold transition cursor-pointer min-h-[44px] shadow-xs"
                     >
                       Sign In to Accept Invitation
                     </button>
                     <button
-                      onClick={() =>
-                        navigate(`/signup?returnUrl=${encodeURIComponent(`/accept-invite?token=${token}`)}`)
-                      }
+                      onClick={() => navigate(getAuthPath("/signup"))}
                       className="w-full py-2.5 px-4 rounded-xl border border-[#d6d3c9] hover:bg-[#faf8f5] text-xs sm:text-sm font-semibold text-[#1c1917] transition cursor-pointer min-h-[42px]"
                     >
                       Create Account

@@ -1,4 +1,4 @@
-import React, { useState, lazy, Suspense } from "react";
+import React, { useState, useEffect, lazy, Suspense } from "react";
 import { Sparkles, X } from "lucide-react";
 import { useLocation } from "react-router-dom";
 
@@ -8,9 +8,16 @@ const AIAssistantModal = lazy(() => import("./AIAssistantModal"));
 export default function AIAssistantButton({ currentCourseId = null, onCourseCreated = null }) {
   const [modalOpen, setModalOpen] = useState(false);
   const location = useLocation();
+  const isCourseBuilder = /^\/(?:builder|createcourses|editcourse)(?:\/|$)/.test(location.pathname);
 
   const pathMatch = location.pathname.match(/\/(?:builder|editcourse|viewcourse|createlecture)\/([a-zA-Z0-9]+)/);
   const activeCourseId = currentCourseId || (pathMatch && pathMatch[1] !== "new" ? pathMatch[1] : null);
+
+  useEffect(() => {
+    if (isCourseBuilder) setModalOpen(false);
+  }, [isCourseBuilder]);
+
+  if (isCourseBuilder) return null;
 
   return (
     <>

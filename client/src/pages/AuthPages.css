@@ -1,0 +1,91 @@
+.auth-page {
+  display: grid;
+  min-height: 100svh;
+  place-items: center;
+  padding: 12px 16px;
+}
+
+.auth-card {
+  display: flex;
+  width: min(100%, 470px);
+  max-height: calc(100svh - 24px);
+  flex-direction: column;
+  gap: 13px;
+  overflow-y: auto;
+  padding: 22px 26px;
+  border-radius: 14px;
+  box-shadow: 0 8px 24px rgb(31 25 45 / 5%);
+}
+
+.auth-card > * { margin-block: 0 !important; }
+.auth-topbar { min-height: 28px; gap: 12px; font-size: 12px; }
+.auth-topbar > button { min-height: 32px; padding: 0; white-space: nowrap; }
+.auth-tenant-pill { max-width: 180px; border-radius: 999px; white-space: nowrap; }
+.auth-heading { display: grid; justify-items: center; gap: 5px; }
+.auth-brand-logo { height: 32px; max-width: 130px; }
+.auth-title { margin: 0; font-size: 25px; line-height: 1.15; }
+.auth-subtitle { max-width: 390px; margin: 0; font-size: 13px; line-height: 1.45; }
+.auth-alert { border-radius: 9px; font-size: 12px; line-height: 1.4; }
+.auth-alert p { margin-block: 0; }
+
+.auth-role-row { display: flex; justify-content: center; }
+.auth-toggle-group { min-width: 0; min-height: 40px; align-items: stretch; border-radius: 10px; }
+.auth-toggle-group button { min-width: 0; min-height: 32px; padding: 6px 8px; border-radius: 7px; font-size: 12px; }
+.auth-role-switcher { width: min(100%, 310px); }
+.auth-role-switcher button { white-space: nowrap; }
+
+.auth-form { display: flex; flex-direction: column; gap: 11px; }
+.auth-form > div { margin: 0 !important; }
+.auth-form label { margin-bottom: 4px; font-size: 12px; }
+.auth-form input { min-height: 42px; padding-block: 8px; font-size: 13px; }
+.auth-form .pt-2, .auth-form .pt-1 { padding-top: 0; }
+.auth-form button[type="submit"] { min-height: 42px; padding-block: 9px; font-size: 13px; }
+.auth-form-signup-email { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px 12px; }
+.auth-form-signup-email > div:nth-child(n + 3) { grid-column: 1 / -1; }
+.auth-form-signup-email .pt-2 { padding-top: 0; }
+.auth-footer { margin-top: auto !important; padding-top: 10px; font-size: 12px; line-height: 1.4; }
+
+.auth-institution-step { display: flex; flex-direction: column; gap: 12px; }
+.auth-institution-step > .text-center, .auth-institution-heading { display: grid; justify-items: center; gap: 4px; }
+.auth-institution-icon { width: 36px; height: 36px; margin-bottom: 2px; border-radius: 9px; }
+.auth-institution-icon svg { width: 19px; height: 19px; }
+.auth-institution-title { margin: 0; font-size: 21px; line-height: 1.18; }
+.auth-institution-description { max-width: 390px; margin: 0; font-size: 12px; line-height: 1.45; }
+.auth-search { min-height: 40px; padding-block: 8px; font-size: 13px; }
+.auth-institution-list { display: flex; max-height: clamp(100px, calc(100svh - 510px), 210px); flex-direction: column; gap: 6px; overscroll-behavior: contain; }
+.auth-institution-list > button { min-height: 58px; padding: 8px 10px; border-radius: 9px; }
+.auth-institution-list > div { min-height: 76px; padding-block: 12px; }
+.auth-institution-actions { padding-top: 10px; }
+.auth-institution-actions button { min-height: 42px; padding-block: 9px; font-size: 13px; }
+.auth-card-login > .auth-institution-step { min-height: 0; }
+.auth-forgot-icon { width: 36px; height: 36px; border-radius: 9px; }
+.auth-forgot-icon svg { width: 19px; height: 19px; }
+.auth-progress { min-height: 8px; }
+.auth-progress > div { height: 4px; }
+.auth-form-reset > div:nth-child(3) { padding-top: 0; font-size: 11px; }
+.auth-form-reset > button[type="submit"] { margin-top: 0 !important; }
+.auth-directory-error p { margin: 0; }
+.auth-directory-error button { margin-top: 10px; padding: 8px 12px; border: 1px solid #5b3cc4; border-radius: 8px; background: #fff; color: #5b3cc4; font-size: 12px; font-weight: 700; cursor: pointer; }
+
+@media (max-width: 560px) {
+  .auth-page { padding: 10px 12px; }
+  .auth-card { width: min(100%, 430px); gap: 11px; padding: 18px 18px; border-radius: 12px; }
+  .auth-topbar { font-size: 11px; }
+  .auth-title { font-size: 23px; }
+  .auth-subtitle { font-size: 12px; }
+  .auth-toggle-group button { gap: 4px; padding-inline: 5px; font-size: 11px; }
+  .auth-form-signup-email { grid-template-columns: 1fr; gap: 10px; }
+  .auth-form-signup-email > div:nth-child(n + 3) { grid-column: auto; }
+  .auth-institution-title { font-size: 19px; }
+  .auth-institution-list > button { min-height: 54px; }
+  .auth-card-forgot { width: min(100%, 420px); }
+}
+
+@media (max-height: 700px) and (min-width: 561px) {
+  .auth-page { padding-block: 8px; }
+  .auth-card { max-height: calc(100svh - 16px); gap: 9px; padding: 16px 22px; }
+  .auth-brand-logo { height: 27px; }
+  .auth-title { font-size: 23px; }
+  .auth-institution-step { gap: 9px; }
+  .auth-institution-list { max-height: clamp(88px, calc(100svh - 470px), 180px); }
+}

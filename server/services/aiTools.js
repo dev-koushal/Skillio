@@ -128,7 +128,7 @@ export const TOOL_REGISTRY = {
       if (args.category !== undefined) updateData.category = args.category;
       if (args.price !== undefined) updateData.price = Number(args.price);
       if (args.level !== undefined) updateData.level = args.level;
-      if (args.isPublished !== undefined) updateData.isPublished = Boolean(args.isPublished);
+      if (args.isPublished !== undefined) updateData.isPublished = args.isPublished === true || args.isPublished === "true";
 
       const updated = await courseService.updateCourse({
         tenantId,

@@ -7,6 +7,7 @@ import { TOOL_REGISTRY, OPENAI_TOOL_DEFINITIONS } from "./aiTools.js";
 import AIActionLog from "../models/aiActionLogModel.js";
 import Tenant from "../models/tenantModel.js";
 import mongoose from "mongoose";
+import { isEducatorRole } from "../utils/permissions.js";
 
 /**
  * LMS-Specialized AI Application Agent for Educators.
@@ -29,8 +30,8 @@ export const aiService = {
     messagesHistory = [],
   }) {
     // 1. RBAC Guardrail: Strictly block non-educators (students receive 403)
-    if (userRole !== "educator" && userRole !== "tenant_admin" && userRole !== "platform_admin") {
-      const err = new Error("Access Denied: AI Teaching Assistant is only available for educators and administrators.");
+    if (!isEducatorRole(userRole)) {
+      const err = new Error("You don't have permission to perform this action.");
       err.statusCode = 403;
       throw err;
     }
@@ -1060,8 +1061,8 @@ Select the most appropriate tool from the tool registry when an action or data q
     userId,
     userRole,
   }) {
-    if (userRole !== "educator" && userRole !== "tenant_admin" && userRole !== "platform_admin") {
-      const err = new Error("Access Denied: Course AI generation is strictly available to educators.");
+    if (!isEducatorRole(userRole)) {
+      const err = new Error("You don't have permission to perform this action.");
       err.statusCode = 403;
       throw err;
     }
