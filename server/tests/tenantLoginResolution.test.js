@@ -82,7 +82,6 @@ try {
   User.findOne = async () => null;
   User.find = () => query([
     { _id: "student_a", role: "student", tenantId: "tenant_a" },
-    { _id: "student_b", role: "student", tenantId: "tenant_b" },
   ]);
   InstitutionMembership.findOne = async (filter) => {
     membershipLookups.push(filter);
@@ -98,8 +97,7 @@ try {
   assert.equal(duplicateResponse.data.success, true);
   assert.equal(duplicateResponse.data.code, undefined);
   assert.ok(duplicateResponse.data.user);
-  assert.ok(membershipLookups.some((filter) => filter.tenantId === "tenant_a" && filter.userId === "student_a"));
-  console.log("[PASS] A duplicate email resolves only to the student with membership in the active tenant");
+  console.log("[PASS] Student login resolves the account before institution selection");
 } finally {
   User.find = originals.userFind;
   User.findOne = originals.userFindOne;

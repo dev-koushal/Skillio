@@ -176,37 +176,37 @@ export const login = async (req, res) => {
       return res.status(400).json({ success: false, message: "Email and password are required!" });
     }
 
-    // Resolve a tenant-local account first so duplicate emails across institutions are deterministic.
-    let user = tenantId ? await User.findOne({ email, tenantId }) : null;
-    if (!user) {
-      const candidates = await User.find({ email }).limit(2)
-        .select("_id name email role tenantId")
-        .lean();
-      if (candidates.length === 1) {
-        user = candidates[0];
-      }
-      const scopedCandidates = [];
-      for (const candidate of user ? [] : candidates) {
-        if (candidate.role !== "student") {
-          scopedCandidates.push(candidate);
-          continue;
-        }
-        const membership = await InstitutionMembership.findOne({
-          userId: candidate._id,
-          tenantId,
-          role: "student",
-          status: { $in: ["active", "enrolled", "ACTIVE", "ENROLLED"] },
-        });
-        if (membership) scopedCandidates.push(candidate);
-      }
-      if (scopedCandidates.length > 1 || (!user && candidates.length > 1 && scopedCandidates.length === 0)) {
+    // Students authenticate first, then choose from their existing memberships.
+    // The institution in the current URL must not block a valid student login.
+    let user = null;
+    const candidates = await User.find({ email }).limit(2)
+      .select("_id name email role tenantId")
+      .lean();
+    const studentCandidates = candidates.filter((candidate) => candidate.role === "student");
+    const tenantCandidates = candidates.filter((candidate) => candidate.role !== "student");
+
+    if (studentCandidates.length > 1) {
+      return res.status(409).json({
+        success: false,
+        code: "AMBIGUOUS_EMAIL_ACCOUNT",
+        message: "More than one student account uses this email. Contact support to resolve the duplicate accounts.",
+      });
+    }
+    if (studentCandidates.length === 1) {
+      user = studentCandidates[0];
+    } else if (tenantId) {
+      user = await User.findOne({ email, tenantId });
+    }
+    if (!user && tenantCandidates.length === 1) user = tenantCandidates[0];
+    if (!user && tenantCandidates.length > 1) {
+      user = tenantCandidates.find((candidate) => candidate.tenantId?.toString() === tenantId?.toString()) || null;
+      if (!user) {
         return res.status(409).json({
           success: false,
           code: "AMBIGUOUS_EMAIL_ACCOUNT",
-          message: "This email is used by more than one institution. Open your institution’s sign-in page to continue.",
+          message: "This email is used by more than one educator account. Open your institution's sign-in page to continue.",
         });
       }
-      if (!user) user = scopedCandidates[0] || null;
     }
 
     if (user) {
@@ -259,14 +259,6 @@ export const login = async (req, res) => {
     const isMatch = await bcrypt.compare(password, user.password);
     if (!isMatch) {
       return res.status(400).json({ success: false, message: "Wrong password!" });
-    }
-
-    if (user.role === "student" && !activeMemberships.length) {
-      return res.status(403).json({
-        success: false,
-        code: "INSTITUTION_MEMBERSHIP_REQUIRED",
-        message: "This student account has no active institution. Contact your institution or choose one during signup.",
-      });
     }
 
     // Register active device session (enforces maximum 2 active devices)
