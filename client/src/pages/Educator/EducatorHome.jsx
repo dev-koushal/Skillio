@@ -30,6 +30,8 @@ import { useTenant } from "../../context/TenantContext";
 import { optimizeImage } from "../../utils/imageOptimizer";
 import api from "../../services/api";
 import EducatorLiveClassPanel from "../../components/video/EducatorLiveClassPanel";
+import RequireInstitutionModal from "../../components/common/RequireInstitutionModal";
+import { hasEducatorInstitution } from "../../auth/permissions";
 import "./EducatorHome.css";
 
 export default function EducatorHome() {
@@ -40,6 +42,7 @@ export default function EducatorHome() {
   const [loading, setLoading] = useState(true);
   const [overview, setOverview] = useState(null);
   const [error, setError] = useState(null);
+  const [requireInstitutionModalOpen, setRequireInstitutionModalOpen] = useState(false);
 
   // Time-aware greeting
   const getGreeting = () => {
@@ -464,7 +467,13 @@ export default function EducatorHome() {
 
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
                 <button
-                  onClick={() => navigate("/builder/new")}
+                  onClick={() => {
+                    if (!hasEducatorInstitution(userData, tenant)) {
+                      setRequireInstitutionModalOpen(true);
+                      return;
+                    }
+                    navigate("/builder/new");
+                  }}
                   className="bg-white border border-[#e8e5dc] hover:border-[#1e3a8a]/40 p-4 rounded-2xl text-left flex flex-col justify-between h-28 card-lift transition cursor-pointer pressable"
                 >
                   <div className="w-8 h-8 rounded-xl bg-blue-50 text-[#1e3a8a] flex items-center justify-center">
@@ -693,6 +702,12 @@ export default function EducatorHome() {
           </div>
         </div>
       </main>
+
+      {/* Blocking Dialog for Course Creation without an Institution */}
+      <RequireInstitutionModal
+        isOpen={requireInstitutionModalOpen}
+        onClose={() => setRequireInstitutionModalOpen(false)}
+      />
 
       {/* Floating AI Copilot for Educator (Aware of Educator Home) */}
       <AIAssistantButton />

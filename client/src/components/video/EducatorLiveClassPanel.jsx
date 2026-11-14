@@ -1,15 +1,22 @@
-﻿import React, { useCallback, useEffect, useState } from "react";
+import React, { useCallback, useEffect, useState } from "react";
 import { CircleDot, Link2, LoaderCircle, Plus, Radio, Trash2, X } from "lucide-react";
+import { useSelector } from "react-redux";
 import api from "../../services/api";
 import { toast } from "react-toastify";
+import { useTenant } from "../../context/TenantContext";
+import { hasEducatorInstitution } from "../../auth/permissions";
+import RequireInstitutionModal from "../common/RequireInstitutionModal";
 
 export default function EducatorLiveClassPanel() {
+  const { userData } = useSelector((state) => state.user);
+  const { tenant } = useTenant();
   const [liveClasses, setLiveClasses] = useState([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [actionId, setActionId] = useState(null);
   const [formOpen, setFormOpen] = useState(false);
   const [youtubeLiveUrl, setYoutubeLiveUrl] = useState("");
+  const [requireInstitutionModalOpen, setRequireInstitutionModalOpen] = useState(false);
 
   const loadLiveClasses = useCallback(async () => {
     try {
@@ -78,7 +85,17 @@ export default function EducatorLiveClassPanel() {
           </div>
         </div>
         {!formOpen && (
-          <button type="button" onClick={() => setFormOpen(true)} className="inline-flex min-h-10 items-center gap-1.5 rounded-lg bg-[#5b3cc4] px-3 text-xs font-bold text-white transition hover:bg-[#4b2fa8] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#5b3cc4]">
+          <button
+            type="button"
+            onClick={() => {
+              if (!hasEducatorInstitution(userData, tenant)) {
+                setRequireInstitutionModalOpen(true);
+                return;
+              }
+              setFormOpen(true);
+            }}
+            className="inline-flex min-h-10 items-center gap-1.5 rounded-lg bg-[#5b3cc4] px-3 text-xs font-bold text-white transition hover:bg-[#4b2fa8] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#5b3cc4]"
+          >
             <Plus size={14} aria-hidden="true" /> Add live link
           </button>
         )}
@@ -123,6 +140,13 @@ export default function EducatorLiveClassPanel() {
           </article>
         ))}
       </div>
+
+      <RequireInstitutionModal
+        isOpen={requireInstitutionModalOpen}
+        onClose={() => setRequireInstitutionModalOpen(false)}
+        title="Create your institution first"
+        description="Your institution is the home for your live broadcasts, courses and learning content. Create it before scheduling or starting a live session."
+      />
     </section>
   );
 }

@@ -1,5 +1,5 @@
 ﻿import React, { useEffect, useMemo, useState } from "react";
-import { ArrowRight, BookOpen, CircleDot, Search } from "lucide-react";
+import { ArrowRight, BookOpen, CircleDot, Play, Search, GraduationCap } from "lucide-react";
 import { Link, useParams } from "react-router-dom";
 import { useSelector } from "react-redux";
 import Navbar from "../components/Navbar";
@@ -10,64 +10,39 @@ import { setStoredTenantSlug } from "../services/tenantStorage";
 import { getAccessibleTextColor, getInstitutionTheme } from "../utils/institutionTheme";
 import "./InstitutionHome.css";
 
-function getCourseMeta(course) {
-  const facts = [
-    Array.isArray(course?.lectures) && course.lectures.length > 0 ? `${course.lectures.length} lessons` : null,
-    course?.level,
-  ].filter(Boolean);
-  return facts.join(" · ") || course?.category || course?.subTitle || "";
-}
-
 function getInitials(label = "") {
-  return label.trim().split(/\s+/).filter(Boolean).slice(0, 2).map((word) => word[0]).join("").toUpperCase();
+  return label
+    .trim()
+    .split(/\s+/)
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((word) => word[0])
+    .join("")
+    .toUpperCase();
 }
 
-function InstitutionMark({ institution }) {
-  return institution?.logo
-    ? <img className="ih-institution-mark-image" src={institution.logo} alt="" width="64" height="64" />
-    : <span className="ih-institution-mark-letters" aria-hidden="true">{getInitials(institution?.name) || "A"}</span>;
-}
+function CourseThumbnail({ course, className = "", size = "normal" }) {
+  const [imgFailed, setImgFailed] = useState(false);
+  const initials = getInitials(course?.title) || "C";
 
-function CourseArtwork({ course, featured = false }) {
-  return course?.thumbnail
-    ? <img className={featured ? "ih-feature-art-image" : "ih-library-thumbnail"} src={optimizeImage(course.thumbnail, featured ? 320 : 180)} alt="" width={featured ? 160 : 112} height={featured ? 160 : 96} loading="lazy" decoding="async" />
-    : <span className={featured ? "ih-feature-art-fallback" : "ih-library-art-fallback"} aria-hidden="true">{getInitials(course?.title) || "C"}</span>;
-}
-
-function LearningHero({ activeCourse, firstCourse, institution, institutionName, courseCount, coursePath, courseCountLabel }) {
-  const hasActiveCourse = Boolean(activeCourse);
-  const artworkCourse = activeCourse || firstCourse || null;
+  if (course?.thumbnail && !imgFailed) {
+    return (
+      <img
+        src={optimizeImage(course.thumbnail, size === "large" ? 360 : 200)}
+        alt=""
+        className={`ih-thumb-img ${className}`}
+        loading="lazy"
+        decoding="async"
+        onError={() => setImgFailed(true)}
+      />
+    );
+  }
 
   return (
-    <section className="ih-next-step" aria-labelledby="ih-next-step-title">
-      <article className={`ih-learning-card${hasActiveCourse ? " is-continuing" : ""}`}>
-        <div className="ih-learning-copy">
-          <p className="ih-learning-kicker">{hasActiveCourse ? "CONTINUE LEARNING" : "YOUR NEXT STEP"}</p>
-          <h2 id="ih-next-step-title">{hasActiveCourse ? activeCourse.title : courseCount ? "Find your next course" : "Start learning"}</h2>
-          {hasActiveCourse ? (
-            getCourseMeta(activeCourse) && <p className="ih-learning-detail">{getCourseMeta(activeCourse)}</p>
-          ) : (
-            <p className="ih-learning-detail">
-              {courseCount
-                ? `Explore ${courseCountLabel} courses from ${institutionName}.`
-                : `Courses from ${institutionName} will appear here when published.`}
-            </p>
-          )}
-          <Link className="ih-learning-action" to={hasActiveCourse ? `/viewlecture/${activeCourse._id}` : coursePath}>
-            {hasActiveCourse ? "Continue course" : "Browse courses"} <ArrowRight size={15} aria-hidden="true" />
-          </Link>
-        </div>
-        <div className="ih-learning-art" aria-hidden="true">
-          <span className="ih-learning-art-orbit" />
-          <span className="ih-learning-art-mark">
-            {artworkCourse
-              ? <CourseArtwork course={artworkCourse} featured />
-              : <InstitutionMark institution={institution} />}
-          </span>
-          <span className="ih-learning-art-dot" />
-        </div>
-      </article>
-    </section>
+    <div className={`ih-thumb-fallback ${size} ${className}`} aria-hidden="true">
+      <div className="ih-thumb-pattern" />
+      <span className="ih-thumb-initials">{initials}</span>
+    </div>
   );
 }
 
@@ -86,7 +61,9 @@ export default function InstitutionHome() {
     const targetSlug = slug || contextTenant?.slug || "default";
     setLoading(true);
 
-    if (targetSlug !== "default") setStoredTenantSlug(targetSlug);
+    if (targetSlug !== "default") {
+      setStoredTenantSlug(targetSlug);
+    }
 
     Promise.allSettled([
       api.get(`/api/tenant/by-slug/${targetSlug}`),
@@ -101,7 +78,7 @@ export default function InstitutionHome() {
       ) {
         const tenantData = tenantResult.value.data.tenant;
         setInstitution(tenantData);
-        document.title = `${tenantData.name} - Student learning`;
+        document.title = `${tenantData.name} — Student Learning`;
       } else if (contextTenant?.slug === targetSlug) {
         setInstitution(contextTenant);
       }
@@ -114,9 +91,12 @@ export default function InstitutionHome() {
       setLoading(false);
     });
 
-    return () => { mounted = false; };
+    return () => {
+      mounted = false;
+    };
   }, [slug, contextTenant?.slug]);
 
+  // Poll for active live broadcast in this institution
   useEffect(() => {
     let mounted = true;
     const loadLiveClass = async () => {
@@ -142,116 +122,286 @@ export default function InstitutionHome() {
   const activeTenant = institution || contextTenant;
   const institutionName = activeTenant?.name || "Your Academy";
   const theme = getInstitutionTheme(activeTenant);
+
+  // Dynamic Theme Controls scoped to semantic CSS variables
   const tenantStyle = {
     "--primary": theme.primary,
-    "--secondary": theme.secondary,
+    "--primary-soft": `color-mix(in srgb, ${theme.primary} 8%, white)`,
+    "--primary-border": `color-mix(in srgb, ${theme.primary} 20%, #e7e5e4)`,
     "--accent": theme.accent,
-    "--background": theme.background,
-    "--surface": theme.surface,
-    "--text": theme.text,
-    "--muted": theme.muted,
-    "--border": theme.border,
+    "--background": theme.background || "#fafaf9",
+    "--surface": theme.surface || "#ffffff",
+    "--text": theme.text || "#1c1917",
+    "--muted": theme.muted || "#78716c",
+    "--border": theme.border || "#e7e5e4",
     "--primary-text": getAccessibleTextColor(theme.primary),
-    "--display-font": "'Plus Jakarta Sans', 'DM Sans', ui-sans-serif, system-ui, sans-serif",
   };
+
   const resolvedSlug = activeTenant?.slug || slug;
-  const coursePath = resolvedSlug ? `/institution/${encodeURIComponent(resolvedSlug)}/courses` : "/courses";
+  const courseCatalogPath = resolvedSlug
+    ? `/institution/${encodeURIComponent(resolvedSlug)}/courses`
+    : "/courses";
 
-  const enrolledCourseIds = useMemo(() => new Set(
-    (userData?.enrolledCourses || [])
-      .map((item) => (typeof item === "object" ? item?._id : item))
-      .filter(Boolean)
-      .map(String),
-  ), [userData?.enrolledCourses]);
+  // Check which courses in this institution the student is enrolled in
+  const enrolledCourseIds = useMemo(() => {
+    return new Set(
+      (userData?.enrolledCourses || [])
+        .map((item) => (typeof item === "object" ? item?._id : item))
+        .filter(Boolean)
+        .map(String)
+    );
+  }, [userData?.enrolledCourses]);
 
-  const enrolledCourses = institutionCourses.filter((course) => enrolledCourseIds.has(String(course._id)));
-  const activeCourse = enrolledCourses[0]
-    || (userData?.enrolledCourses || []).find((course) => course && typeof course === "object")
-    || null;
-  const rawFirstName = userData?.name?.trim().split(/\s+/)[0];
-  const firstName = rawFirstName ? `${rawFirstName[0].toLocaleUpperCase()}${rawFirstName.slice(1)}` : "Student";
-  const courseCountLabel = new Intl.NumberFormat().format(institutionCourses.length);
+  const enrolledInThisInstitution = useMemo(() => {
+    return institutionCourses.filter((course) => enrolledCourseIds.has(String(course._id)));
+  }, [institutionCourses, enrolledCourseIds]);
+
+  // Active enrolled course for "Continue learning"
+  const activeCourse = enrolledInThisInstitution[0] || null;
+
+  // Time-aware personalized greeting
+  const hour = new Date().getHours();
+  const timeGreeting = hour < 12 ? "Good morning" : hour < 17 ? "Good afternoon" : "Good evening";
+  const studentFirstName = userData?.name ? userData.name.trim().split(/\s+/)[0] : "Student";
+
+  // Filter courses for search
   const visibleCourses = useMemo(() => {
-    const query = courseQuery.trim().toLowerCase();
-    const courses = query
-      ? institutionCourses.filter((course) => `${course.title || ""} ${course.category || ""} ${course.subTitle || ""}`.toLowerCase().includes(query))
-      : institutionCourses;
-    return courses.slice(0, 3);
+    const q = courseQuery.trim().toLowerCase();
+    if (!q) return institutionCourses.slice(0, 6);
+    return institutionCourses.filter(
+      (c) =>
+        (c.title && c.title.toLowerCase().includes(q)) ||
+        (c.category && c.category.toLowerCase().includes(q)) ||
+        (c.subTitle && c.subTitle.toLowerCase().includes(q))
+    ).slice(0, 6);
   }, [courseQuery, institutionCourses]);
 
   return (
-    <div className="institution-learning" style={tenantStyle}>
+    <div className="ih-app-shell" style={tenantStyle}>
+      {/* Compact Native App Bar */}
       <Navbar currentInstitution={activeTenant} studentHome={userData?.role === "student"} />
-      <a className="ih-skip-link" href="#ih-main">Skip to main content</a>
-      <main className="ih-main" id="ih-main">
+
+      <main className="ih-content-container" id="ih-main">
         {loading ? (
-          <div className="ih-loading" aria-live="polite">            <span>Opening {institutionName}{"\u2026"}</span>
+          <div className="ih-loading-state" role="status" aria-live="polite">
+            <div className="ih-loading-spinner" />
+            <span>Loading {institutionName}…</span>
           </div>
         ) : (
-          <>
-            <section className="ih-hero" aria-labelledby="ih-title">
-              <h1 id="ih-title">Welcome back, {firstName}</h1>
-            </section>
-
-            <LearningHero
-              activeCourse={activeCourse}
-              firstCourse={institutionCourses[0]}
-              institution={activeTenant}
-              institutionName={institutionName}
-              courseCount={institutionCourses.length}
-              courseCountLabel={courseCountLabel}
-              coursePath={coursePath}
-            />
-
-            {currentLiveClass && (
-              <Link className="ih-live-row" to={`/institution/${encodeURIComponent(resolvedSlug)}/live`}>
-                <span className="ih-live-indicator"><CircleDot size={13} aria-hidden="true" /> LIVE NOW</span>
-                <span className="ih-live-title">
-                  <strong>{currentLiveClass.title || "Live class"}</strong>
-                  {currentLiveClass.createdBy?.name && <small>{currentLiveClass.createdBy.name}</small>}
+          <div className="ih-screen-flow">
+            {/* 1. Header Greeting & Identity */}
+            <header className="ih-welcome-header">
+              <div className="ih-greeting-group">
+                <span className="ih-institution-badge">
+                  {activeTenant?.institutionType || "Academy"}
                 </span>
-                <span className="ih-live-join">Join live <ArrowRight size={15} aria-hidden="true" /></span>
-              </Link>
+                <h1 className="ih-welcome-title">
+                  {timeGreeting}, {studentFirstName}
+                </h1>
+                <p className="ih-institution-tagline">
+                  {activeTenant?.title || `Welcome to ${institutionName}`}
+                </p>
+              </div>
+            </header>
+
+            {/* 2. Optional Live Session Banner (Subtle & Compact) */}
+            {currentLiveClass && (
+              <section className="ih-live-banner-section" aria-label="Live Broadcast">
+                <Link
+                  to={`/institution/${encodeURIComponent(resolvedSlug)}/live`}
+                  className="ih-live-banner"
+                >
+                  <div className="ih-live-badge">
+                    <CircleDot size={12} className="ih-live-pulse-dot" />
+                    <span>LIVE NOW</span>
+                  </div>
+                  <div className="ih-live-info">
+                    <strong className="ih-live-name">
+                      {currentLiveClass.title || "Live class session"}
+                    </strong>
+                    {currentLiveClass.createdBy?.name && (
+                      <span className="ih-live-host">with {currentLiveClass.createdBy.name}</span>
+                    )}
+                  </div>
+                  <span className="ih-live-join-action">
+                    Join <ArrowRight size={14} />
+                  </span>
+                </Link>
+              </section>
             )}
 
-            <section className="ih-catalog" aria-labelledby="ih-catalog-title">
-              <div className="ih-section-heading ih-catalog-heading">
-                <h2 id="ih-catalog-title">Courses</h2>
-                {institutionCourses.length > 3 && !courseQuery && <Link to={coursePath} className="ih-view-all">View all <ArrowRight size={15} aria-hidden="true" /></Link>}
-              </div>
-              {institutionCourses.length > 2 && <label className="ih-search"><Search size={16} aria-hidden="true" /><input name="courseSearch" autoComplete="off" value={courseQuery} onChange={(event) => setCourseQuery(event.target.value)} placeholder={"Find a course\u2026"} aria-label="Find a course" /></label>}
-
-              {visibleCourses.length ? (
-                <div className="ih-course-grid">
-                  {visibleCourses.map((course) => (
-                    <Link
-                      key={course._id}
-                      to={`/institution/${encodeURIComponent(resolvedSlug)}/course/${course._id}`}
-                      className="ih-library-course"
-                      aria-label={`View course ${course.title || "Untitled course"}`}
-                    >
-                      <CourseArtwork course={course} />
-                      <span className="ih-library-copy">
-                        <strong>{course.title || "Untitled course"}</strong>
-                        {getCourseMeta(course) && <span>{getCourseMeta(course)}</span>}
-                      </span>
-                      <ArrowRight size={17} aria-hidden="true" />
-                    </Link>
-                  ))}
+            {/* 3. Continue Learning (Priority Surface when student has enrolled courses) */}
+            {activeCourse ? (
+              <section className="ih-learning-section" aria-labelledby="ih-continue-heading">
+                <div className="ih-section-header">
+                  <h2 id="ih-continue-heading" className="ih-section-title">
+                    Continue learning
+                  </h2>
                 </div>
-              ) : (
-                <div className="ih-empty-courses">
-                  <span className="ih-empty-course-mark" aria-hidden="true"><BookOpen size={19} strokeWidth={1.7} /></span>
-                  <div>
-                    <strong>{courseQuery ? "No matching courses" : "No courses yet"}</strong>
-                    <p>{courseQuery ? "Try a different name or subject." : "Your educator’s published courses will appear here."}</p>
+
+                <div className="ih-continue-card">
+                  <div className="ih-continue-thumb-wrap">
+                    <CourseThumbnail course={activeCourse} size="large" />
+                    <div className="ih-continue-play-overlay">
+                      <Play size={20} className="ih-play-icon" />
+                    </div>
                   </div>
+
+                  <div className="ih-continue-details">
+                    <span className="ih-continue-category">
+                      {activeCourse.category || "In Progress"}
+                    </span>
+                    <h3 className="ih-continue-title">{activeCourse.title}</h3>
+
+                    <div className="ih-continue-meta">
+                      <span className="ih-progress-text">
+                        {Array.isArray(activeCourse.lectures) && activeCourse.lectures.length > 0
+                          ? `${activeCourse.lectures.length} lessons available`
+                          : "Curriculum ready"}
+                      </span>
+                      <div className="ih-progress-track">
+                        <div
+                          className="ih-progress-fill"
+                          style={{ width: "35%" }}
+                          role="progressbar"
+                          aria-valuenow={35}
+                          aria-valuemin={0}
+                          aria-valuemax={100}
+                        />
+                      </div>
+                    </div>
+
+                    <div className="ih-continue-action-wrap">
+                      <Link
+                        to={`/viewlecture/${activeCourse._id}`}
+                        className="ih-continue-btn"
+                      >
+                        <span>Continue</span>
+                        <ArrowRight size={14} />
+                      </Link>
+                    </div>
+                  </div>
+                </div>
+              </section>
+            ) : null}
+
+            {/* 4. Institution Course Catalog */}
+            <section className="ih-courses-section" aria-labelledby="ih-courses-heading">
+              <div className="ih-section-header">
+                <div className="ih-section-title-wrap">
+                  <h2 id="ih-courses-heading" className="ih-section-title">
+                    Courses
+                  </h2>
+                  <span className="ih-courses-count-pill">
+                    {institutionCourses.length}
+                  </span>
+                </div>
+                {institutionCourses.length > 3 && !courseQuery && (
+                  <Link to={courseCatalogPath} className="ih-view-all-link">
+                    <span>View all</span>
+                    <ArrowRight size={14} />
+                  </Link>
+                )}
+              </div>
+
+              {/* Course Search Filter (if multiple courses exist) */}
+              {institutionCourses.length > 2 && (
+                <div className="ih-search-box">
+                  <Search size={15} className="ih-search-icon" aria-hidden="true" />
+                  <input
+                    type="text"
+                    value={courseQuery}
+                    onChange={(e) => setCourseQuery(e.target.value)}
+                    placeholder="Search courses…"
+                    aria-label="Search courses"
+                    className="ih-search-input"
+                  />
                 </div>
               )}
 
-            </section>
+              {visibleCourses.length > 0 ? (
+                <div className="ih-course-list">
+                  {visibleCourses.map((course) => {
+                    const isEnrolled = enrolledCourseIds.has(String(course._id));
+                    const lectureCount = Array.isArray(course.lectures) ? course.lectures.length : 0;
 
-          </>
+                    return (
+                      <Link
+                        key={course._id}
+                        to={`/institution/${encodeURIComponent(resolvedSlug)}/course/${course._id}`}
+                        className="ih-course-row"
+                        aria-label={`View course: ${course.title}`}
+                      >
+                        <div className="ih-course-row-thumb">
+                          <CourseThumbnail course={course} />
+                        </div>
+
+                        <div className="ih-course-row-info">
+                          <div className="ih-course-row-top">
+                            <span className="ih-course-row-cat">{course.category || "General"}</span>
+                            {isEnrolled && (
+                              <span className="ih-enrolled-tag">
+                                Enrolled
+                              </span>
+                            )}
+                          </div>
+                          <h3 className="ih-course-row-title">{course.title}</h3>
+                          <div className="ih-course-row-meta">
+                            {lectureCount > 0 && (
+                              <span>{lectureCount} {lectureCount === 1 ? "lesson" : "lessons"}</span>
+                            )}
+                            {course.level && <span>• {course.level}</span>}
+                            {!isEnrolled && (
+                              <span className="ih-course-row-price">
+                                {course.price === 0 || !course.price
+                                  ? "Free"
+                                  : `₹${Number(course.price).toLocaleString("en-IN")}`}
+                              </span>
+                            )}
+                          </div>
+                        </div>
+
+                        <div className="ih-course-row-arrow" aria-hidden="true">
+                          <ArrowRight size={16} />
+                        </div>
+                      </Link>
+                    );
+                  })}
+                </div>
+              ) : (
+                /* 5. Elegant Empty State (No Giant Graphics, Restrained & Branded) */
+                <div className="ih-empty-state">
+                  <div className="ih-empty-icon-wrap" aria-hidden="true">
+                    <BookOpen size={22} className="ih-empty-icon" />
+                  </div>
+                  <div className="ih-empty-copy">
+                    <h3 className="ih-empty-title">
+                      {courseQuery ? "No matching courses" : "Start learning"}
+                    </h3>
+                    <p className="ih-empty-desc">
+                      {courseQuery
+                        ? `No courses matching "${courseQuery}". Try another keyword.`
+                        : "No courses have been published yet. Your educator will add courses here when they're ready."}
+                    </p>
+                  </div>
+                  {courseQuery ? (
+                    <button
+                      type="button"
+                      onClick={() => setCourseQuery("")}
+                      className="ih-empty-btn"
+                    >
+                      Clear search
+                    </button>
+                  ) : (
+                    <Link to="/courses" className="ih-empty-btn">
+                      <span>Browse courses</span>
+                      <ArrowRight size={14} />
+                    </Link>
+                  )}
+                </div>
+              )}
+            </section>
+          </div>
         )}
       </main>
     </div>

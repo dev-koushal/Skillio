@@ -12,7 +12,10 @@ export const PERMISSIONS = Object.freeze({
   MANAGE_LIVE_CLASSES: "manage_live_classes",
 });
 
-export const hasRole = (user, role) => user?.role === role;
+export const hasRole = (user, role) => {
+  const userRole = user?.role === "tenant_admin" ? ROLES.EDUCATOR : user?.role;
+  return userRole === role;
+};
 export const getRoleLabel = (user) => {
   if (hasRole(user, ROLES.PLATFORM_ADMIN)) return "Platform Admin";
   if (hasRole(user, ROLES.EDUCATOR)) return "Educator";
@@ -21,6 +24,17 @@ export const getRoleLabel = (user) => {
 };
 export const canUseEducatorWorkspace = (user) =>
   hasRole(user, ROLES.EDUCATOR) || hasRole(user, ROLES.PLATFORM_ADMIN);
+
+export const hasEducatorInstitution = (user, tenant = null) => {
+  if (hasRole(user, ROLES.PLATFORM_ADMIN)) return true;
+  if (!hasRole(user, ROLES.EDUCATOR)) return false;
+  const t = user?.tenant || tenant;
+  if (t && t.slug && !["default", "platform"].includes(t.slug) && (t.id || t._id)) return true;
+  if (user?.isInstitutionOwner) return true;
+  const userTenantSlug = typeof user?.tenantId === "object" ? user?.tenantId?.slug : null;
+  if (userTenantSlug && !["default", "platform"].includes(userTenantSlug)) return true;
+  return false;
+};
 export const canManagePlatform = (user) => hasRole(user, ROLES.PLATFORM_ADMIN);
 export const canManageCourse = (user, course) => {
   if (canManagePlatform(user)) return true;

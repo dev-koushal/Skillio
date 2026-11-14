@@ -1,0 +1,12 @@
+.secure-document-watermark {
+  animation: secure-watermark-drift 23s ease-in-out infinite alternate;
+}
+
+@keyframes secure-watermark-drift {
+  from { transform: translate(-3%, -2%) rotate(-24deg); }
+  to { transform: translate(3%, 2%) rotate(-21deg); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .secure-document-watermark { animation: none; }
+}

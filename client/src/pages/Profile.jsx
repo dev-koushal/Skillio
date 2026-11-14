@@ -25,6 +25,8 @@ import {
   LogOut,
   Phone,
   Plus,
+  AlertTriangle,
+  ArrowRight,
 } from "lucide-react";
 import { useSelector, useDispatch } from "react-redux";
 import { useNavigate } from "react-router-dom";
@@ -44,8 +46,10 @@ function Profile() {
   const dispatch = useDispatch();
   const { tenant, switchTenant } = useTenant();
 
-  // Switch Academy Modal State
-  const [switchModalOpen, setSwitchModalOpen] = useState(false);
+  // Change Institution Confirmation & Selector State
+  const [changeConfirmOpen, setChangeConfirmOpen] = useState(false);
+  const [changeConfirmText, setChangeConfirmText] = useState("");
+  const [selectorModalOpen, setSelectorModalOpen] = useState(false);
   const [institutions, setInstitutions] = useState([]);
   const [loadingInstitutions, setLoadingInstitutions] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
@@ -235,7 +239,7 @@ function Profile() {
 
     // Load institutions when modal opens
     useEffect(() => {
-      if (switchModalOpen) {
+      if (selectorModalOpen) {
         setLoadingInstitutions(true);
         api
           .get("/api/tenant/directory")
@@ -249,7 +253,7 @@ function Profile() {
           })
           .finally(() => setLoadingInstitutions(false));
       }
-    }, [switchModalOpen]);
+    }, [selectorModalOpen]);
 
     if (!userData) {
       return (
@@ -275,15 +279,24 @@ function Profile() {
     const activeAcademyLogo = tenant?.logo || "/skillio.png";
     const activeAcademyType = tenant?.institutionType || (tenant?.isPlatform ? "Platform" : "Academy");
 
-    const handleSwitchAcademy = (targetSlug, targetName) => {
+    const handleSwitchAcademy = async (targetSlug, targetName) => {
       try {
+        const { data } = await api.post("/api/auth/select-institution", { institutionSlug: targetSlug });
+        if (data?.success && data.token && data.user) {
+          setAuthSession(data.token, data.user);
+          dispatch(setUserData(data.user));
+        }
         setStoredTenantSlug(targetSlug);
-        toast.success(`Switched to ${targetName}!`);
-        setSwitchModalOpen(false);
+        toast.success(`Switched to ${targetName || targetSlug}!`);
+        setSelectorModalOpen(false);
         switchTenant(targetSlug);
+        navigate(`/institution/${targetSlug}`);
       } catch (err) {
         console.error("[Profile Switch Academy Error]", err);
-        toast.error("Failed to switch academy");
+        setStoredTenantSlug(targetSlug);
+        setSelectorModalOpen(false);
+        switchTenant(targetSlug);
+        navigate(`/institution/${targetSlug}`);
       }
     };
 
@@ -479,7 +492,10 @@ function Profile() {
 
                 <button
                   type="button"
-                  onClick={() => setSwitchModalOpen(true)}
+                  onClick={() => {
+                    setChangeConfirmOpen(true);
+                    setChangeConfirmText("");
+                  }}
                   className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl border border-[#1e3a8a] bg-[#eff6ff] hover:bg-blue-100/70 text-xs sm:text-sm font-bold text-[#1e3a8a] transition cursor-pointer pressable min-h-[42px] self-start sm:self-auto shadow-2xs"
                 >
                   <ArrowRightLeft size={15} />
@@ -519,7 +535,10 @@ function Profile() {
                 <div className="flex items-center gap-2 w-full sm:w-auto">
                   <button
                     type="button"
-                    onClick={() => setSwitchModalOpen(true)}
+                    onClick={() => {
+                      setChangeConfirmOpen(true);
+                      setChangeConfirmText("");
+                    }}
                     className="w-full sm:w-auto inline-flex items-center justify-center gap-1.5 px-4 py-2 rounded-xl bg-[#1e3a8a] hover:bg-[#172554] text-white text-xs font-semibold transition cursor-pointer pressable min-h-[40px] shadow-xs"
                   >
                     <ArrowRightLeft size={13} />
@@ -655,13 +674,102 @@ function Profile() {
           </div>
         </main>
 
-        {/* ================= SWITCH ACADEMY MODAL / BOTTOM SHEET ================= */}
-        {switchModalOpen && (
+        {/* ================= 1. DELIBERATE CONFIRMATION DIALOG ================= */}
+        {changeConfirmOpen && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-in fade-in duration-150">
+            <div
+              className="fixed inset-0 bg-transparent"
+              onClick={() => {
+                setChangeConfirmOpen(false);
+                setChangeConfirmText("");
+              }}
+            />
+            <div
+              className="relative w-full max-w-md bg-white rounded-2xl border border-[#e8e5dc] shadow-2xl p-6 sm:p-7 space-y-4 z-10 animate-in zoom-in-95 duration-150"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="flex items-start justify-between gap-3">
+                <div className="w-11 h-11 rounded-xl bg-amber-50 text-amber-700 border border-amber-200 flex items-center justify-center shrink-0">
+                  <AlertTriangle size={22} />
+                </div>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setChangeConfirmOpen(false);
+                    setChangeConfirmText("");
+                  }}
+                  className="p-1.5 rounded-lg text-[#78716c] hover:text-[#1c1917] hover:bg-[#f2efe9] transition cursor-pointer"
+                  aria-label="Close dialog"
+                >
+                  <X size={18} />
+                </button>
+              </div>
+
+              <div>
+                <h3 className="text-lg sm:text-xl font-bold text-[#1c1917] tracking-tight">
+                  Change institution?
+                </h3>
+                <p className="text-xs sm:text-sm text-[#78716c] mt-1 leading-relaxed">
+                  Changing your institution will switch your current learning context, courses, resources and institution-specific experience.
+                </p>
+              </div>
+
+              <div className="p-3.5 rounded-xl bg-[#faf8f5] border border-[#e8e5dc] text-xs">
+                <p className="text-[#78716c] font-medium">You are about to leave:</p>
+                <p className="text-sm font-bold text-[#1c1917] mt-0.5">{activeAcademyName}</p>
+              </div>
+
+              <div className="space-y-1.5">
+                <label className="block text-xs font-bold text-[#44403c]">
+                  Type <span className="font-mono text-red-600 bg-red-50 px-1 py-0.5 rounded border border-red-200">CHANGE</span> to continue.
+                </label>
+                <input
+                  type="text"
+                  value={changeConfirmText}
+                  onChange={(e) => setChangeConfirmText(e.target.value)}
+                  placeholder="Type CHANGE"
+                  autoCapitalize="characters"
+                  spellCheck={false}
+                  className="w-full bg-[#fcfbf9] border border-[#d6d3d1] rounded-xl px-3.5 py-2.5 text-sm text-[#1c1917] placeholder-[#a8a29e] focus:outline-none focus:border-[#1e3a8a] focus:ring-1 focus:ring-[#1e3a8a] font-mono tracking-wider min-h-[42px]"
+                />
+              </div>
+
+              <div className="pt-2 flex flex-col-reverse sm:flex-row items-center justify-end gap-2.5">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setChangeConfirmOpen(false);
+                    setChangeConfirmText("");
+                  }}
+                  className="w-full sm:w-auto px-4 py-2.5 rounded-xl border border-[#d6d3c9] bg-white hover:bg-[#f8f7f4] text-xs sm:text-sm font-semibold text-[#44403c] transition cursor-pointer pressable min-h-[42px]"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  disabled={changeConfirmText.trim() !== "CHANGE"}
+                  onClick={() => {
+                    setChangeConfirmOpen(false);
+                    setChangeConfirmText("");
+                    setSelectorModalOpen(true);
+                  }}
+                  className="w-full sm:w-auto inline-flex items-center justify-center gap-1.5 px-5 py-2.5 rounded-xl bg-[#1e3a8a] hover:bg-[#172554] text-white text-xs sm:text-sm font-bold shadow-xs transition cursor-pointer pressable disabled:opacity-40 disabled:cursor-not-allowed min-h-[42px]"
+                >
+                  <span>Continue</span>
+                  <ArrowRight size={15} />
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* ================= 2. INSTITUTION SELECTOR MODAL ================= */}
+        {selectorModalOpen && (
           <div className="profile-modal-overlay fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 animate-in fade-in duration-200">
             {/* Backdrop */}
             <div
               className="fixed inset-0 bg-black/50 backdrop-blur-xs transition-opacity"
-              onClick={() => setSwitchModalOpen(false)}
+              onClick={() => setSelectorModalOpen(false)}
             />
 
             {/* Sheet / Dialog Surface */}
@@ -673,14 +781,14 @@ function Profile() {
               <div className="flex items-center justify-between pb-3 border-b border-[#e8e5dc]">
                 <div>
                   <h3 className="text-lg sm:text-xl font-bold text-[#1c1917] tracking-tight">
-                    Switch Academy
+                    Select Institution
                   </h3>
                   <p className="text-xs text-[#78716c]">
-                    Select an institution to switch your active courses and learning space
+                    Choose an institution to switch your learning environment
                   </p>
                 </div>
                 <button
-                  onClick={() => setSwitchModalOpen(false)}
+                  onClick={() => setSelectorModalOpen(false)}
                   className="p-2 rounded-xl text-[#78716c] hover:bg-[#f2efe9] hover:text-[#1c1917] transition cursor-pointer touch-target pressable"
                   aria-label="Close dialog"
                 >
@@ -767,7 +875,7 @@ function Profile() {
                               onClick={() => handleSwitchAcademy(inst.slug, inst.name)}
                               className="px-3 py-1.5 rounded-xl bg-[#1e3a8a] hover:bg-[#172554] text-white text-xs font-semibold transition cursor-pointer pressable min-h-[38px] shadow-xs"
                             >
-                              Switch
+                              Select
                             </button>
                           )}
                         </div>
@@ -784,7 +892,7 @@ function Profile() {
                 </span>
                 <button
                   type="button"
-                  onClick={() => setSwitchModalOpen(false)}
+                  onClick={() => setSelectorModalOpen(false)}
                   className="px-3.5 py-1.5 rounded-xl text-xs font-semibold text-[#57534e] hover:bg-[#f2efe9] cursor-pointer min-h-[36px]"
                 >
                   Close

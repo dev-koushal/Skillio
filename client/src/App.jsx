@@ -6,6 +6,7 @@ import "react-toastify/dist/ReactToastify.css";
 
 import ScrollToTop from "./components/ScrollToTop";
 import WelcomeModal from "./components/common/WelcomeModal";
+import InstitutionRequiredDialog from "./components/common/InstitutionRequiredDialog";
 import { TenantProvider } from "./context/TenantContext";
 import { serverURL, getActiveTenantSlug } from "./services/api";
 import { getStoredTenantSlug } from "./services/tenantStorage";
@@ -294,6 +295,10 @@ function AppRoutes() {
             element={isEducator ? <CourseBuilder /> : <Navigate to="/login" replace />}
           />
           <Route
+            path="/course-resources/:courseId"
+            element={isEducator ? <EditCourse /> : <Navigate to="/login" replace />}
+          />
+          <Route
             path="/editcourse/:courseId"
             element={isEducator ? <CourseBuilder /> : <Navigate to="/login" replace />}
           />
@@ -325,6 +330,7 @@ function AppRoutes() {
 
       {/* Entry Modal for first-time visitors */}
       <WelcomeModal />
+      <InstitutionRequiredDialog />
 
       <ToastContainer
         position="top-right"

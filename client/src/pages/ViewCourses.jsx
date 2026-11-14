@@ -33,6 +33,7 @@ import Navbar from "../components/Navbar";
 import Footer from "../components/Footer";
 import { optimizeImage } from "../utils/imageOptimizer";
 import SecureVideoPlayer from "../components/video/SecureVideoPlayer";
+import SecureDocumentViewer from "../components/resources/SecureDocumentViewer";
 import "./InstitutionStudentPages.css";
 
 // Helper to load Razorpay checkout script dynamically
@@ -89,6 +90,8 @@ function ViewCourses() {
   const [resources, setResources] = useState([]);
   const [resourceSearch, setResourceSearch] = useState("");
   const [resourcesLoading, setResourcesLoading] = useState(false);
+  const [activeDocument, setActiveDocument] = useState(null);
+  const [buyingResourceId, setBuyingResourceId] = useState(null);
 
   // Fetch course details by ID
   const loadCourse = async () => {
@@ -297,6 +300,42 @@ function ViewCourses() {
     }
   };
 
+  const handleBuyResource = async (resource) => {
+    if (!userData?._id) {
+      toast.info("Sign in to unlock these notes.");
+      navigate("/login");
+      return;
+    }
+    setBuyingResourceId(resource._id);
+    try {
+      const { data: order } = await api.post(`/api/resource/${resource._id}/order`);
+      if (!order.key) throw new Error("Notes payments are not configured yet.");
+      const loaded = await loadRazorpayScript();
+      if (!loaded || !window.Razorpay) throw new Error("Razorpay checkout could not be loaded.");
+      const checkout = new window.Razorpay({
+        key: order.key, amount: order.amount, currency: order.currency || "INR",
+        name: tenant?.name || "Skillio Academy", description: `Unlock ${resource.title}`,
+        order_id: order.id, prefill: { name: userData?.name || "", email: userData?.email || "" },
+        theme: { color: tenant?.primaryColor || "#1e3a8a" },
+        handler: async (payment) => {
+          try {
+            await api.post(`/api/resource/${resource._id}/verify`, payment);
+            toast.success("Notes unlocked. Your access is ready.");
+            await loadResources();
+          } catch (error) {
+            toast.error(error.response?.data?.message || "Payment verification failed.");
+          } finally { setBuyingResourceId(null); }
+        },
+        modal: { ondismiss: () => setBuyingResourceId(null) },
+      });
+      checkout.on("payment.failed", (event) => toast.error(event?.error?.description || "Payment failed."));
+      checkout.open();
+    } catch (error) {
+      toast.error(error.response?.data?.message || error.message || "Could not start the purchase.");
+      setBuyingResourceId(null);
+    }
+  };
+
   // Handle Review Submission
   const handleReview = async (e) => {
     e.preventDefault();
@@ -344,6 +383,12 @@ function ViewCourses() {
     );
   });
 
+  useEffect(() => {
+    if (activeTab !== "resources" || !resources.some((resource) => resource.processingStatus === "processing")) return;
+    const timer = setTimeout(loadResources, 5000);
+    return () => clearTimeout(timer);
+  }, [resources, activeTab, courseId]);
+
   if (fetching && !course) {
     return (
       <div className="institution-student-page min-h-screen text-[#1c1917]" style={tenantStyle}>
@@ -361,6 +406,7 @@ function ViewCourses() {
   return (
     <div className="institution-student-page min-h-screen text-[#1c1917] flex flex-col font-sans" style={tenantStyle}>
       <Navbar currentInstitution={tenant?.isPlatform ? null : tenant} />
+      {activeDocument && <SecureDocumentViewer resource={activeDocument} user={userData} tenantName={tenant?.name} onClose={() => setActiveDocument(null)} />}
 
       <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8 space-y-6 sm:space-y-8 pb-36 md:pb-12">
         {/* Back Link */}
@@ -685,7 +731,7 @@ function ViewCourses() {
                     Course Notes & Supplementary Materials
                   </h2>
                   <p className="text-xs text-[#78716c]">
-                    Download formula sheets, lecture notes, slide decks, and code files.
+                    Open secure notes and study materials for this course.
                   </p>
                 </div>
 
@@ -749,7 +795,15 @@ function ViewCourses() {
                         </div>
                       </div>
 
-                      {hasFullAccess ? (
+                      {res.storageProvider === "cloudinary_authenticated" && res.processingStatus !== "ready" ? (
+                        <span className="shrink-0 text-xs font-semibold text-[#78716c]">{res.processingStatus === "processing" ? "Preparing notes…" : "Unavailable"}</span>
+                      ) : res.storageProvider === "cloudinary_authenticated" ? (
+                        res.isUnlocked ? (
+                          <button type="button" onClick={() => setActiveDocument(res)} className="min-h-10 shrink-0 rounded-xl bg-[#183c32] px-3 text-xs font-bold text-white hover:bg-[#102d25]">Read notes</button>
+                        ) : res.accessType === "paid" ? (
+                          <button type="button" disabled={buyingResourceId === res._id} onClick={() => handleBuyResource(res)} className="min-h-10 shrink-0 rounded-xl bg-[#183c32] px-3 text-xs font-bold text-white hover:bg-[#102d25] disabled:opacity-60">{buyingResourceId === res._id ? "Opening…" : `Unlock · ₹${(res.pricePaise / 100).toLocaleString("en-IN")}`}</button>
+                        ) : <span className="text-emerald-800 text-[11px] font-semibold">Free notes</span>
+                      ) : hasFullAccess && res.fileUrl ? (
                         <a
                           href={res.fileUrl}
                           target="_blank"

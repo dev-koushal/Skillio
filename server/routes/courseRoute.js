@@ -20,6 +20,7 @@ import requireInstitutionMembership from "../middleware/requireInstitutionMember
 import { requireEducator, requirePermission } from "../middleware/rbac.js";
 import { PERMISSIONS } from "../utils/permissions.js";
 import upload from "../middleware/multer.js";
+import requireEducatorInstitution from "../middleware/requireEducatorInstitution.js";
 
 const courseRouter = Router();
 
@@ -34,15 +35,15 @@ courseRouter.get("/courselecture/:courseId", isAuth, requireInstitutionMembershi
 courseRouter.get("/lecture/:lectureId/playback", isAuth, requireInstitutionMembership, getLecturePlayback);
 
 // Educator / Admin Management Endpoints
-courseRouter.post("/create", isAuth, requirePermission(PERMISSIONS.CREATE_COURSE), createCourse);
+courseRouter.post("/create", isAuth, requireEducatorInstitution, requirePermission(PERMISSIONS.CREATE_COURSE), createCourse);
 courseRouter.get("/getcreator", isAuth, requireEducator, getCreatorCourses);
 courseRouter.post("/youtube/validate", isAuth, requireEducator, validateYouTubeUrl);
-courseRouter.post("/editcourse/:courseId", isAuth, requireEducator, upload.single("thumbnail"), editCourse);
-courseRouter.delete("/remove/:courseId", isAuth, requireEducator, removeCourse);
+courseRouter.post("/editcourse/:courseId", isAuth, requireEducatorInstitution, requireEducator, upload.single("thumbnail"), editCourse);
+courseRouter.delete("/remove/:courseId", isAuth, requireEducatorInstitution, requireEducator, removeCourse);
 
 // Lecture Management Endpoints
-courseRouter.post("/createlecture/:courseId", isAuth, requireEducator, upload.single("video"), createLecture);
-courseRouter.post("/editlecture/:lectureId", isAuth, requireEducator, upload.single("videoUrl"), editLecture);
-courseRouter.delete("/removelecture/:lectureId", isAuth, requireEducator, removeLecture);
+courseRouter.post("/createlecture/:courseId", isAuth, requireEducatorInstitution, requireEducator, upload.single("video"), createLecture);
+courseRouter.post("/editlecture/:lectureId", isAuth, requireEducatorInstitution, requireEducator, upload.single("videoUrl"), editLecture);
+courseRouter.delete("/removelecture/:lectureId", isAuth, requireEducatorInstitution, requireEducator, removeLecture);
 
 export default courseRouter;

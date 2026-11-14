@@ -26,6 +26,8 @@ import invitationRouter from "./routes/invitationRoute.js";
 import liveClassRouter from "./routes/liveClassRoute.js";
 import { startYouTubeLiveSync } from "./services/youtubeLiveSync.js";
 import { getLecturePlayback } from "./controller/courseController.js";
+import { handleResourcePaymentWebhook } from "./controller/paidResourceController.js";
+import { handleCloudinaryEagerNotification } from "./controller/resourceController.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -35,6 +37,10 @@ dotenv.config();
 
 const app = express();
 const PORT = process.env.PORT || 3000;
+
+// Razorpay requires the unmodified request bytes to validate webhook signatures.
+app.post("/api/order/razorpay-webhook", express.raw({ type: "application/json", limit: "256kb" }), handleResourcePaymentWebhook);
+app.post("/api/resource/cloudinary-eager-webhook", express.raw({ type: "application/json", limit: "256kb" }), handleCloudinaryEagerNotification);
 
 // Express Body & Cookie Parsers
 app.use(express.json());

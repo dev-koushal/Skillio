@@ -182,6 +182,15 @@ export const login = async (req, res) => {
     const candidates = await User.find({ email }).limit(2)
       .select("_id name email role tenantId")
       .lean();
+
+    // Auto-normalize legacy tenant_admin role to educator
+    for (const candidate of candidates) {
+      if (candidate.role === "tenant_admin") {
+        candidate.role = "educator";
+        User.updateOne({ _id: candidate._id }, { $set: { role: "educator" } }).catch(() => {});
+      }
+    }
+
     const studentCandidates = candidates.filter((candidate) => candidate.role === "student");
     const tenantCandidates = candidates.filter((candidate) => candidate.role !== "student");
 
@@ -216,6 +225,11 @@ export const login = async (req, res) => {
         path: "enrolledCourses",
         select: "title thumbnail description subTitle category price creator lectures isPublished tenantId",
       });
+
+      if (user && user.role === "tenant_admin") {
+        user.role = "educator";
+        User.updateOne({ _id: user._id }, { $set: { role: "educator" } }).catch(() => {});
+      }
     }
 
     if (user?.role === "educator" && user.tenantId?.toString() !== tenantId?.toString()) {
@@ -225,6 +239,12 @@ export const login = async (req, res) => {
 
     if (!user) {
       return res.status(400).json({ success: false, message: "No account found with this email!" });
+    }
+
+    // Auto-normalize legacy tenant_admin
+    if (user.role === "tenant_admin") {
+      user.role = "educator";
+      User.updateOne({ _id: user._id }, { $set: { role: "educator" } }).catch(() => {});
     }
 
     const activeMemberships = user.role === "student"
@@ -247,11 +267,12 @@ export const login = async (req, res) => {
 
     // Only the product-facing roles can be requested from the login form.
     if (role && user.role !== "platform_admin") {
+      const effectiveUserRole = user.role === "tenant_admin" ? "educator" : user.role;
       if (!["student", "educator"].includes(role)) {
         return res.status(400).json({ success: false, message: "Choose Student or Educator to sign in." });
       }
-      if (user.role !== role) {
-        const expected = user.role === "student" ? "Student" : "Educator";
+      if (effectiveUserRole !== role) {
+        const expected = effectiveUserRole === "student" ? "Student" : "Educator";
         return res.status(400).json({ success: false, message: `This account is registered as ${expected}.` });
       }
     }

@@ -8,15 +8,27 @@ import Navbar from "../../components/Navbar";
 import Footer from "../../components/Footer";
 import { toast } from "react-toastify";
 import "./Courses.css";
-import { canUseEducatorWorkspace } from "../../auth/permissions";
+import { canUseEducatorWorkspace, hasEducatorInstitution } from "../../auth/permissions";
+import RequireInstitutionModal from "../../components/common/RequireInstitutionModal";
+import { useTenant } from "../../context/TenantContext";
 
 function Courses() {
   const navigate = useNavigate();
   const dispatch = useDispatch();
   const { creatorCourseData, courseData } = useSelector((state) => state.course);
   const { userData } = useSelector((state) => state.user);
+  const { tenant } = useTenant();
   const [deletingCourseId, setDeletingCourseId] = React.useState(null);
   const [coursesLoading, setCoursesLoading] = React.useState(true);
+  const [requireInstitutionModalOpen, setRequireInstitutionModalOpen] = React.useState(false);
+
+  const handleCreateCourseClick = () => {
+    if (!hasEducatorInstitution(userData, tenant)) {
+      setRequireInstitutionModalOpen(true);
+      return;
+    }
+    navigate("/builder");
+  };
 
   const courses = Array.isArray(creatorCourseData)
     ? creatorCourseData
@@ -82,7 +94,7 @@ function Courses() {
           </div>
 
           <button
-            onClick={() => navigate("/builder")}
+            onClick={handleCreateCourseClick}
             className="inline-flex items-center justify-center gap-2 bg-[#1e3a8a] hover:bg-[#172554] text-white text-xs sm:text-sm font-bold px-4 py-2.5 rounded-xl shadow-xs transition active:scale-95 cursor-pointer min-h-[42px]"
           >
             <Plus size={16} /> Create New Course
@@ -100,7 +112,7 @@ function Courses() {
               Start building your first curriculum with video lectures, lecture notes, and student enrollment.
             </p>
             <button
-              onClick={() => navigate("/builder")}
+              onClick={handleCreateCourseClick}
               className="bg-[#1e3a8a] hover:bg-[#172554] text-white text-xs font-bold px-5 py-2.5 rounded-xl transition cursor-pointer shadow-xs"
             >
               Create Your First Course
@@ -225,6 +237,11 @@ function Courses() {
           </>
         )}
       </main>
+
+      <RequireInstitutionModal
+        isOpen={requireInstitutionModalOpen}
+        onClose={() => setRequireInstitutionModalOpen(false)}
+      />
 
       <Footer />
     </div>

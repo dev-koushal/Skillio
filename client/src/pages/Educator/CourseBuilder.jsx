@@ -30,6 +30,9 @@ import Footer from "../../components/Footer";
 import Button from "../../components/common/Button";
 import InlineFieldAIGenerateButton from "../../components/InlineFieldAIGenerateButton";
 import LectureVideoSourceFields from "../../components/video/LectureVideoSourceFields";
+import RequireInstitutionModal from "../../components/common/RequireInstitutionModal";
+import { hasEducatorInstitution } from "../../auth/permissions";
+import { useTenant } from "../../context/TenantContext";
 import "./CourseBuilder.css";
 
 const SUGGESTED_TOPICS = [
@@ -49,9 +52,11 @@ export default function CourseBuilder() {
   const { courseId } = useParams();
   const dispatch = useDispatch();
   const { userData } = useSelector((state) => state.user);
+  const { tenant } = useTenant();
 
   // Course Primary State
   const [activeCourseId, setActiveCourseId] = useState(courseId !== "new" ? courseId : null);
+  const [requireInstitutionModalOpen, setRequireInstitutionModalOpen] = useState(false);
   const [builderStep, setBuilderStep] = useState(0);
   const [title, setTitle] = useState("");
   const [category, setCategory] = useState("General");
@@ -171,6 +176,12 @@ export default function CourseBuilder() {
   }, [courseId, activeCourseId]);
 
   useEffect(() => {
+    if ((!courseId || courseId === "new") && !hasEducatorInstitution(userData, tenant)) {
+      setRequireInstitutionModalOpen(true);
+    }
+  }, [courseId, userData, tenant]);
+
+  useEffect(() => {
     if (courseId && courseId !== "new") {
       loadCourse(courseId);
     } else {
@@ -260,6 +271,9 @@ export default function CourseBuilder() {
       return updated;
     } catch (err) {
       console.error("[CourseBuilder Save Error]", err);
+      if (err.response?.data?.code === "INSTITUTION_REQUIRED") {
+        setRequireInstitutionModalOpen(true);
+      }
       toast.error(err.response?.data?.message || "Failed to save course");
       setSaveStatus("Unsaved changes");
       return null;
@@ -551,7 +565,7 @@ export default function CourseBuilder() {
                     setTitle(e.target.value);
                     setSaveStatus("Unsaved changes");
                   }}
-                  name="courseTitle" autoComplete="off" placeholder="e.g. Practical Spoken English for Everyday Life…"
+                  name="courseTitle" autoComplete="off" placeholder="e.g. Practical Spoken English for Everyday Life"
                   className="w-full bg-[#fcfbf9] border border-[#d6d3d1] rounded-xl pl-4 pr-12 py-2.5 sm:py-3 text-[#1c1917] text-sm focus:outline-none focus:border-[#1e3a8a] focus:ring-1 focus:ring-[#1e3a8a] min-h-[44px]"
                 />
                 <InlineFieldAIGenerateButton field="title" currentFields={currentFields} onGenerated={(value) => handleGeneratedField("title", value)} />
@@ -571,7 +585,7 @@ export default function CourseBuilder() {
                       setCategory(e.target.value);
                       setSaveStatus("Unsaved changes");
                     }}
-                    name="courseCategory" autoComplete="off" placeholder="e.g. Spoken English, Mechanics, React…"
+                    name="courseCategory" autoComplete="off" placeholder="e.g. Spoken English, Mechanics, React"
                     className="w-full bg-[#fcfbf9] border border-[#d6d3d1] rounded-xl pl-4 pr-12 py-2.5 text-[#1c1917] text-sm focus:outline-none focus:border-[#1e3a8a] min-h-[44px]"
                   />
                   <InlineFieldAIGenerateButton field="category" currentFields={currentFields} onGenerated={(value) => handleGeneratedField("category", value)} />
@@ -622,7 +636,7 @@ export default function CourseBuilder() {
                     setSubTitle(e.target.value);
                     setSaveStatus("Unsaved changes");
                   }}
-                  name="courseSubtitle" autoComplete="off" placeholder="e.g. Build confidence in daily conversations and vocabulary…"
+                  name="courseSubtitle" autoComplete="off" placeholder="e.g. Build confidence in daily conversations and vocabulary"
                   className="w-full bg-[#fcfbf9] border border-[#d6d3d1] rounded-xl pl-4 pr-12 py-2.5 text-[#1c1917] text-sm focus:outline-none focus:border-[#1e3a8a] min-h-[44px]"
                 />
                 <InlineFieldAIGenerateButton field="subTitle" currentFields={currentFields} onGenerated={(value) => handleGeneratedField("subTitle", value)} />
@@ -639,7 +653,7 @@ export default function CourseBuilder() {
                     setDescription(e.target.value);
                     setSaveStatus("Unsaved changes");
                   }}
-                  name="courseDescription" autoComplete="off" placeholder="Describe what students will learn and the outcomes…"
+                  name="courseDescription" autoComplete="off" placeholder="Describe what students will learn and the outcomes"
                   className="w-full bg-[#fcfbf9] border border-[#d6d3d1] rounded-xl pl-3 pr-12 pt-3 pb-3 text-[#1c1917] text-sm focus:outline-none focus:border-[#1e3a8a]"
                 />
                 <InlineFieldAIGenerateButton field="description" currentFields={currentFields} onGenerated={(value) => handleGeneratedField("description", value)} className="is-textarea" />
@@ -1012,6 +1026,10 @@ export default function CourseBuilder() {
               </div>
             </div>
           </div>
+          <div className="flex flex-col gap-2 rounded-xl border border-[#d9e5db] bg-[#f3f7f2] p-4 sm:flex-row sm:items-center sm:justify-between">
+            <div><p className="text-sm font-semibold text-[#254a39]">Course notes and resources</p><p className="mt-1 text-xs text-[#68756a]">Create free or paid secure PDF notes for this course.</p></div>
+            <button type="button" onClick={async () => { const saved = await handleSaveCourse(null, true); const id = saved?._id || activeCourseId; if (id) navigate(`/course-resources/${id}`); }} className="min-h-10 shrink-0 rounded-xl bg-[#254a39] px-4 text-xs font-semibold text-white hover:bg-[#1c392c]">Manage notes</button>
+          </div>
         </section>
 
         {/* BOTTOM SAVE FOOTER */}
@@ -1192,6 +1210,15 @@ export default function CourseBuilder() {
           </div>
         </div>
       )}
+
+      {/* Blocking Dialog for Course Creation without an Institution */}
+      <RequireInstitutionModal
+        isOpen={requireInstitutionModalOpen}
+        onClose={() => {
+          setRequireInstitutionModalOpen(false);
+          navigate("/educator/home");
+        }}
+      />
 
       <Footer />
     </div>
