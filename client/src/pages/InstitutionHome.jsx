@@ -1,5 +1,5 @@
 ﻿import React, { useEffect, useMemo, useState } from "react";
-import { ArrowRight, CircleDot, Search } from "lucide-react";
+import { ArrowRight, BookOpen, CircleDot, Search } from "lucide-react";
 import { Link, useParams } from "react-router-dom";
 import { useSelector } from "react-redux";
 import Navbar from "../components/Navbar";
@@ -16,6 +16,59 @@ function getCourseMeta(course) {
     course?.level,
   ].filter(Boolean);
   return facts.join(" · ") || course?.category || course?.subTitle || "";
+}
+
+function getInitials(label = "") {
+  return label.trim().split(/\s+/).filter(Boolean).slice(0, 2).map((word) => word[0]).join("").toUpperCase();
+}
+
+function InstitutionMark({ institution }) {
+  return institution?.logo
+    ? <img className="ih-institution-mark-image" src={institution.logo} alt="" width="64" height="64" />
+    : <span className="ih-institution-mark-letters" aria-hidden="true">{getInitials(institution?.name) || "A"}</span>;
+}
+
+function CourseArtwork({ course, featured = false }) {
+  return course?.thumbnail
+    ? <img className={featured ? "ih-feature-art-image" : "ih-library-thumbnail"} src={optimizeImage(course.thumbnail, featured ? 320 : 180)} alt="" width={featured ? 160 : 112} height={featured ? 160 : 96} loading="lazy" decoding="async" />
+    : <span className={featured ? "ih-feature-art-fallback" : "ih-library-art-fallback"} aria-hidden="true">{getInitials(course?.title) || "C"}</span>;
+}
+
+function LearningHero({ activeCourse, firstCourse, institution, institutionName, courseCount, coursePath, courseCountLabel }) {
+  const hasActiveCourse = Boolean(activeCourse);
+  const artworkCourse = activeCourse || firstCourse || null;
+
+  return (
+    <section className="ih-next-step" aria-labelledby="ih-next-step-title">
+      <article className={`ih-learning-card${hasActiveCourse ? " is-continuing" : ""}`}>
+        <div className="ih-learning-copy">
+          <p className="ih-learning-kicker">{hasActiveCourse ? "CONTINUE LEARNING" : "YOUR NEXT STEP"}</p>
+          <h2 id="ih-next-step-title">{hasActiveCourse ? activeCourse.title : courseCount ? "Find your next course" : "Start learning"}</h2>
+          {hasActiveCourse ? (
+            getCourseMeta(activeCourse) && <p className="ih-learning-detail">{getCourseMeta(activeCourse)}</p>
+          ) : (
+            <p className="ih-learning-detail">
+              {courseCount
+                ? `Explore ${courseCountLabel} courses from ${institutionName}.`
+                : `Courses from ${institutionName} will appear here when published.`}
+            </p>
+          )}
+          <Link className="ih-learning-action" to={hasActiveCourse ? `/viewlecture/${activeCourse._id}` : coursePath}>
+            {hasActiveCourse ? "Continue course" : "Browse courses"} <ArrowRight size={15} aria-hidden="true" />
+          </Link>
+        </div>
+        <div className="ih-learning-art" aria-hidden="true">
+          <span className="ih-learning-art-orbit" />
+          <span className="ih-learning-art-mark">
+            {artworkCourse
+              ? <CourseArtwork course={artworkCourse} featured />
+              : <InstitutionMark institution={institution} />}
+          </span>
+          <span className="ih-learning-art-dot" />
+        </div>
+      </article>
+    </section>
+  );
 }
 
 export default function InstitutionHome() {
@@ -48,7 +101,7 @@ export default function InstitutionHome() {
       ) {
         const tenantData = tenantResult.value.data.tenant;
         setInstitution(tenantData);
-        document.title = `${tenantData.name} â€” Student learning`;
+        document.title = `${tenantData.name} - Student learning`;
       } else if (contextTenant?.slug === targetSlug) {
         setInstitution(contextTenant);
       }
@@ -115,8 +168,9 @@ export default function InstitutionHome() {
   const activeCourse = enrolledCourses[0]
     || (userData?.enrolledCourses || []).find((course) => course && typeof course === "object")
     || null;
-  const firstName = userData?.name?.trim().split(/\s+/)[0];
-  const activeCourseMeta = getCourseMeta(activeCourse);
+  const rawFirstName = userData?.name?.trim().split(/\s+/)[0];
+  const firstName = rawFirstName ? `${rawFirstName[0].toLocaleUpperCase()}${rawFirstName.slice(1)}` : "Student";
+  const courseCountLabel = new Intl.NumberFormat().format(institutionCourses.length);
   const visibleCourses = useMemo(() => {
     const query = courseQuery.trim().toLowerCase();
     const courses = query
@@ -128,47 +182,34 @@ export default function InstitutionHome() {
   return (
     <div className="institution-learning" style={tenantStyle}>
       <Navbar currentInstitution={activeTenant} studentHome={userData?.role === "student"} />
-      <main className="ih-main">
+      <a className="ih-skip-link" href="#ih-main">Skip to main content</a>
+      <main className="ih-main" id="ih-main">
         {loading ? (
           <div className="ih-loading" aria-live="polite">            <span>Opening {institutionName}{"\u2026"}</span>
           </div>
         ) : (
           <>
             <section className="ih-hero" aria-labelledby="ih-title">
-              <h1 id="ih-title">{firstName ? `Welcome back, ${firstName}` : `Welcome to ${institutionName}`}</h1>
+              <h1 id="ih-title">Welcome back, {firstName}</h1>
             </section>
 
-            {activeCourse && (
-              <section className="ih-resume" aria-labelledby="ih-resume-title">
-                <div className="ih-section-heading"><h2 id="ih-resume-title">Continue learning</h2></div>
-                <article className="ih-featured-course">
-                  {activeCourse.thumbnail && <img className="ih-featured-thumbnail" src={optimizeImage(activeCourse.thumbnail, 760)} alt="" width="760" height="428" loading="lazy" decoding="async" />}
-                  <div className="ih-featured-copy">
-                    <h3>{activeCourse.title}</h3>
-                    {activeCourseMeta && <p>{activeCourseMeta}</p>}
-                    <Link className="ih-continue-link" to={`/viewlecture/${activeCourse._id}`}>Continue <ArrowRight size={16} aria-hidden="true" /></Link>
-                  </div>
-                </article>
-              </section>
-            )}
-
-            {!activeCourse && institutionCourses.length > 0 && (
-              <section className="ih-resume" aria-labelledby="ih-resume-title">
-                <div className="ih-section-heading"><h2 id="ih-resume-title">Start learning</h2></div>
-                <article className="ih-featured-course ih-featured-course-empty">
-                  <div className="ih-featured-copy">
-                    <h3>No enrolled courses yet</h3>
-                    <p>Explore courses available at {institutionName}.</p>
-                    <Link className="ih-continue-link" to={coursePath}>Browse courses <ArrowRight size={16} aria-hidden="true" /></Link>
-                  </div>
-                </article>
-              </section>
-            )}
+            <LearningHero
+              activeCourse={activeCourse}
+              firstCourse={institutionCourses[0]}
+              institution={activeTenant}
+              institutionName={institutionName}
+              courseCount={institutionCourses.length}
+              courseCountLabel={courseCountLabel}
+              coursePath={coursePath}
+            />
 
             {currentLiveClass && (
               <Link className="ih-live-row" to={`/institution/${encodeURIComponent(resolvedSlug)}/live`}>
                 <span className="ih-live-indicator"><CircleDot size={13} aria-hidden="true" /> LIVE NOW</span>
-                <span className="ih-live-title">{currentLiveClass.title || "Live class"}</span>
+                <span className="ih-live-title">
+                  <strong>{currentLiveClass.title || "Live class"}</strong>
+                  {currentLiveClass.createdBy?.name && <small>{currentLiveClass.createdBy.name}</small>}
+                </span>
                 <span className="ih-live-join">Join live <ArrowRight size={15} aria-hidden="true" /></span>
               </Link>
             )}
@@ -189,7 +230,7 @@ export default function InstitutionHome() {
                       className="ih-library-course"
                       aria-label={`View course ${course.title || "Untitled course"}`}
                     >
-                      {course.thumbnail && <img className="ih-library-thumbnail" src={optimizeImage(course.thumbnail, 180)} alt="" width="180" height="160" loading="lazy" decoding="async" />}
+                      <CourseArtwork course={course} />
                       <span className="ih-library-copy">
                         <strong>{course.title || "Untitled course"}</strong>
                         {getCourseMeta(course) && <span>{getCourseMeta(course)}</span>}
@@ -200,8 +241,11 @@ export default function InstitutionHome() {
                 </div>
               ) : (
                 <div className="ih-empty-courses">
-                  <strong>{courseQuery ? "No matching courses" : "No courses published yet."}</strong>
-                  <p>{courseQuery ? "Try another course name or subject." : "Your educator will add courses here when they are ready."}</p>
+                  <span className="ih-empty-course-mark" aria-hidden="true"><BookOpen size={19} strokeWidth={1.7} /></span>
+                  <div>
+                    <strong>{courseQuery ? "No matching courses" : "No courses yet"}</strong>
+                    <p>{courseQuery ? "Try a different name or subject." : "Your educator’s published courses will appear here."}</p>
+                  </div>
                 </div>
               )}
 

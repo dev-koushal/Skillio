@@ -112,7 +112,7 @@ function Navbar({ currentInstitution = null, studentHome = false }) {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 sm:h-20 flex justify-between items-center gap-4">
           {/* Brand / Logo + Institution Switcher Link */}
           <div className="flex items-center gap-3 sm:gap-6">
-            {studentHome && <div className="md:hidden"><StudentInstitutionSwitcher compact appBar /></div>}
+            {studentHome && <div className="md:hidden"><StudentInstitutionSwitcher compact appBar currentInstitution={currentInstitution} /></div>}
             <Link
               to={isEducator ? "/educator/home" : activeInstitution ? `/institution/${activeInstitution.slug}` : "/"}
               className={`flex items-center gap-2.5 sm:gap-3 group cursor-pointer focus:outline-none focus:ring-2 focus:ring-[#5b3cc4] rounded-xl p-1 pressable ${studentHome ? "hidden md:flex" : ""}`}
@@ -402,7 +402,7 @@ function Navbar({ currentInstitution = null, studentHome = false }) {
           {/* Compact Mobile Top Actions (App Style) */}
           <div className="student-appbar-actions flex items-center gap-1.5 md:hidden">
             {userData?.role === "student" && !studentHome ? (
-              <StudentInstitutionSwitcher compact />
+              <StudentInstitutionSwitcher compact appBar currentInstitution={currentInstitution} />
             ) : activeInstitution && !studentHome && (
               <Link
                 to="/"

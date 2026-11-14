@@ -36,6 +36,7 @@ import { getRoleLabel, ROLES } from "../auth/permissions";
 import api from "../services/api";
 import { performLogout } from "../services/authStorage";
 import { setStoredTenantSlug } from "../services/tenantStorage";
+import "./Profile.css";
 
 function Profile() {
   const { userData } = useSelector((store) => store.user);
@@ -298,12 +299,13 @@ function Profile() {
     });
 
     return (
-      <div className="min-h-screen bg-[#f8f7f4] text-[#1c1917] flex flex-col font-sans">
-        <Navbar />
+      <div className="institution-student-page profile-page min-h-screen text-[#1c1917] flex flex-col font-sans" style={{ "--institution-accent": tenant?.primaryColor || "#5b3cc4" }}>
+        <Navbar currentInstitution={tenant?.isPlatform ? null : tenant} />
 
-        <div className="max-w-4xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-6 flex-1">
+        <main className="profile-main max-w-4xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-6 flex-1">
           {/* Back Link */}
           <button
+            type="button"
             onClick={() => {
               if (activeAcademySlug) {
                 navigate(`/institution/${activeAcademySlug}`);
@@ -311,16 +313,16 @@ function Profile() {
                 navigate("/");
               }
             }}
-            className="inline-flex items-center gap-1.5 text-xs text-[#78716c] hover:text-[#1c1917] transition cursor-pointer pressable"
+            className="profile-back-link inline-flex items-center gap-1.5 text-xs text-[#78716c] hover:text-[#1c1917] transition cursor-pointer pressable"
           >
             <ArrowLeft size={16} /> Back to Learning Space
           </button>
 
           {/* Profile Info Card */}
-          <div className="bg-white border border-[#e8e5dc] rounded-2xl p-6 sm:p-8 space-y-6 shadow-sm">
+          <div className="profile-panel profile-summary bg-white border border-[#e8e5dc] rounded-2xl p-6 sm:p-8 space-y-6 shadow-sm">
             {/* Avatar and Info Header */}
-            <div className="flex flex-col sm:flex-row items-center sm:items-start justify-between gap-6 pb-6 border-b border-[#e8e5dc] text-center sm:text-left">
-              <div className="flex flex-col sm:flex-row items-center gap-5">
+            <div className="profile-identity flex flex-col sm:flex-row items-center sm:items-start justify-between gap-6 pb-6 border-b border-[#e8e5dc] text-center sm:text-left">
+              <div className="profile-identity-content flex flex-col sm:flex-row items-center gap-5">
                 <div className="w-24 h-24 rounded-full overflow-hidden bg-[#eff6ff] border-2 border-[#1e3a8a]/30 flex items-center justify-center text-3xl font-bold text-[#1e3a8a] shadow-xs shrink-0">
                   {userData.profilePicture ? (
                     <img
@@ -333,8 +335,8 @@ function Profile() {
                   )}
                 </div>
 
-                <div className="space-y-1">
-                  <h1 className="text-2xl sm:text-3xl font-bold text-[#1c1917] tracking-tight">
+                <div className="profile-identity-text space-y-1">
+                  <h1 className="profile-name text-2xl sm:text-3xl font-bold text-[#1c1917] tracking-tight">
                     {userData.name}
                   </h1>
                   <p className="text-xs sm:text-sm text-[#78716c] max-w-md">
@@ -354,17 +356,18 @@ function Profile() {
               </div>
 
               <button
+                type="button"
                 onClick={() => navigate("/editprofile")}
-                className="inline-flex items-center gap-2 bg-[#1e3a8a] hover:bg-[#172554] text-white text-xs sm:text-sm font-semibold px-4 py-2.5 rounded-xl transition shadow-xs cursor-pointer min-h-[40px] pressable"
+                className="profile-edit-button inline-flex items-center gap-2 bg-[#1e3a8a] hover:bg-[#172554] text-white text-xs sm:text-sm font-semibold px-4 py-2.5 rounded-xl transition shadow-xs cursor-pointer min-h-[40px] pressable"
               >
                 <Edit size={16} /> Edit Profile
               </button>
             </div>
 
             {/* Details Grid (Email, Phone, Courses, Joined) */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 pt-2">
+            <div className="profile-detail-grid grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 pt-2">
               {/* Email Card */}
-              <div className="p-4 rounded-xl bg-[#faf8f5] border border-[#e8e5dc] flex items-center justify-between gap-3">
+              <div className="profile-detail-card p-4 rounded-xl bg-[#faf8f5] border border-[#e8e5dc] flex items-center justify-between gap-3">
                 <div className="flex items-center gap-3 min-w-0">
                   <Mail className="text-[#1e3a8a] shrink-0" size={20} />
                   <div className="min-w-0">
@@ -387,7 +390,7 @@ function Profile() {
               </div>
 
               {/* Phone Card */}
-              <div className="p-4 rounded-xl bg-[#faf8f5] border border-[#e8e5dc] flex items-center justify-between gap-3">
+              <div className="profile-detail-card p-4 rounded-xl bg-[#faf8f5] border border-[#e8e5dc] flex items-center justify-between gap-3">
                 <div className="flex items-center gap-3 min-w-0">
                   <Phone className="text-[#1e3a8a] shrink-0" size={20} />
                   <div className="min-w-0">
@@ -417,7 +420,7 @@ function Profile() {
               </div>
 
               {/* Courses Card */}
-              <div className="p-4 rounded-xl bg-[#faf8f5] border border-[#e8e5dc] flex items-center gap-3">
+              <div className="profile-detail-card p-4 rounded-xl bg-[#faf8f5] border border-[#e8e5dc] flex items-center gap-3">
                 <BookOpen className="text-[#1e3a8a] shrink-0" size={20} />
                 <div>
                   <span className="text-[11px] text-[#78716c] uppercase font-semibold block">
@@ -430,7 +433,7 @@ function Profile() {
               </div>
 
               {/* Joined Card */}
-              <div className="p-4 rounded-xl bg-[#faf8f5] border border-[#e8e5dc] flex items-center gap-3">
+              <div className="profile-detail-card p-4 rounded-xl bg-[#faf8f5] border border-[#e8e5dc] flex items-center gap-3">
                 <Calendar className="text-[#1e3a8a] shrink-0" size={20} />
                 <div>
                   <span className="text-[11px] text-[#78716c] uppercase font-semibold block">Joined On</span>
@@ -440,7 +443,7 @@ function Profile() {
             </div>
 
             {/* Quick Action Navigation */}
-            <div className="pt-2 flex flex-wrap gap-3">
+            <div className="profile-quick-actions pt-2 flex flex-wrap gap-3">
               <button
                 onClick={() => navigate("/mycourses")}
                 className="px-4 py-2.5 rounded-xl bg-[#faf8f5] hover:bg-[#f1ede4] border border-[#e8e5dc] text-xs font-semibold text-[#1c1917] transition cursor-pointer pressable min-h-[40px]"
@@ -460,7 +463,7 @@ function Profile() {
 
           {/* ================= STUDENT ACADEMY & INSTITUTIONS SECTION ================= */}
           {isStudent && (
-            <div className="bg-white border border-[#e8e5dc] rounded-2xl p-6 sm:p-8 space-y-6 shadow-sm">
+            <div className="profile-panel bg-white border border-[#e8e5dc] rounded-2xl p-6 sm:p-8 space-y-6 shadow-sm">
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-4 border-b border-[#e8e5dc]">
                 <div>
                   <div className="flex items-center gap-2">
@@ -485,7 +488,7 @@ function Profile() {
               </div>
 
               {/* Current Active Academy Card */}
-              <div className="overflow-auto p-4 sm:p-5 rounded-2xl bg-[#faf8f5] border border-[#e8e5dc] flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+              <div className="profile-academy-card overflow-auto p-4 sm:p-5 rounded-2xl bg-[#faf8f5] border border-[#e8e5dc] flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
                 <div className="flex items-center gap-3.5 min-w-0">
                   <div className="w-12 h-12 rounded-xl bg-white border border-[#e8e5dc] flex items-center justify-center p-1.5 shrink-0 shadow-xs">
                     <img
@@ -528,8 +531,8 @@ function Profile() {
           )}
 
           {/* ================= SECURITY & PASSWORD SECTION ================= */}
-          <div className="bg-white border border-[#e8e5dc] rounded-2xl p-6 sm:p-8 space-y-5 shadow-sm">
-            <div className="flex items-center justify-between pb-3 border-b border-[#e8e5dc]">
+          <div className="profile-panel bg-white border border-[#e8e5dc] rounded-2xl p-6 sm:p-8 space-y-5 shadow-sm">
+            <div className="profile-security-heading flex items-center justify-between pb-3 border-b border-[#e8e5dc]">
               <div className="flex items-center gap-2">
                 <KeyRound size={20} className="text-[#1e3a8a]" />
                 <div>
@@ -545,7 +548,7 @@ function Profile() {
               <button
                 type="button"
                 onClick={() => setShowPasswordSection(!showPasswordSection)}
-                className="text-xs font-bold text-[#1e3a8a] hover:underline cursor-pointer"
+                className="profile-section-toggle text-xs font-bold text-[#1e3a8a] hover:underline cursor-pointer"
               >
                 {showPasswordSection ? "Cancel" : "Change Password"}
               </button>
@@ -623,7 +626,7 @@ function Profile() {
           </div>
 
           {/* ================= APP ACTIONS & LOGOUT ================= */}
-          <div className="bg-white border border-[#e8e5dc] rounded-2xl p-6 sm:p-8 space-y-4 shadow-sm">
+          <div className="profile-panel bg-white border border-[#e8e5dc] rounded-2xl p-6 sm:p-8 space-y-4 shadow-sm">
             <h2 className="text-base font-bold text-[#1c1917] pb-2 border-b border-[#e8e5dc]">
               Account Preferences & Actions
             </h2>
@@ -650,11 +653,11 @@ function Profile() {
               </button>
             </div>
           </div>
-        </div>
+        </main>
 
         {/* ================= SWITCH ACADEMY MODAL / BOTTOM SHEET ================= */}
         {switchModalOpen && (
-          <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 animate-in fade-in duration-200">
+          <div className="profile-modal-overlay fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 animate-in fade-in duration-200">
             {/* Backdrop */}
             <div
               className="fixed inset-0 bg-black/50 backdrop-blur-xs transition-opacity"
@@ -662,7 +665,7 @@ function Profile() {
             />
 
             {/* Sheet / Dialog Surface */}
-            <div className="relative w-full sm:max-w-lg bg-white rounded-t-3xl sm:rounded-2xl border border-[#e8e5dc] shadow-2xl p-6 sm:p-7 space-y-4 max-h-[85vh] flex flex-col z-10 animate-in slide-in-from-bottom-4 duration-200">
+            <div className="profile-modal-sheet relative w-full sm:max-w-lg bg-white rounded-t-3xl sm:rounded-2xl border border-[#e8e5dc] shadow-2xl p-6 sm:p-7 space-y-4 max-h-[85vh] flex flex-col z-10 animate-in slide-in-from-bottom-4 duration-200">
               {/* Sheet Handle for Mobile */}
               <div className="w-12 h-1.5 bg-[#d6d3d1] rounded-full mx-auto sm:hidden mb-1" />
 
@@ -792,7 +795,7 @@ function Profile() {
         )}
         {/* ================= LINK PHONE MODAL ================= */}
         {linkPhoneModalOpen && (
-          <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 animate-in fade-in duration-200">
+          <div className="profile-modal-overlay fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 animate-in fade-in duration-200">
             <div
               className="fixed inset-0 bg-black/50 backdrop-blur-xs"
               onClick={() => {
@@ -801,7 +804,7 @@ function Profile() {
               }}
             />
 
-            <div className="relative w-full sm:max-w-md bg-white rounded-t-3xl sm:rounded-2xl border border-[#e8e5dc] shadow-2xl p-6 sm:p-7 space-y-4 z-10 animate-in slide-in-from-bottom-4 duration-200">
+            <div className="profile-modal-sheet relative w-full sm:max-w-md bg-white rounded-t-3xl sm:rounded-2xl border border-[#e8e5dc] shadow-2xl p-6 sm:p-7 space-y-4 z-10 animate-in slide-in-from-bottom-4 duration-200">
               <div className="flex items-center justify-between pb-3 border-b border-[#e8e5dc]">
                 <div>
                   <h3 className="text-lg font-bold text-[#1c1917]">Link Mobile Number</h3>
@@ -896,13 +899,13 @@ function Profile() {
 
         {/* ================= LINK EMAIL MODAL ================= */}
         {linkEmailModalOpen && (
-          <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 animate-in fade-in duration-200">
+          <div className="profile-modal-overlay fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 animate-in fade-in duration-200">
             <div
               className="fixed inset-0 bg-black/50 backdrop-blur-xs"
               onClick={() => setLinkEmailModalOpen(false)}
             />
 
-            <div className="relative w-full sm:max-w-md bg-white rounded-t-3xl sm:rounded-2xl border border-[#e8e5dc] shadow-2xl p-6 sm:p-7 space-y-4 z-10 animate-in slide-in-from-bottom-4 duration-200">
+            <div className="profile-modal-sheet relative w-full sm:max-w-md bg-white rounded-t-3xl sm:rounded-2xl border border-[#e8e5dc] shadow-2xl p-6 sm:p-7 space-y-4 z-10 animate-in slide-in-from-bottom-4 duration-200">
               <div className="flex items-center justify-between pb-3 border-b border-[#e8e5dc]">
                 <div>
                   <h3 className="text-lg font-bold text-[#1c1917]">Link Email Address</h3>

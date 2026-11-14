@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useMemo } from "react";
-import { ArrowLeft, Filter, Search, X, BookOpen, Building2, SlidersHorizontal, Check } from "lucide-react";
+import { ArrowLeft, BookOpen, Search, SlidersHorizontal, X } from "lucide-react";
 import { useNavigate, useSearchParams, useParams } from "react-router-dom";
 import CourseCard from "../components/CourseCard";
 import { useSelector, useDispatch } from "react-redux";
@@ -9,9 +9,9 @@ import Navbar from "../components/Navbar";
 import Footer from "../components/Footer";
 import { CourseCardSkeleton } from "../components/common/Skeleton";
 import { useTenant } from "../context/TenantContext";
-import EmptyState from "../components/common/EmptyState";
 import { setStoredTenantSlug } from "../services/tenantStorage";
 import "./InstitutionStudentPages.css";
+import "./AllCourses.css";
 
 function AllCourses() {
   const navigate = useNavigate();
@@ -52,7 +52,6 @@ function AllCourses() {
   const [priceFilter, setPriceFilter] = useState("all"); // "all" | "free" | "paid"
   const [levelFilter, setLevelFilter] = useState("all"); // "all" | "Beginner" | "Intermediate" | "Advanced"
   const [sortBy, setSortBy] = useState("recent"); // "recent" | "price-asc" | "price-desc"
-  const [mobileFilterOpen, setMobileFilterOpen] = useState(false);
 
   // Derive organization-defined categories from actual courses
   const orgCategories = useMemo(() => {
@@ -149,42 +148,44 @@ function AllCourses() {
   const tenantStyle = { "--institution-accent": accent };
 
   return (
-    <div className="institution-student-page flex flex-col min-h-screen font-sans" style={tenantStyle}>
+    <div className="institution-student-page all-courses-page flex flex-col min-h-screen font-sans" style={tenantStyle}>
       <Navbar currentInstitution={tenant?.isPlatform ? null : tenant} />
 
-      <main className="max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-10 flex-1 space-y-6 pb-28 md:pb-12">
+      <main className="all-courses-main max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-10 flex-1 space-y-6 pb-28 md:pb-12">
         {/* Top Header */}
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-4 border-b border-[#e8e5dc]">
-          <div>
+        <div className="all-courses-header flex flex-col md:flex-row md:items-center justify-between gap-4 pb-4 border-b border-[#e8e5dc]">
+          <div className="all-courses-heading">
             <div className="flex items-center gap-2 mb-1">
               <button
+                type="button"
                 onClick={() => navigate(activeSlug ? `/institution/${activeSlug}` : "/")}
                 className="p-1.5 rounded-lg text-[#78716c] hover:text-[#1c1917] hover:bg-[#f1ede4] transition cursor-pointer"
                 aria-label="Back to home"
               >
                 <ArrowLeft size={18} />
               </button>
-              <h1 className="text-2xl sm:text-3xl font-extrabold text-[#1c1917] tracking-tight">
+              <h1 className="all-courses-title text-2xl sm:text-3xl font-extrabold text-[#1c1917] tracking-tight">
                 {tenant?.isPlatform ? "Explore courses" : `Courses at ${tenantName}`}
               </h1>
             </div>
-            <p className="text-xs sm:text-sm text-[#78716c]">
+            <p className="all-courses-subtitle text-xs sm:text-sm text-[#78716c]">
               {tenant?.isPlatform ? (
                 <span>Explore accredited courses and study resources across institutions on Skillio</span>
               ) : (
                 <span>
                   Explore courses and study resources offered by{" "}
-                  <strong className="text-[#1e3a8a]">{tenantName}</strong>
+                  <strong className="all-courses-tenant-name text-[#1e3a8a]">{tenantName}</strong>
                 </span>
               )}
             </p>
           </div>
 
           {/* Search Bar */}
-          <div className="relative w-full md:w-80">
+          <div className="all-courses-search relative w-full md:w-80">
             <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 text-[#a8a29e] w-4 h-4" />
             <input
               type="text"
+              aria-label="Search courses by topic or title"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               placeholder="Search courses by topic, title..."
@@ -193,6 +194,8 @@ function AllCourses() {
             {searchQuery && (
               <button
                 onClick={() => setSearchQuery("")}
+                type="button"
+                aria-label="Clear course search"
                 className="absolute right-3 top-1/2 -translate-y-1/2 text-[#a8a29e] hover:text-[#1c1917]"
               >
                 <X size={15} />
@@ -202,11 +205,13 @@ function AllCourses() {
         </div>
 
         {/* Filter Toolbar */}
-        <div className="flex flex-wrap items-center justify-between gap-3 bg-white border border-[#e8e5dc] p-3.5 sm:p-4 rounded-2xl shadow-xs overflow-auto">
+        <div className="all-courses-filters flex flex-wrap items-center justify-between gap-3 bg-white border border-[#e8e5dc] p-3.5 sm:p-4 rounded-2xl shadow-xs">
           {/* Left: Organization-Specific Categories (if > 1) */}
-          <div className="flex items-center gap-2 overflow-x-auto pb-1 sm:pb-0 max-w-full">
+          <div className="all-courses-topics flex items-center gap-2 overflow-x-auto pb-1 sm:pb-0 max-w-full" role="group" aria-label="Filter by topic">
             <button
+              type="button"
               onClick={() => setSelectedCategory("all")}
+              aria-pressed={selectedCategory === "all"}
               className={`px-3.5 py-1.5 rounded-xl text-xs font-semibold whitespace-nowrap transition cursor-pointer ${selectedCategory === "all"
                 ? "bg-[#1e3a8a] text-white"
                 : "bg-[#f8f7f4] text-[#44403c] hover:bg-[#f1ede4] border border-[#e8e5dc]"
@@ -217,7 +222,9 @@ function AllCourses() {
             {orgCategories.map((cat) => (
               <button
                 key={cat}
+                type="button"
                 onClick={() => setSelectedCategory(cat)}
+                aria-pressed={selectedCategory.toLowerCase() === cat.toLowerCase()}
                 className={`px-3.5 py-1.5 rounded-xl text-xs font-semibold whitespace-nowrap transition cursor-pointer ${selectedCategory.toLowerCase() === cat.toLowerCase()
                   ? "bg-[#1e3a8a] text-white"
                   : "bg-[#f8f7f4] text-[#44403c] hover:bg-[#f1ede4] border border-[#e8e5dc]"
@@ -229,9 +236,10 @@ function AllCourses() {
           </div>
 
           {/* Right: Quick Contextual Filters */}
-          <div className="flex items-center gap-2.5 ml-auto">
+          <div className="all-courses-filter-controls flex items-center gap-2.5 ml-auto">
             {/* Price Filter */}
             <select
+              aria-label="Filter by pricing"
               value={priceFilter}
               onChange={(e) => setPriceFilter(e.target.value)}
               className="bg-[#f8f7f4] border border-[#d6d3d1] text-[#44403c] text-xs font-semibold rounded-xl px-3 py-1.5 focus:outline-none focus:border-[#1e3a8a] cursor-pointer min-h-[36px]"
@@ -244,6 +252,7 @@ function AllCourses() {
             {/* Level Filter (only if levels exist in this org) */}
             {availableLevels.length > 0 && (
               <select
+                aria-label="Filter by course level"
                 value={levelFilter}
                 onChange={(e) => setLevelFilter(e.target.value)}
                 className="bg-[#f8f7f4] border border-[#d6d3d1] text-[#44403c] text-xs font-semibold rounded-xl px-3 py-1.5 focus:outline-none focus:border-[#1e3a8a] cursor-pointer min-h-[36px]"
@@ -259,6 +268,7 @@ function AllCourses() {
 
             {/* Sort */}
             <select
+              aria-label="Sort courses"
               value={sortBy}
               onChange={(e) => setSortBy(e.target.value)}
               className="bg-[#f8f7f4] border border-[#d6d3d1] text-[#44403c] text-xs font-semibold rounded-xl px-3 py-1.5 focus:outline-none focus:border-[#1e3a8a] cursor-pointer min-h-[36px]"
@@ -270,6 +280,7 @@ function AllCourses() {
 
             {hasActiveFilters && (
               <button
+                type="button"
                 onClick={clearFilters}
                 className="text-xs text-[#1e3a8a] hover:underline font-semibold px-2 py-1 cursor-pointer"
               >
@@ -280,7 +291,7 @@ function AllCourses() {
         </div>
 
         {/* Course Grid */}
-        <section>
+        <section className="all-courses-results" aria-label="Course results">
           {isLoading ? (
             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
               {[1, 2, 3, 4, 5, 6].map((n) => (
@@ -288,17 +299,28 @@ function AllCourses() {
               ))}
             </div>
           ) : filteredCourses.length === 0 ? (
-            <EmptyState
-              type={hasActiveFilters ? "search" : "courses"}
-              title={hasActiveFilters ? "No courses match your filters" : `No courses in ${tenantName} yet`}
-              description={
-                hasActiveFilters
-                  ? "Try resetting your search query, level, or pricing filters to explore other courses."
-                  : `This academy has not published any live courses yet. Check back soon!`
-              }
-              actionLabel={hasActiveFilters ? "Reset All Filters" : "Go to Home"}
-              onAction={hasActiveFilters ? clearFilters : () => navigate("/")}
-            />
+            <div className={`catalog-empty-state${hasActiveFilters ? " is-filtered" : ""}`}>
+              <span className="catalog-empty-icon" aria-hidden="true">
+                {hasActiveFilters ? <Search size={21} strokeWidth={1.8} /> : <BookOpen size={21} strokeWidth={1.8} />}
+              </span>
+              <div className="catalog-empty-copy">
+                <p className="catalog-empty-eyebrow">{hasActiveFilters ? "REFINE YOUR SEARCH" : tenantName}</p>
+                <h2>{hasActiveFilters ? "No courses match these filters" : `No courses in ${tenantName} yet`}</h2>
+                <p>
+                  {hasActiveFilters
+                    ? "Adjust your search or clear filters to see available courses."
+                    : "New courses will appear here as soon as your academy publishes them."}
+                </p>
+              </div>
+              <button
+                type="button"
+                className="catalog-empty-action"
+                onClick={hasActiveFilters ? clearFilters : () => navigate(activeSlug ? `/institution/${activeSlug}` : "/")}
+              >
+                {hasActiveFilters ? "Clear filters" : "Back to academy"}
+                <ArrowLeft size={14} aria-hidden="true" />
+              </button>
+            </div>
           ) : (
             <div>
               <div className="flex items-center justify-between mb-4">
