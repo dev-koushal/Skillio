@@ -44,6 +44,7 @@ const AcceptInvite = lazy(() => import("./pages/AcceptInvite"));
 
 // Lazy-loaded AI Assistant button to keep anonymous landing fast
 const AIAssistantButton = lazy(() => import("./components/AIAssistantButton"));
+const VoiceCommandButton = lazy(() => import("./components/VoiceCommandButton"));
 
 export { serverURL };
 
@@ -313,7 +314,12 @@ function AppRoutes() {
       {/* AI Assistant is available strictly to authorized educators */}
       {isEducator && (
         <Suspense fallback={null}>
-          <AIAssistantButton />
+          <AIAssistantButton hideTrigger />
+        </Suspense>
+      )}
+      {isEducator && !/^\/(?:builder|createcourses|editcourse)(?:\/|$)/.test(location.pathname) && (
+        <Suspense fallback={null}>
+          <VoiceCommandButton />
         </Suspense>
       )}
 

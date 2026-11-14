@@ -30,7 +30,7 @@ import MobileBottomNav from "./common/MobileBottomNav";
 import StudentInstitutionSwitcher from "./common/StudentInstitutionSwitcher";
 import { performLogout } from "../services/authStorage";
 
-function Navbar({ currentInstitution = null }) {
+function Navbar({ currentInstitution = null, studentHome = false }) {
   const { userData } = useSelector((state) => state.user);
   const { tenant } = useTenant();
   const navigate = useNavigate();
@@ -112,9 +112,10 @@ function Navbar({ currentInstitution = null }) {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 sm:h-20 flex justify-between items-center gap-4">
           {/* Brand / Logo + Institution Switcher Link */}
           <div className="flex items-center gap-3 sm:gap-6">
+            {studentHome && <div className="md:hidden"><StudentInstitutionSwitcher compact appBar /></div>}
             <Link
               to={isEducator ? "/educator/home" : activeInstitution ? `/institution/${activeInstitution.slug}` : "/"}
-              className="flex items-center gap-2.5 sm:gap-3 group cursor-pointer focus:outline-none focus:ring-2 focus:ring-[#5b3cc4] rounded-xl p-1 pressable"
+              className={`flex items-center gap-2.5 sm:gap-3 group cursor-pointer focus:outline-none focus:ring-2 focus:ring-[#5b3cc4] rounded-xl p-1 pressable ${studentHome ? "hidden md:flex" : ""}`}
             >
               <img
                 src={brandLogo}
@@ -399,10 +400,10 @@ function Navbar({ currentInstitution = null }) {
           </div>
 
           {/* Compact Mobile Top Actions (App Style) */}
-          <div className="flex items-center gap-1.5 md:hidden">
-            {userData?.role === "student" ? (
+          <div className="student-appbar-actions flex items-center gap-1.5 md:hidden">
+            {userData?.role === "student" && !studentHome ? (
               <StudentInstitutionSwitcher compact />
-            ) : activeInstitution && (
+            ) : activeInstitution && !studentHome && (
               <Link
                 to="/"
                 className="px-2.5 py-1.5 rounded-xl text-[#5b3cc4] bg-[#f1edff] hover:bg-[#e5defc] border border-[#d8cdf7] flex items-center gap-1.5 text-[11px] font-bold touch-target pressable"
@@ -412,7 +413,7 @@ function Navbar({ currentInstitution = null }) {
               </Link>
             )}
 
-            {canInstall && (
+            {canInstall && !studentHome && (
               <button
                 onClick={handleInstallClick}
                 className="p-2 rounded-xl text-emerald-800 bg-emerald-50 border border-emerald-300 touch-target pressable"
@@ -423,14 +424,14 @@ function Navbar({ currentInstitution = null }) {
             )}
 
             {/* Mobile Navigation Toggle (Hamburger) */}
-            <button
+            {!studentHome && <button
               type="button"
               onClick={() => setMobileMenuOpen(true)}
               className="p-2 rounded-xl text-[#44403c] hover:bg-[#f2efe9] touch-target pressable min-h-[44px] min-w-[44px] flex items-center justify-center cursor-pointer"
               aria-label="Open navigation menu"
             >
               <MenuIcon size={22} />
-            </button>
+            </button>}
 
             {/* Mobile User Avatar Toggle (Tapping opens Profile Menu) */}
             {userData && (

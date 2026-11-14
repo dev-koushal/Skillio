@@ -8,7 +8,7 @@ import { setAuthSession } from "../../services/authStorage";
 import { setStoredTenantSlug } from "../../services/tenantStorage";
 import { setUserData } from "../../redux/userSlice";
 
-export default function StudentInstitutionSwitcher({ compact = false }) {
+export default function StudentInstitutionSwitcher({ compact = false, appBar = false }) {
   const { userData } = useSelector((state) => state.user);
   const dispatch = useDispatch();
   const navigate = useNavigate();
@@ -55,13 +55,13 @@ export default function StudentInstitutionSwitcher({ compact = false }) {
     <div className="relative">
       <button
         type="button"
-        className={`inline-flex max-w-full items-center gap-2 rounded-xl border border-[#e8e5dc] bg-white text-[#292524] hover:bg-[#faf9f7] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#5b3cc4] ${compact ? "h-10 px-2.5 text-[11px]" : "min-h-10 px-3 text-xs font-semibold"}`}
+        className={appBar ? "institution-app-switcher" : `inline-flex max-w-full items-center gap-2 rounded-xl border border-[#e8e5dc] bg-white text-[#292524] hover:bg-[#faf9f7] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#5b3cc4] ${compact ? "h-10 px-2.5 text-[11px]" : "min-h-10 px-3 text-xs font-semibold"}`}
         onClick={() => setOpen((value) => !value)}
         aria-haspopup="menu"
         aria-expanded={open}
         aria-label={`Choose institution. Current institution: ${activeInstitution?.name || "none selected"}`}
       >
-        <Building2 size={15} className="shrink-0 text-[#5b3cc4]" />
+        {activeInstitution?.logo && <img src={activeInstitution.logo} alt="" width="34" height="34" className="institution-app-switcher-logo" />}
         <span className="max-w-[130px] truncate">{activeInstitution?.name || "Choose institution"}</span>
         <ChevronDown size={14} className={`shrink-0 transition-transform ${open ? "rotate-180" : ""}`} />
       </button>

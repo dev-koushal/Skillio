@@ -397,8 +397,43 @@ async function runAITests() {
     console.log("[PASS] 25. Duplicate prevention verified through title resolution");
   }
 
+  // Voice semantic fallback: transliterated Hindi should still resolve without an LLM key.
+  {
+    const plan = aiService.semanticFallbackParser({
+      prompt: "Ek course bnao introduction to chemistry",
+      context: { currentCourseId: null },
+    });
+    assert.strictEqual(plan.tool, "createCourse");
+    assert.strictEqual(plan.args.title, "introduction to chemistry Course");
+    assert.strictEqual(plan.args.category, "Chemistry");
+    console.log("[PASS] 26. Hinglish bnao course request resolves through offline fallback");
+  }
+
+  // Compound command: create the requested subject course and generate the spoken lecture count.
+  {
+    const plan = aiService.semanticFallbackParser({
+      prompt: "Ek Tumhare Man Se physics ka course bnao jismein Panch lecture bnao aur Sabhi lectures ke naam do",
+      context: { currentCourseId: null },
+    });
+    assert.strictEqual(plan.tool, "compoundCreateCourseAndLectures");
+    assert.strictEqual(plan.args.title, "Physics Course");
+    assert.strictEqual(plan.args.lectureTitles.length, 5);
+    assert(plan.args.lectureTitles.every((title) => title.length > 3));
+    console.log("[PASS] 27. Hinglish course plus five lectures resolves into a complete draft");
+  }
+
+  {
+    const plan = aiService.semanticFallbackParser({
+      prompt: "Create a course named React with five lectures",
+      context: { currentCourseId: null },
+    });
+    assert.strictEqual(plan.tool, "compoundCreateCourseAndLectures");
+    assert.strictEqual(plan.args.lectureTitles.length, 5);
+    console.log("[PASS] 28. English compound course and lecture request uses the same safe tool");
+  }
+
   console.log("--------------------------------------------------");
-  console.log(" RESULTS: 25/25 SPECIALIZED AI ACCEPTANCE TESTS PASSED");
+  console.log(" RESULTS: 28/28 SPECIALIZED AI ACCEPTANCE TESTS PASSED");
   console.log("--------------------------------------------------\n");
 }
 

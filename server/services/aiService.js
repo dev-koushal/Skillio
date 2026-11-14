@@ -557,7 +557,9 @@ Select the most appropriate tool from the tool registry when an action or data q
    * Understands English, Hindi, and Hinglish. Maps user intent to structured tools.
    */
   semanticFallbackParser({ prompt, context, existingCourses = [] }) {
-    const text = prompt.toLowerCase();
+    const text = prompt.toLowerCase()
+      .replace(/\b(bnao|bana do|banaado|bana|banana)\b/g, "banao")
+      .replace(/\b(kro|karo)\b/g, "karo");
 
     // 1. ANALYTICS / EARNINGS / STUDENTS
     if (
@@ -880,16 +882,20 @@ Select the most appropriate tool from the tool registry when an action or data q
       (text.includes("lecture") || text.includes("lectures") || text.includes("1.") || text.includes("modules"))
     ) {
       let courseTitle = "New Course";
-      const calledMatch = prompt.match(/(?:named|called|jiska naam)\s+["']?([^"'\n]+?)["']?(?:\s+(?:hai|aur|with|having)|$)/i);
-      const beforeBanaoMatch = prompt.match(/^(.+?)\s+(?:course\s+)?banao/i);
+      const calledMatch = prompt.match(/(?:named|called|jiska naam)\s+["']?([^"'\n]+?)["']?(?:\s+(?:hai|aur|with|having|jismein)|$)/i);
+      const beforeBanaoMatch = prompt.match(/^(.+?)\s+(?:course\s+)?(?:banao|bnao|bana|banana)/i);
       const createCourseMatch = prompt.match(
-        /(?:create|banao)\s+(?:a\s+)?(?:course\s+)?(?:called\s+|named\s+)?["']?([^"'\n]+?)["']?(?:\s+(?:aur|with|and)|$)/i
+        /(?:create|banao|bnao|bana)\s+(?:a\s+)?(?:course\s+)?(?:called\s+|named\s+)?["']?([^"'\n]+?)["']?(?:\s+(?:aur|with|and|jismein)|$)/i
       );
+
+      const subjectMatch = prompt.match(/\b(physics|chemistry|mathematics|maths?|english|biology|science|javascript|programming|computer science|history|geography)\b/i);
 
       if (calledMatch && calledMatch[1]) {
         courseTitle = calledMatch[1].trim();
+      } else if (subjectMatch?.[1]) {
+        courseTitle = subjectMatch[1].replace(/\b\w/g, (letter) => letter.toUpperCase());
       } else if (beforeBanaoMatch && beforeBanaoMatch[1]) {
-        courseTitle = beforeBanaoMatch[1].replace(/create|new|ek/gi, "").trim();
+        courseTitle = beforeBanaoMatch[1].replace(/create|new|ek|tumhare man se/gi, "").replace(/\s+course$/i, "").trim();
       } else if (createCourseMatch && createCourseMatch[1]) {
         courseTitle = createCourseMatch[1].trim();
       }
@@ -898,7 +904,7 @@ Select the most appropriate tool from the tool registry when an action or data q
         courseTitle = courseTitle + " Course";
       }
 
-      const lectureTitles = [];
+      let lectureTitles = [];
       const lines = prompt.split(/\n/);
       for (const line of lines) {
         const numMatch = line.match(/^\s*(?:\d+[\.\)]|-|\*)\s*(.+)/);
@@ -908,13 +914,24 @@ Select the most appropriate tool from the tool registry when an action or data q
       }
 
       if (lectureTitles.length === 0) {
-        const parts = prompt.split(/(?:lectures?|aur|and|,)/i);
-        for (const part of parts) {
-          const cleaned = part.replace(/ke teen|ke|three|banao|add karo|add|course|mein|usme|these/gi, "").trim();
-          if (cleaned.length > 2 && cleaned.length < 50 && !cleaned.toLowerCase().includes(courseTitle.toLowerCase())) {
-            lectureTitles.push(cleaned);
-          }
-        }
+        const countWords = { one: 1, two: 2, three: 3, four: 4, five: 5, six: 6, ek: 1, do: 2, teen: 3, char: 4, chaar: 4, panch: 5, paanch: 5, cheh: 6, chhe: 6 };
+        const countMatch = prompt.match(/\b(one|two|three|four|five|six|ek|do|teen|char|chaar|panch|paanch|cheh|chhe|\d+)\s+(?:lectures?|lessons?|modules?)\b/i);
+        const requestedCount = countMatch ? Math.min(Math.max(Number(countMatch[1]) || countWords[countMatch[1].toLowerCase()] || 3, 1), 6) : 3;
+        const subject = subjectMatch?.[1] || courseTitle.replace(/\s+course$/i, "");
+        const normalizedSubject = subject.toLowerCase();
+        const subjectLessons = normalizedSubject.includes("physics")
+          ? ["Introduction to Physics", "Motion and Forces", "Work, Energy and Power", "Waves and Sound", "Electricity and Magnetism", "Modern Physics"]
+          : normalizedSubject.includes("chemistry")
+            ? ["Introduction to Chemistry", "Atoms and Elements", "Chemical Bonding", "Reactions and Equations", "Acids, Bases and Salts", "Applied Chemistry"]
+            : [
+              `Introduction to ${subject}`,
+              "Core Concepts and Foundations",
+              "Methods and Problem Solving",
+              "Guided Practice",
+              "Practical Applications",
+              "Review and Next Steps",
+            ];
+        lectureTitles = subjectLessons.slice(0, requestedCount);
       }
 
       return {
@@ -964,7 +981,9 @@ Select the most appropriate tool from the tool registry when an action or data q
         title = titleMatch[1].trim();
       } else {
         const simpleMatch = prompt.match(
-          /(?:create|banao|new)\s+(?:a\s+)?(?:course\s+)?["']?([^"'\n\.]+?)["']?(?:\s*(?:\.|\b(?:course|hai|description|price)\b)|$)/i
+          /(?:ek\s+)?course\s+(?:banao|bnao|bana|banana)\s+["']?([^"'\n\.]+?)["']?(?:\s+(?:with|aur|jismein|description|price)\b|$)/i
+        ) || prompt.match(
+          /(?:create|banao|bnao|bana|banana|new)\s+(?:a\s+)?(?:course\s+)?["']?([^"'\n\.]+?)["']?(?:\s*(?:\.|\b(?:course|hai|description|price)\b)|$)/i
         );
         if (simpleMatch && simpleMatch[1]) {
           title = simpleMatch[1].trim();
@@ -991,6 +1010,12 @@ Select the most appropriate tool from the tool registry when an action or data q
         ? "Computer Science"
         : text.includes("physics")
         ? "Physics"
+        : text.includes("chemistry")
+        ? "Chemistry"
+        : text.includes("biology")
+        ? "Biology"
+        : text.includes("mathematics") || text.includes("maths")
+        ? "Mathematics"
         : "General";
 
       return {
@@ -1214,11 +1239,12 @@ Field to generate: "${fieldToGenerate}".`;
       targetAudience = "college students and competitive exam aspirants";
     else if (promptLower.includes("beginner")) targetAudience = "absolute beginners";
 
-    const title =
-      currentFields.title ||
-      (cleanTopic.toLowerCase().includes("course") ? cleanTopic : `${cleanTopic} Masterclass`);
-    const subTitle =
-      currentFields.subTitle || `Comprehensive ${level.toLowerCase()} curriculum designed for ${targetAudience}`;
+    const titleSuggestion = cleanTopic.toLowerCase().includes("course") ? cleanTopic : `${cleanTopic} Masterclass`;
+    const title = fieldToGenerate === "title" ? titleSuggestion : currentFields.title || titleSuggestion;
+    const subtitleSuggestion = `A practical ${level.toLowerCase()} course designed for ${targetAudience} to master ${cleanTopic}`;
+    const subTitle = fieldToGenerate === "subTitle"
+      ? subtitleSuggestion
+      : currentFields.subTitle || `Comprehensive ${level.toLowerCase()} curriculum designed for ${targetAudience}`;
 
     let description = `In this structured course, ${targetAudience} will master ${cleanTopic} from the ground up through step-by-step video lectures, practical exercises, and downloadable study resources. The curriculum emphasizes real-world application, foundational clarity, and measurable progress.`;
     if (promptLower.includes("professional") || promptLower.includes("premium")) {
@@ -1228,8 +1254,8 @@ Field to generate: "${fieldToGenerate}".`;
     return {
       title,
       subTitle,
-      description,
-      category,
+      description: fieldToGenerate === "description" ? description : currentFields.description || description,
+      category: fieldToGenerate === "category" ? category : currentFields.category || category,
       level,
       price: currentFields.price || 0,
     };
