@@ -104,7 +104,9 @@ app.use("/api/institution/live", liveClassRouter);
 if (process.env.NODE_ENV === "production") {
   const clientDistPath = path.join(__dirname, "../client/dist");
   app.use(express.static(clientDistPath));
-  app.get("*", (req, res, next) => {
+  // path-to-regexp v8 requires named wildcards. Use a RegExp here so this
+  // SPA fallback matches the root path as well as nested client routes.
+  app.get(/.*/, (req, res, next) => {
     if (req.originalUrl.startsWith("/api/")) return next();
     res.sendFile(path.join(clientDistPath, "index.html"));
   });
