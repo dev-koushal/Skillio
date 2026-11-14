@@ -47,7 +47,7 @@ function EditCourse() {
   const { courseData } = useSelector((state) => state.course);
 
   // Workflow steps: "info" | "curriculum" | "resources" | "pricing" | "publish"
-  const [activeTab, setActiveTab] = useState("info");
+  const [activeTab, setActiveTab] = useState(window.location.pathname.startsWith("/course-resources/") ? "resources" : "info");
 
   // Course Fields
   const [title, setTitle] = useState("");
@@ -63,8 +63,12 @@ function EditCourse() {
 
   // Resource Upload Form State
   const [resourceTitle, setResourceTitle] = useState("");
+  const [resourceDescription, setResourceDescription] = useState("");
   const [resourceTopic, setResourceTopic] = useState("General");
   const [resourceType, setResourceType] = useState("pdf");
+  const [resourceAccessType, setResourceAccessType] = useState("standard");
+  const [resourcePrice, setResourcePrice] = useState("");
+  const [resourceReferenceLectureId, setResourceReferenceLectureId] = useState("");
   const [resourceLectureId, setResourceLectureId] = useState("");
   const [resourceFile, setResourceFile] = useState(null);
   const [resourceUploading, setResourceUploading] = useState(false);
@@ -72,6 +76,7 @@ function EditCourse() {
   // Resource List State
   const [resources, setResources] = useState([]);
   const [resourcesLoading, setResourcesLoading] = useState(false);
+  const [editingResourcePrice, setEditingResourcePrice] = useState(null);
 
   const [loading, setLoading] = useState(false);
   const [deleteLoading, setDeleteLoading] = useState(false);
@@ -132,6 +137,12 @@ function EditCourse() {
     getCourseById();
     loadResources();
   }, [courseId]);
+
+  useEffect(() => {
+    if (!resources.some((resource) => resource.processingStatus === "processing")) return;
+    const timer = setTimeout(loadResources, 5000);
+    return () => clearTimeout(timer);
+  }, [resources, courseId]);
 
   const handleThumbnail = (e) => {
     const file = e.target.files[0];
@@ -234,23 +245,31 @@ function EditCourse() {
     const formData = new FormData();
     formData.append("courseId", courseId);
     formData.append("title", resourceTitle.trim());
+    formData.append("description", resourceDescription.trim());
     formData.append("topic", resourceTopic.trim());
     formData.append("type", resourceType);
+    formData.append("accessType", resourceAccessType);
+    if (resourceAccessType === "paid") formData.append("price", resourcePrice);
+    if (resourceReferenceLectureId) formData.append("referenceLectureId", resourceReferenceLectureId);
     if (resourceLectureId) {
       formData.append("lectureId", resourceLectureId);
     }
     formData.append("file", resourceFile);
 
     try {
-      const res = await api.post("/api/resource/upload", formData, {
+      const uploadEndpoint = resourceAccessType === "standard" ? "/api/resource/upload" : "/api/resource/upload-secure";
+      const res = await api.post(uploadEndpoint, formData, {
         headers: { "Content-Type": "multipart/form-data" },
       });
       if (res.data?.success) {
         toast.success("Resource attached successfully!");
         setResourceTitle("");
+        setResourceDescription("");
         setResourceTopic("General");
         setResourceFile(null);
         setResourceLectureId("");
+        setResourcePrice("");
+        setResourceReferenceLectureId("");
         loadResources();
       }
     } catch (err) {
@@ -271,6 +290,27 @@ function EditCourse() {
       setResources((prev) => prev.filter((r) => r._id !== resourceId));
     } catch (err) {
       toast.error("Failed to delete resource");
+    }
+  };
+
+  const handleToggleResource = async (resource) => {
+    try {
+      await api.put(`/api/resource/${resource._id}`, { isDisabled: !resource.isDisabled });
+      toast.success(resource.isDisabled ? "Notes are available again." : "Notes have been disabled.");
+      loadResources();
+    } catch (error) {
+      toast.error(error.response?.data?.message || "Could not update notes availability.");
+    }
+  };
+
+  const saveResourcePrice = async (resourceId) => {
+    try {
+      await api.put(`/api/resource/${resourceId}`, { price: editingResourcePrice?.value });
+      toast.success("New price saved. Existing purchasers keep access.");
+      setEditingResourcePrice(null);
+      loadResources();
+    } catch (error) {
+      toast.error(error.response?.data?.message || "Could not update price.");
     }
   };
 
@@ -714,10 +754,10 @@ function EditCourse() {
               <div className="pb-3 border-b border-[#e8e5dc]">
                 <h2 className="text-base font-bold text-[#1c1917] flex items-center gap-2">
                   <UploadCloud size={18} className="text-[#1e3a8a]" />
-                  Upload Course Notes, Formula Sheets or Practice Files
+                  Add a course resource
                 </h2>
                 <p className="text-xs text-[#78716c] mt-0.5">
-                  Attach PDF study sheets or notes at either the course level or to a specific lecture
+                  Add protected free or paid PDF notes, or a standard course file.
                 </p>
               </div>
 
@@ -752,6 +792,8 @@ function EditCourse() {
                     />
                   </div>
                 </div>
+
+                {resourceAccessType !== "standard" && <label className="block text-xs font-semibold uppercase tracking-wider text-[#44403c]">Description <span className="font-normal normal-case text-[#78716c]">(optional)</span><textarea rows={2} maxLength={1000} value={resourceDescription} onChange={(event) => setResourceDescription(event.target.value)} placeholder="What students will learn from these notes" className="mt-1.5 w-full resize-y rounded-xl border border-[#d6d3d1] bg-[#fcfbf9] px-3 py-2 text-sm font-normal normal-case" /></label>}
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   {/* Type */}
@@ -793,12 +835,26 @@ function EditCourse() {
                 </div>
 
                 {/* File input */}
+                <fieldset className="rounded-xl border border-[#e8e5dc] bg-[#faf9f6] p-3">
+                  <legend className="px-1 text-xs font-semibold text-[#44403c]">Notes access</legend>
+                  <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
+                    {[{ value: "standard", label: "Standard file" }, { value: "free", label: "Free secure notes" }, { value: "paid", label: "Paid secure notes" }].map((option) => (
+                      <label key={option.value} className={`flex min-h-10 cursor-pointer items-center gap-2 rounded-lg border px-3 text-xs font-medium ${resourceAccessType === option.value ? "border-[#1e3a8a] bg-white text-[#1e3a8a]" : "border-[#e8e5dc] text-[#57534e]"}`}>
+                        <input type="radio" name="resourceAccessType" value={option.value} checked={resourceAccessType === option.value} onChange={() => { setResourceAccessType(option.value); if (option.value !== "standard") setResourceType("pdf"); }} />{option.label}
+                      </label>
+                    ))}
+                  </div>
+                </fieldset>
+                {resourceAccessType === "paid" && <label className="block max-w-xs text-xs font-semibold text-[#44403c]">Price (INR)<span className="mt-1 flex min-h-11 items-center rounded-xl border border-[#d6d3d1] bg-white px-3 text-sm">₹<input required type="number" min="0.01" max="1000000" step="0.01" inputMode="decimal" value={resourcePrice} onChange={(event) => setResourcePrice(event.target.value)} placeholder="149.00" className="ml-2 min-w-0 flex-1 border-0 bg-transparent outline-none" /></span><span className="mt-1 block font-normal text-[#78716c]">Existing purchases stay unlocked after a price change.</span></label>}
+                {resourceAccessType !== "standard" && courseLectures.length > 0 && <label className="block max-w-xl text-xs font-semibold uppercase tracking-wider text-[#44403c]">Reference video <span className="font-normal normal-case text-[#78716c]">(optional)</span><select value={resourceReferenceLectureId} onChange={(event) => setResourceReferenceLectureId(event.target.value)} className="mt-1.5 min-h-11 w-full rounded-xl border border-[#d6d3d1] bg-[#fcfbf9] px-3 text-sm normal-case"><option value="">No reference video</option>{courseLectures.map((lecture) => <option key={lecture._id} value={lecture._id}>{lecture.lectureTitle}</option>)}</select></label>}
+
                 <div>
                   <label className="block text-xs font-semibold uppercase tracking-wider text-[#44403c] mb-1.5">
-                    File to Upload (PDF, Word, Zip, Code) <span className="text-rose-600">*</span>
+                    {resourceAccessType === "standard" ? "File to Upload (PDF, Word, Zip, Code)" : "PDF notes"} <span className="text-rose-600">*</span>
                   </label>
                   <input
                     type="file"
+                    accept={resourceAccessType === "standard" ? undefined : ".pdf,application/pdf"}
                     required
                     onChange={(e) => setResourceFile(e.target.files[0])}
                     className="w-full bg-[#fcfbf9] border border-[#d6d3d1] rounded-xl p-2 text-xs text-[#1c1917] file:mr-3 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-[#1e3a8a] file:text-white cursor-pointer"
@@ -843,6 +899,10 @@ function EditCourse() {
                           <span className="uppercase font-mono bg-[#f8f7f4] px-1.5 py-0.5 rounded border border-[#e8e5dc]">
                             {r.type}
                           </span>
+                          {r.accessType === "paid" && (editingResourcePrice?.id === r._id ? <span className="inline-flex items-center gap-1"><span>₹</span><input type="number" min="0.01" max="1000000" step="0.01" inputMode="decimal" value={editingResourcePrice.value} onChange={(event) => setEditingResourcePrice({ id: r._id, value: event.target.value })} className="w-24 rounded border border-[#d6d3d1] bg-white px-1.5 py-1 text-xs"/><button type="button" onClick={() => saveResourcePrice(r._id)} className="rounded bg-[#254a39] px-2 py-1 text-white">Save</button><button type="button" onClick={() => setEditingResourcePrice(null)} className="px-1 py-1">Cancel</button></span> : <span className="inline-flex items-center gap-1">₹{(r.pricePaise / 100).toLocaleString("en-IN")}<button type="button" onClick={() => setEditingResourcePrice({ id: r._id, value: String((r.pricePaise / 100).toFixed(2)) })} className="ml-1 underline underline-offset-2">Edit price</button></span>)}
+                          {r.storageProvider === "cloudinary_authenticated" && <span>{r.pageCount} pages · secure</span>}
+                          {r.storageProvider === "cloudinary_authenticated" && r.processingStatus !== "ready" && <span>{r.processingStatus === "processing" ? "Preparing pages…" : "Processing failed"}</span>}
+                          {r.accessType === "paid" && <span>{r.purchaseCount || 0} purchases</span>}
                           {r.topic && <span>• Topic: {r.topic}</span>}
                           {r.lectureId?.lectureTitle ? (
                             <span className="text-[#1e3a8a] font-medium">
@@ -855,14 +915,15 @@ function EditCourse() {
                       </div>
 
                       <div className="flex items-center gap-2 self-end sm:self-auto">
-                        <a
+                        {r.fileUrl && <a
                           href={r.fileUrl}
                           target="_blank"
                           rel="noopener noreferrer"
                           className="p-1.5 rounded-lg border border-[#d6d3d1] text-[#1e3a8a] hover:bg-[#eff6ff] text-xs font-semibold inline-flex items-center gap-1"
                         >
                           <Download size={13} /> View
-                        </a>
+                        </a>}
+                        {r.storageProvider === "cloudinary_authenticated" && <button type="button" onClick={() => handleToggleResource(r)} className="rounded-lg border border-[#d6d3d1] px-2.5 py-1.5 text-xs font-semibold text-[#57534e] hover:bg-[#f8f7f4]">{r.isDisabled ? "Enable" : "Disable"}</button>}
                         <button
                           onClick={() => handleDeleteResource(r._id)}
                           className="p-1.5 rounded-lg border border-red-200 text-red-600 hover:bg-red-50 text-xs font-semibold cursor-pointer"

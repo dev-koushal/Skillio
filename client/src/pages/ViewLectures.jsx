@@ -16,6 +16,7 @@ import api from "../services/api";
 import Navbar from "../components/Navbar";
 import Footer from "../components/Footer";
 import SecureVideoPlayer from "../components/video/SecureVideoPlayer";
+import SecureDocumentViewer from "../components/resources/SecureDocumentViewer";
 import { useTenant } from "../context/TenantContext";
 import "./InstitutionStudentPages.css";
 
@@ -23,6 +24,7 @@ function ViewLectures() {
   const { courseId } = useParams();
   const navigate = useNavigate();
   const { tenant } = useTenant();
+  const userData = useSelector((state) => state.user.userData);
   const accent = /^#(?:[\da-f]{3}|[\da-f]{6})$/i.test(tenant?.primaryColor || "")
     ? tenant.primaryColor
     : "#5b3cc4";
@@ -38,6 +40,7 @@ function ViewLectures() {
   // Lecture-specific resources
   const [lectureResources, setLectureResources] = useState([]);
   const [resourcesLoading, setResourcesLoading] = useState(false);
+  const [activeDocument, setActiveDocument] = useState(null);
 
   // Fetch course lectures directly
   useEffect(() => {
@@ -181,6 +184,7 @@ function ViewLectures() {
   return (
     <div className="institution-student-page min-h-screen text-[#1c1917] flex flex-col font-sans" style={tenantStyle}>
       <Navbar currentInstitution={tenant?.isPlatform ? null : tenant} />
+      {activeDocument && <SecureDocumentViewer resource={activeDocument} user={userData} tenantName={tenant?.name} onClose={() => setActiveDocument(null)} />}
 
       <main className="lecture-player-page max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-6 space-y-5 flex-1 pb-28 md:pb-12">
         {/* Navigation & Progress Header */}
@@ -322,11 +326,13 @@ function ViewLectures() {
                           <span className="uppercase font-mono bg-white px-1.5 py-0.5 rounded border border-[#e8e5dc]">
                             {res.type || "PDF"}
                           </span>
-                          {res.fileSize && <span>{res.fileSize}</span>}
+                          {res.storageProvider === "cloudinary_authenticated" ? <span>{res.pageCount} pages · {res.accessType === "paid" ? `₹${(res.pricePaise / 100).toLocaleString("en-IN")}` : "secure notes"}</span> : res.fileSize && <span>{res.fileSize}</span>}
                         </div>
                       </div>
 
-                      <a
+                      {res.storageProvider === "cloudinary_authenticated" && res.processingStatus !== "ready" ? <span className="shrink-0 text-[10px] font-semibold text-[#78716c]">{res.processingStatus === "processing" ? "Preparing…" : "Unavailable"}</span> : res.storageProvider === "cloudinary_authenticated" ? (
+                        res.isUnlocked ? <button type="button" onClick={() => setActiveDocument(res)} className="shrink-0 rounded-xl bg-[#183c32] px-3 py-2.5 text-xs font-semibold text-white">Read notes</button> : <button type="button" onClick={() => navigate(`/viewcourse/${courseId}`)} className="shrink-0 rounded-xl border border-[#d6d3c9] bg-white px-3 py-2.5 text-xs font-semibold text-[#1e3a8a]">Unlock</button>
+                      ) : <a
                         href={res.fileUrl}
                         target="_blank"
                         rel="noopener noreferrer"
@@ -335,7 +341,7 @@ function ViewLectures() {
                         title="Download Note"
                       >
                         <Download size={15} />
-                      </a>
+                      </a>}
                     </div>
                   ))}
                 </div>

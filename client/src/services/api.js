@@ -83,6 +83,9 @@ api.interceptors.request.use(
 api.interceptors.response.use(
   (response) => response,
   (error) => {
+      if (error.response?.data?.code === "INSTITUTION_REQUIRED" && typeof window !== "undefined") {
+        window.dispatchEvent(new CustomEvent("skillio:institution-required"));
+      }
       const status = error.response?.status;
       if (status === 401 || status === 403) {
         error.response.data = {

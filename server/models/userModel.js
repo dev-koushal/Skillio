@@ -99,5 +99,13 @@ userSchema.index({ phoneNumber: 1 }, { unique: true, sparse: true });
 // Compound index for role-based querying within tenant
 userSchema.index({ tenantId: 1, role: 1 });
 
+// Auto-migrate legacy tenant_admin to educator before validation/save
+userSchema.pre("validate", function (next) {
+  if (this.role === "tenant_admin") {
+    this.role = "educator";
+  }
+  next();
+});
+
 const User = mongoose.model("User", userSchema);
 export default User;

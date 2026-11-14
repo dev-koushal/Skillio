@@ -10,6 +10,8 @@ import Invitation from "./invitationModel.js";
 import Session from "./sessionModel.js";
 import AiActionLog from "./aiActionLogModel.js";
 import LiveClass from "./liveClassModel.js";
+import ResourceEntitlement from "./resourceEntitlementModel.js";
+import PaymentWebhookEvent from "./paymentWebhookEventModel.js";
 
 // Ensure all Mongoose schemas are pre-registered on app startup
 export {
@@ -25,5 +27,7 @@ export {
   Session,
   AiActionLog,
   LiveClass,
+  ResourceEntitlement,
+  PaymentWebhookEvent,
 };
 

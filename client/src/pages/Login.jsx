@@ -96,24 +96,27 @@ export default function Login() {
     }
 
     const memberships = Array.isArray(data.user.memberships) ? data.user.memberships : [];
-    const selected = isDirectInstitution
-      ? memberships.find((membership) => membership.slug === tenant?.slug)
-      : memberships.length === 1 ? memberships[0] : null;
-    if (selected?.slug && (!isDirectInstitution || selected.slug === tenant?.slug)) {
-      handleSelectInstitution(selected.slug);
+
+    // Direct future login to the student's last active institution without re-showing selector
+    const storedSlug = getStoredTenantSlug();
+    const activeStoredMembership = memberships.find((m) => m.slug === storedSlug);
+    const urlMembership = isDirectInstitution && tenant?.slug
+      ? memberships.find((m) => m.slug === tenant.slug)
+      : null;
+
+    const targetSlug = activeStoredMembership?.slug
+      || urlMembership?.slug
+      || (memberships.length > 0 ? memberships[0].slug : null);
+
+    if (targetSlug) {
+      handleSelectInstitution(targetSlug);
       return;
     }
 
-    if (isDirectInstitution && tenant?.slug && !memberships.some((membership) => membership.slug === tenant.slug)) {
-      toast.info(`This account is not connected to ${tenantName}. Choose an institution already linked to your account.`);
-      setStep(2);
-      setInstitutionLoadError(`Your account is not connected to ${tenantName}. Choose one of your institutions below or ask an educator for an invitation.`);
-      return;
-    }
-
-    // Institution choice is part of the signed-in flow, never a public course directory.
+    // Exception: Student has no active institution or it is no longer available
     setStep(2);
-    toast.success(`Signed in as ${data.user.name}`);
+    setInstitutionLoadError("Your previous institution is no longer available. Please select an active institution to continue.");
+    toast.info("Please select an institution to continue.");
   };
 
   // 1. Email + Password Submit
@@ -166,7 +169,9 @@ export default function Login() {
       toast.success("Institution selected.");
       navigate(returnUrl || `/institution/${selectedSlug}`);
     } catch (error) {
-      toast.error(error?.response?.data?.message || "Could not save your institution selection.");
+      setStep(2);
+      setInstitutionLoadError(error?.response?.data?.message || "This institution is currently unavailable. Please select another institution.");
+      toast.error(error?.response?.data?.message || "Could not access your active institution. Please select an available institution.");
     } finally {
       setLoadingInstitutions(false);
     }
@@ -237,7 +242,7 @@ export default function Login() {
             <div className="auth-role-row">
               <div className="auth-toggle-group auth-role-switcher grid grid-cols-2 p-1 bg-[#f8f7f4] border border-[#e8e5dc] gap-1">
                 <button type="button" onClick={() => setRole("student")} className={`py-2 px-3 text-xs sm:text-sm font-bold rounded-xl transition cursor-pointer ${role === "student" ? "bg-white text-[#5b3cc4] shadow-xs border border-[#d6d3c9]" : "text-[#78716c] hover:text-[#1c1917]"}`}>Student</button>
-                <button type="button" onClick={() => setRole("educator")} className={`py-2 px-3 text-xs sm:text-sm font-bold rounded-xl transition cursor-pointer ${role === "educator" ? "bg-white text-[#5b3cc4] shadow-xs border border-[#d6d3c9]" : "text-[#78716c] hover:text-[#1c1917]"}`}>Educator</button>
+                <button type="button" onClick={() => setRole("educator")} className={`py-2 px-3 text-xs sm:text-sm font-bold rounded-xl transition cursor-pointer ${role === "educator" ? "bg-white text-[#5b3cc4] shadow-xs border border-[#d6d3c9]" : "text-[#78716c] hover:text-[#1c1917]"}`}>Educator / Studio</button>
               </div>
             </div>
             {/* Email and password sign in */}

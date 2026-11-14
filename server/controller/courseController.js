@@ -3,7 +3,6 @@ import Lecture from "../models/lectureModel.js";
 import Review from "../models/reviewModel.js";
 import uploadCloudinary from "../config/cloudinary.js";
 import User from "../models/userModel.js";
-import Tenant from "../models/tenantModel.js";
 import Resource from "../models/resourceModel.js";
 import jwt from "jsonwebtoken";
 import { verifyCourseAccess, sanitizeLecturesForViewer } from "../utils/courseAccess.js";
@@ -16,20 +15,8 @@ import { canManageCourse, isInstitutionOwner } from "../utils/permissions.js";
 export const createCourse = async (req, res) => {
   try {
     const { title, category, subTitle, description, price, level, isPublished } = req.body;
-    let tenantId = req.tenantId;
-
-    // Guarantee educator courses always bind to their owned or assigned institution
-    if (req.userId) {
-      const user = await User.findById(req.userId).select("tenantId role");
-      if (user?.role === "educator") {
-        if (user.tenantId) {
-          tenantId = user.tenantId;
-        } else {
-          const ownedTenant = await Tenant.findOne({ ownerId: user._id, status: "active" });
-          if (ownedTenant) tenantId = ownedTenant._id;
-        }
-      }
-    }
+    // The route-level institution guard has already validated and scoped this tenant.
+    const tenantId = req.tenantId;
 
     if (!title || !title.trim()) {
       return res.status(400).json({ success: false, message: "Title is required" });

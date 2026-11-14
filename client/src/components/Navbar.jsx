@@ -27,7 +27,6 @@ import api from "../services/api";
 import { useTenant } from "../context/TenantContext";
 import { canUseEducatorWorkspace } from "../auth/permissions";
 import MobileBottomNav from "./common/MobileBottomNav";
-import StudentInstitutionSwitcher from "./common/StudentInstitutionSwitcher";
 import { performLogout } from "../services/authStorage";
 
 function Navbar({ currentInstitution = null, studentHome = false }) {
@@ -112,10 +111,9 @@ function Navbar({ currentInstitution = null, studentHome = false }) {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 sm:h-20 flex justify-between items-center gap-4">
           {/* Brand / Logo + Institution Switcher Link */}
           <div className="flex items-center gap-3 sm:gap-6">
-            {studentHome && <div className="md:hidden"><StudentInstitutionSwitcher compact appBar currentInstitution={currentInstitution} /></div>}
             <Link
               to={isEducator ? "/educator/home" : activeInstitution ? `/institution/${activeInstitution.slug}` : "/"}
-              className={`flex items-center gap-2.5 sm:gap-3 group cursor-pointer focus:outline-none focus:ring-2 focus:ring-[#5b3cc4] rounded-xl p-1 pressable ${studentHome ? "hidden md:flex" : ""}`}
+              className="flex items-center gap-2.5 sm:gap-3 group cursor-pointer focus:outline-none focus:ring-2 focus:ring-[#5b3cc4] rounded-xl p-1 pressable"
             >
               <img
                 src={brandLogo}
@@ -125,11 +123,11 @@ function Navbar({ currentInstitution = null, studentHome = false }) {
                   e.target.src = "/skillio.png";
                 }}
               />
-              <div className="hidden min-[480px]:flex flex-col">
-                <span className="font-extrabold text-sm sm:text-base tracking-tight text-[#1c1917] truncate max-w-[150px] sm:max-w-[200px] leading-tight">
+              <div className="flex flex-col">
+                <span className="font-extrabold text-xs sm:text-base tracking-tight text-[#1c1917] truncate max-w-[150px] sm:max-w-[200px] leading-tight">
                   {brandName}
                 </span>
-                <span className="text-[10px] text-[#78716c] font-semibold tracking-wider uppercase">
+                <span className="hidden sm:block text-[10px] text-[#78716c] font-semibold tracking-wider uppercase">
                   {brandSubtitle}
                 </span>
               </div>
@@ -195,8 +193,6 @@ function Navbar({ currentInstitution = null, studentHome = false }) {
 
               </>
             )}
-
-            {userData?.role === "student" && <StudentInstitutionSwitcher />}
 
             {/* Install App Button if PWA available */}
             {canInstall && (
@@ -401,18 +397,6 @@ function Navbar({ currentInstitution = null, studentHome = false }) {
 
           {/* Compact Mobile Top Actions (App Style) */}
           <div className="student-appbar-actions flex items-center gap-1.5 md:hidden">
-            {userData?.role === "student" && !studentHome ? (
-              <StudentInstitutionSwitcher compact appBar currentInstitution={currentInstitution} />
-            ) : activeInstitution && !studentHome && (
-              <Link
-                to="/"
-                className="px-2.5 py-1.5 rounded-xl text-[#5b3cc4] bg-[#f1edff] hover:bg-[#e5defc] border border-[#d8cdf7] flex items-center gap-1.5 text-[11px] font-bold touch-target pressable"
-              >
-                <Building2 size={14} />
-                <span className="truncate max-w-[80px]">{brandName}</span>
-              </Link>
-            )}
-
             {canInstall && !studentHome && (
               <button
                 onClick={handleInstallClick}

@@ -42,12 +42,26 @@ const resourceSchema = new mongoose.Schema(
     },
     fileUrl: {
       type: String,
-      required: true,
+      required: function () { return this.storageProvider !== "cloudinary_authenticated"; },
     },
     fileName: {
       type: String,
       default: "",
     },
+    accessType: { type: String, enum: ["standard", "free", "paid"], default: "standard", index: true },
+    pricePaise: { type: Number, min: 0, default: 0 },
+    currency: { type: String, enum: ["INR"], default: "INR" },
+    storageProvider: { type: String, enum: ["legacy", "cloudinary_authenticated"], default: "legacy" },
+    assetId: { type: String, default: "", select: false },
+    assetVersion: { type: Number, default: 0, select: false },
+    pageCount: { type: Number, min: 0, default: 0 },
+    processingStatus: { type: String, enum: ["ready", "processing", "failed"], default: "ready" },
+    processingStartedAt: { type: Date, default: null },
+    referenceVideo: {
+      provider: { type: String, enum: ["bunny", "youtube", "cloudinary", "lecture", ""], default: "" },
+      videoId: { type: String, default: "" },
+    },
+    isDisabled: { type: Boolean, default: false, index: true },
     fileSize: {
       type: String,
       default: "",

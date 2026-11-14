@@ -7,4 +7,6 @@ server/.env
 .DS_Store
 Thumbs.db
 *.log
+server/public/*.mp4
+
 

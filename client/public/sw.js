@@ -34,6 +34,9 @@ self.addEventListener("fetch", (event) => {
 
   // Security guard: Bypass SW cache completely for sensitive endpoints, video streams, and tokens
   if (
+    url.pathname.startsWith("/api/resource/") ||
+    url.pathname.startsWith("/api/resources/") ||
+    url.pathname.startsWith("/api/paid-resources/") ||
     url.pathname.startsWith("/api/") ||
     url.pathname.includes("/video/") ||
     url.pathname.includes("/playback") ||

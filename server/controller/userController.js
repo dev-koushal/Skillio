@@ -24,6 +24,12 @@ export const getCurrentUser = async (req, res) => {
       });
     }
 
+    // Auto-normalize legacy tenant_admin to educator
+    if (user.role === "tenant_admin") {
+      user.role = "educator";
+      User.updateOne({ _id: user._id }, { $set: { role: "educator" } }).catch(() => {});
+    }
+
     const safeUser = user.toObject ? user.toObject() : { ...user };
 
     // Keep non-student course summaries within the active tenant context.

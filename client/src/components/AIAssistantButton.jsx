@@ -49,7 +49,7 @@ export default function AIAssistantButton({ currentCourseId = null, onCourseCrea
   return (
     <>
       {/* Circular Floating AI Button (Educator Action) */}
-      {!hideTrigger && <div className="fixed bottom-20 md:bottom-6 right-4 md:right-6 z-[1000000] group">
+      {!hideTrigger && <div className="hidden bottom-20 md:bottom-6 right-4 md:right-6 z-[1000000] group">
         <button
           onClick={() => setModalOpen((prev) => !prev)}
           className={`relative w-12 h-12 sm:w-14 sm:h-14 rounded-full flex items-center justify-center transition-all duration-300 active:scale-90 cursor-pointer border border-white/25 shadow-lg hover:shadow-xl ${
