@@ -5,6 +5,7 @@ export function Skeleton({ className = "", ...props }) {
     <div
       className={`animate-pulse bg-[#e8e5dc]/60 rounded-xl ${className}`}
       {...props}
+      aria-hidden="true"
     />
   );
 }
