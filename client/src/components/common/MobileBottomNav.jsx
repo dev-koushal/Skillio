@@ -109,6 +109,7 @@ export default function MobileBottomNav({ currentInstitution = null }) {
     <nav
       className="md:hidden fixed bottom-0 left-0 right-0 z-50 bg-white/95 backdrop-blur-lg border-t border-[#e8e5dc] pb-safe shadow-lg transition-transform"
       aria-label="Mobile Bottom Navigation"
+      style={{ "--mobile-nav-accent": currentInstitution ? undefined : tenant?.primaryColor || "#5b3cc4" }}
     >
       <div className="flex items-center justify-around h-16 max-w-lg mx-auto px-2">
         {items.map((item) => {
@@ -119,16 +120,10 @@ export default function MobileBottomNav({ currentInstitution = null }) {
             <Link
               key={item.label}
               to={item.path}
-              className={`flex-1 flex flex-col items-center justify-center py-1 px-1 touch-target rounded-xl transition-all select-none ${
-                active
-                  ? "text-[#1e3a8a] font-bold"
-                  : "text-[#78716c] hover:text-[#1c1917] font-medium"
-              }`}
+              className={`mobile-nav-link flex-1 flex flex-col items-center justify-center py-1 px-1 touch-target rounded-xl transition-all select-none ${active ? "is-active font-bold" : "text-[#78716c] hover:text-[#1c1917] font-medium"}`}
             >
               <div
-                className={`p-1 rounded-xl transition-all duration-200 ${
-                  active ? "bg-[#eff6ff] scale-105" : "bg-transparent"
-                }`}
+                className={`mobile-nav-icon p-1 rounded-xl transition-all duration-200 ${active ? "scale-105" : "bg-transparent"}`}
               >
                 <Icon size={20} strokeWidth={active ? 2.4 : 2} />
               </div>

@@ -5,7 +5,7 @@ import { useLocation } from "react-router-dom";
 // Lazy-load modal so audio analyzers and large AI components do not hurt initial page load
 const AIAssistantModal = lazy(() => import("./AIAssistantModal"));
 
-export default function AIAssistantButton({ currentCourseId = null, onCourseCreated = null }) {
+export default function AIAssistantButton({ currentCourseId = null, onCourseCreated = null, hideTrigger = false }) {
   const [modalOpen, setModalOpen] = useState(false);
   const location = useLocation();
   const isCourseBuilder = /^\/(?:builder|createcourses|editcourse)(?:\/|$)/.test(location.pathname);
@@ -17,12 +17,39 @@ export default function AIAssistantButton({ currentCourseId = null, onCourseCrea
     if (isCourseBuilder) setModalOpen(false);
   }, [isCourseBuilder]);
 
+  useEffect(() => {
+    const openFromDock = () => { if (!isCourseBuilder) setModalOpen(true); };
+    const toggleFromDock = () => { if (!isCourseBuilder) setModalOpen((current) => !current); };
+    const closeFromDock = () => setModalOpen(false);
+    window.addEventListener("skillio:open-ai-chat", openFromDock);
+    window.addEventListener("skillio:toggle-ai-chat", toggleFromDock);
+    window.addEventListener("skillio:close-ai-chat", closeFromDock);
+    return () => {
+      window.removeEventListener("skillio:open-ai-chat", openFromDock);
+      window.removeEventListener("skillio:toggle-ai-chat", toggleFromDock);
+      window.removeEventListener("skillio:close-ai-chat", closeFromDock);
+    };
+  }, [isCourseBuilder]);
+
+  useEffect(() => {
+    window.dispatchEvent(new CustomEvent("skillio:ai-chat-state", { detail: { open: modalOpen } }));
+  }, [modalOpen]);
+
+  useEffect(() => {
+    if (!modalOpen) return undefined;
+    const closeOnEscape = (event) => {
+      if (event.key === "Escape") setModalOpen(false);
+    };
+    window.addEventListener("keydown", closeOnEscape);
+    return () => window.removeEventListener("keydown", closeOnEscape);
+  }, [modalOpen]);
+
   if (isCourseBuilder) return null;
 
   return (
     <>
       {/* Circular Floating AI Button (Educator Action) */}
-      <div className="fixed bottom-20 md:bottom-6 right-4 md:right-6 z-40 group">
+      {!hideTrigger && <div className="fixed bottom-20 md:bottom-6 right-4 md:right-6 z-[1000000] group">
         <button
           onClick={() => setModalOpen((prev) => !prev)}
           className={`relative w-12 h-12 sm:w-14 sm:h-14 rounded-full flex items-center justify-center transition-all duration-300 active:scale-90 cursor-pointer border border-white/25 shadow-lg hover:shadow-xl ${
@@ -48,13 +75,7 @@ export default function AIAssistantButton({ currentCourseId = null, onCourseCrea
           )}
         </button>
 
-        {/* Tooltip on hover when closed */}
-        {!modalOpen && (
-          <div className="absolute right-full mr-3 top-1/2 -translate-y-1/2 hidden sm:flex items-center gap-1.5 bg-[#0f172a]/90 backdrop-blur-md text-white text-xs font-semibold px-3 py-1.5 rounded-xl border border-white/10 shadow-xl opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none whitespace-nowrap">
-            <span className="text-amber-300">✨</span> Ask AI Assistant
-          </div>
-        )}
-      </div>
+      </div>}
 
       {/* Floating Copilot Dock (Loaded only when activated) */}
       {modalOpen && (

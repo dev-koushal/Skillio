@@ -544,10 +544,11 @@ export default function AIAssistantModal({
   if (!isOpen) return null;
 
   return (
-    <div className="fixed bottom-24 right-4 sm:right-6 z-[999998] w-[420px] max-w-[calc(100vw-2rem)] h-[600px] max-h-[calc(100vh-7.5rem)] font-sans animate-in slide-in-from-bottom-5 duration-300 pointer-events-auto">
-      <div className="w-full h-full bg-white/98 backdrop-blur-md border border-[#e8e5dc] rounded-3xl shadow-[0_25px_60px_-15px_rgba(0,0,0,0.35),0_0_1px_rgba(0,0,0,0.2)] flex flex-col overflow-hidden">
+    <div className="ai-copilot-dismiss-layer fixed inset-0 z-[999998]" onMouseDown={(event) => { if (event.target === event.currentTarget) onClose(); }}>
+    <div className="ai-copilot-shell fixed bottom-24 right-4 sm:right-6 z-[999999] w-[420px] max-w-[calc(100vw-2rem)] h-[600px] max-h-[calc(100vh-7.5rem)] font-sans animate-in slide-in-from-bottom-5 duration-300 pointer-events-auto">
+      <div className="ai-copilot-card w-full h-full bg-white/98 backdrop-blur-md border border-[#e8e5dc] rounded-3xl shadow-[0_25px_60px_-15px_rgba(0,0,0,0.35),0_0_1px_rgba(0,0,0,0.2)] flex flex-col overflow-hidden">
         {/* Multi-Million Dollar SaaS Header */}
-        <div className="flex items-center justify-between p-4 sm:p-4.5 border-b border-[#e8e5dc] bg-gradient-to-r from-[#0f172a] via-[#111827] to-[#1e3a8a] text-white">
+        <div className="ai-copilot-header flex items-center justify-between p-4 sm:p-4.5 border-b border-[#e8e5dc] bg-gradient-to-r from-[#38256f] via-[#49338f] to-[#5b3cc4] text-white">
           <div className="flex items-center gap-2.5">
             <div className="w-9 h-9 rounded-xl bg-white/10 border border-white/20 text-amber-300 flex items-center justify-center shadow-xs">
               <Sparkles size={18} />
@@ -595,7 +596,7 @@ export default function AIAssistantModal({
         </div>
 
         {/* Message Stream */}
-        <div className="flex-1 p-4 overflow-y-auto space-y-3.5 bg-[#fcfbf9]">
+        <div className="ai-copilot-messages flex-1 p-4 overflow-y-auto space-y-3.5 bg-[#fcfbf9]">
           {messages.map((m, idx) => (
             <div
               key={idx}
@@ -604,8 +605,8 @@ export default function AIAssistantModal({
             >
               <div
                 className={`max-w-[88%] rounded-2xl px-4 py-2.5 text-xs sm:text-sm leading-relaxed ${m.sender === "user"
-                    ? "bg-[#1e3a8a] text-white shadow-xs"
-                    : "bg-white border border-[#e8e5dc] text-[#1c1917] shadow-xs"
+                    ? "ai-user-message bg-[#5b3cc4] text-white shadow-xs"
+                    : "ai-assistant-message bg-white border border-[#e8e5dc] text-[#1c1917] shadow-xs"
                   }`}
               >
                 {m.text}
@@ -710,7 +711,7 @@ export default function AIAssistantModal({
         </div>
 
         {/* Voice & Text Input Box */}
-        <div className="p-3 bg-white border-t border-[#e8e5dc]">
+        <div className="ai-copilot-composer p-3 bg-white border-t border-[#e8e5dc]">
           {isListening ? (
             <div className="p-3 bg-gradient-to-r from-rose-50 via-red-50 to-amber-50 border border-rose-200 rounded-2xl space-y-2.5 animate-in fade-in duration-150">
               <div className="flex items-center justify-between">
@@ -806,6 +807,7 @@ export default function AIAssistantModal({
           )}
         </div>
       </div>
+    </div>
     </div>
   );
 }

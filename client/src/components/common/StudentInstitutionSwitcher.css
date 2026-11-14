@@ -1,0 +1,45 @@
+.institution-app-switcher,
+.institution-app-identity {
+  display: inline-flex;
+  max-width: min(72vw, 270px);
+  min-height: 44px;
+  align-items: center;
+  gap: 10px;
+  padding: 0;
+  color: var(--text, #292524);
+  text-align: left;
+}
+.institution-app-switcher { border: 0; background: transparent; cursor: pointer; touch-action: manipulation; }
+.institution-app-switcher > span,
+.institution-app-identity > span { min-width: 0; overflow: hidden; font-size: 13px; font-weight: 680; letter-spacing: -.02em; text-overflow: ellipsis; white-space: nowrap; }
+.institution-app-switcher > svg:last-child { flex: 0 0 auto; color: var(--muted, #78716c); }
+.institution-app-switcher-logo { width: 32px; height: 32px; flex: 0 0 auto; border-radius: 8px; object-fit: contain; }
+.institution-app-switcher:focus-visible { outline: 2px solid var(--primary, #5b3cc4); outline-offset: 3px; border-radius: 5px; }
+.institution-switcher-layer { position: fixed; z-index: 1000; inset: 0; background: rgb(24 22 30 / 24%); }
+.institution-switcher-viewport-menu {
+  position: fixed;
+  z-index: 1001;
+  top: max(72px, calc(env(safe-area-inset-top) + 68px));
+  right: max(12px, env(safe-area-inset-right));
+  left: max(12px, env(safe-area-inset-left));
+  width: auto;
+  max-height: min(64dvh, 440px);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding: 8px;
+  border: 1px solid var(--border, #e8e5dc);
+  border-radius: 12px;
+  background: var(--surface, white);
+  box-shadow: 0 14px 38px rgb(28 24 38 / 18%);
+}
+.institution-switcher-viewport-menu [role="menuitem"] { color: var(--text, #292524); }
+.institution-switcher-viewport-menu [role="menuitem"]:hover,
+.institution-switcher-viewport-menu [role="menuitem"]:focus-visible { background: color-mix(in srgb, var(--primary, #5b3cc4) 7%, var(--surface, white)); outline-color: var(--primary, #5b3cc4); }
+.institution-switcher-viewport-menu [role="menuitem"] .text-\[\#5b3cc4\] { color: var(--primary, #5b3cc4); }
+
+@media (max-width: 359px) {
+  .institution-app-switcher,
+  .institution-app-identity { max-width: calc(100vw - 104px); gap: 7px; }
+  .institution-app-switcher > span,
+  .institution-app-identity > span { font-size: 12px; }
+}

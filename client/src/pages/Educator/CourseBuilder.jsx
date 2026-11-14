@@ -20,7 +20,7 @@ import {
   Loader2,
   Layers,
 } from "lucide-react";
-import { useNavigate, useParams } from "react-router-dom";
+import { useLocation, useNavigate, useParams } from "react-router-dom";
 import api from "../../services/api";
 import { toast } from "react-toastify";
 import { useDispatch, useSelector } from "react-redux";
@@ -28,7 +28,7 @@ import { setCourseData, setCreatorCourseData } from "../../redux/courseSlice";
 import Navbar from "../../components/Navbar";
 import Footer from "../../components/Footer";
 import Button from "../../components/common/Button";
-import WriteWithAIModal from "../../components/WriteWithAIModal";
+import InlineFieldAIGenerateButton from "../../components/InlineFieldAIGenerateButton";
 import LectureVideoSourceFields from "../../components/video/LectureVideoSourceFields";
 import "./CourseBuilder.css";
 
@@ -45,6 +45,7 @@ const SUGGESTED_TOPICS = [
 
 export default function CourseBuilder() {
   const navigate = useNavigate();
+  const location = useLocation();
   const { courseId } = useParams();
   const dispatch = useDispatch();
   const { userData } = useSelector((state) => state.user);
@@ -96,19 +97,23 @@ export default function CourseBuilder() {
   const [aiTopic, setAiTopic] = useState("");
   const [aiGenerating, setAiGenerating] = useState(false);
 
-  // Write With AI Modal State
-  const [showWriteAIModal, setShowWriteAIModal] = useState(false);
-  const [aiFieldTarget, setAiFieldTarget] = useState("all");
-
-  const handleApplyAIGenerated = (fields) => {
-    if (fields.title) setTitle(fields.title);
-    if (fields.subTitle) setSubTitle(fields.subTitle);
-    if (fields.description) setDescription(fields.description);
-    if (fields.category) setCategory(fields.category);
-    if (fields.level) setLevel(fields.level);
-    if (typeof fields.price === "number" && fields.price > 0) setPrice(fields.price);
+  // AI text generation is scoped to the field button the educator clicks.
+  const currentFields = { title, subTitle, description, category, level, price };
+  const handleGeneratedField = (field, value) => {
+    const setters = { title: setTitle, category: setCategory, subTitle: setSubTitle, description: setDescription };
+    setters[field]?.(value);
     setSaveStatus("Unsaved changes");
   };
+
+  useEffect(() => {
+    const draft = location.state?.voiceDraft;
+    if (courseId === "new" && draft?.title) {
+      setTitle(draft.title);
+      setSaveStatus("Unsaved changes");
+      navigate(location.pathname, { replace: true, state: null });
+      toast.success(`Course draft ready: ${draft.title}`);
+    }
+  }, [courseId, location.pathname, location.state, navigate]);
 
   // Fetch Course details if editing existing course
   const loadCourse = async (idToLoad) => {
@@ -152,6 +157,18 @@ export default function CourseBuilder() {
       setFetching(false);
     }
   };
+
+  useEffect(() => {
+    const refreshAfterVoiceAction = (event) => {
+      const changedCourseId = event.detail?.currentCourseId;
+      const activeId = courseId && courseId !== "new" ? courseId : activeCourseId;
+      if (changedCourseId && activeId && String(changedCourseId) === String(activeId)) {
+        loadCourse(activeId);
+      }
+    };
+    window.addEventListener("skillio:voice-ai-action-complete", refreshAfterVoiceAction);
+    return () => window.removeEventListener("skillio:voice-ai-action-complete", refreshAfterVoiceAction);
+  }, [courseId, activeCourseId]);
 
   useEffect(() => {
     if (courseId && courseId !== "new") {
@@ -471,18 +488,6 @@ export default function CourseBuilder() {
           </div>
 
           <div className="flex items-center gap-2 shrink-0">
-            <button
-              type="button"
-              onClick={() => {
-                setAiFieldTarget("all");
-                setShowWriteAIModal(true);
-              }}
-              className="inline-flex items-center gap-1.5 bg-[#eff6ff] hover:bg-blue-100 text-[#1e3a8a] text-xs font-semibold px-3 py-2 rounded-xl border border-[#bfdbfe] transition cursor-pointer"
-            >
-              <Sparkles size={14} className="text-[#1e3a8a]" />
-              <span>Write with AI</span>
-            </button>
-
             {activeCourseId && (
               <button
                 type="button"
@@ -538,16 +543,19 @@ export default function CourseBuilder() {
               <label className="block text-xs font-semibold uppercase tracking-wider text-[#44403c] mb-1.5">
                 Course Title <span className="text-rose-600">*</span>
               </label>
-              <input
-                type="text"
-                value={title}
-                onChange={(e) => {
-                  setTitle(e.target.value);
-                  setSaveStatus("Unsaved changes");
-                }}
-                placeholder="e.g. Practical Spoken English for Everyday Life"
-                className="w-full bg-[#fcfbf9] border border-[#d6d3d1] rounded-xl px-4 py-2.5 sm:py-3 text-[#1c1917] text-sm focus:outline-none focus:border-[#1e3a8a] focus:ring-1 focus:ring-[#1e3a8a] min-h-[44px]"
-              />
+              <div className="course-field-ai-wrap">
+                <input
+                  type="text"
+                  value={title}
+                  onChange={(e) => {
+                    setTitle(e.target.value);
+                    setSaveStatus("Unsaved changes");
+                  }}
+                  name="courseTitle" autoComplete="off" placeholder="e.g. Practical Spoken English for Everyday Life…"
+                  className="w-full bg-[#fcfbf9] border border-[#d6d3d1] rounded-xl pl-4 pr-12 py-2.5 sm:py-3 text-[#1c1917] text-sm focus:outline-none focus:border-[#1e3a8a] focus:ring-1 focus:ring-[#1e3a8a] min-h-[44px]"
+                />
+                <InlineFieldAIGenerateButton field="title" currentFields={currentFields} onGenerated={(value) => handleGeneratedField("title", value)} />
+              </div>
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -555,16 +563,19 @@ export default function CourseBuilder() {
                 <label className="block text-xs font-semibold uppercase tracking-wider text-[#44403c] mb-1.5">
                   Subject or Topic
                 </label>
-                <input
-                  type="text"
-                  value={category}
-                  onChange={(e) => {
-                    setCategory(e.target.value);
-                    setSaveStatus("Unsaved changes");
-                  }}
-                  placeholder="e.g. Spoken English, Mechanics, React..."
-                  className="w-full bg-[#fcfbf9] border border-[#d6d3d1] rounded-xl px-4 py-2.5 text-[#1c1917] text-sm focus:outline-none focus:border-[#1e3a8a] min-h-[44px]"
-                />
+                <div className="course-field-ai-wrap">
+                  <input
+                    type="text"
+                    value={category}
+                    onChange={(e) => {
+                      setCategory(e.target.value);
+                      setSaveStatus("Unsaved changes");
+                    }}
+                    name="courseCategory" autoComplete="off" placeholder="e.g. Spoken English, Mechanics, React…"
+                    className="w-full bg-[#fcfbf9] border border-[#d6d3d1] rounded-xl pl-4 pr-12 py-2.5 text-[#1c1917] text-sm focus:outline-none focus:border-[#1e3a8a] min-h-[44px]"
+                  />
+                  <InlineFieldAIGenerateButton field="category" currentFields={currentFields} onGenerated={(value) => handleGeneratedField("category", value)} />
+                </div>
                 <div className="flex flex-wrap gap-1 mt-2">
                   {SUGGESTED_TOPICS.slice(0, 5).map((t) => (
                     <button
@@ -602,59 +613,37 @@ export default function CourseBuilder() {
             </div>
 
             <div>
-              <div className="flex items-center justify-between mb-1.5">
-                <label className="block text-xs font-semibold uppercase tracking-wider text-[#44403c]">
-                  Brief Headline (Subtitle)
-                </label>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setAiFieldTarget("subTitle");
-                    setShowWriteAIModal(true);
+              <label className="block text-xs font-semibold uppercase tracking-wider text-[#44403c] mb-1.5">Brief Headline (Subtitle)</label>
+              <div className="course-field-ai-wrap">
+                <input
+                  type="text"
+                  value={subTitle}
+                  onChange={(e) => {
+                    setSubTitle(e.target.value);
+                    setSaveStatus("Unsaved changes");
                   }}
-                  className="text-[11px] font-semibold text-[#1e3a8a] hover:underline flex items-center gap-1 cursor-pointer"
-                >
-                  <Sparkles size={11} /> Suggest
-                </button>
+                  name="courseSubtitle" autoComplete="off" placeholder="e.g. Build confidence in daily conversations and vocabulary…"
+                  className="w-full bg-[#fcfbf9] border border-[#d6d3d1] rounded-xl pl-4 pr-12 py-2.5 text-[#1c1917] text-sm focus:outline-none focus:border-[#1e3a8a] min-h-[44px]"
+                />
+                <InlineFieldAIGenerateButton field="subTitle" currentFields={currentFields} onGenerated={(value) => handleGeneratedField("subTitle", value)} />
               </div>
-              <input
-                type="text"
-                value={subTitle}
-                onChange={(e) => {
-                  setSubTitle(e.target.value);
-                  setSaveStatus("Unsaved changes");
-                }}
-                placeholder="e.g. Build confidence in daily conversations, correct grammar, and vocabulary drills"
-                className="w-full bg-[#fcfbf9] border border-[#d6d3d1] rounded-xl px-4 py-2.5 text-[#1c1917] text-sm focus:outline-none focus:border-[#1e3a8a] min-h-[44px]"
-              />
             </div>
 
             <div>
-              <div className="flex items-center justify-between mb-1.5">
-                <label className="block text-xs font-semibold uppercase tracking-wider text-[#44403c]">
-                  Course Description
-                </label>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setAiFieldTarget("description");
-                    setShowWriteAIModal(true);
+              <label className="block text-xs font-semibold uppercase tracking-wider text-[#44403c] mb-1.5">Course Description</label>
+              <div className="course-field-ai-wrap">
+                <textarea
+                  rows={3}
+                  value={description}
+                  onChange={(e) => {
+                    setDescription(e.target.value);
+                    setSaveStatus("Unsaved changes");
                   }}
-                  className="text-[11px] font-semibold text-[#1e3a8a] hover:underline flex items-center gap-1 cursor-pointer"
-                >
-                  <Sparkles size={11} /> Write with AI
-                </button>
+                  name="courseDescription" autoComplete="off" placeholder="Describe what students will learn and the outcomes…"
+                  className="w-full bg-[#fcfbf9] border border-[#d6d3d1] rounded-xl pl-3 pr-12 pt-3 pb-3 text-[#1c1917] text-sm focus:outline-none focus:border-[#1e3a8a]"
+                />
+                <InlineFieldAIGenerateButton field="description" currentFields={currentFields} onGenerated={(value) => handleGeneratedField("description", value)} className="is-textarea" />
               </div>
-              <textarea
-                rows={3}
-                value={description}
-                onChange={(e) => {
-                  setDescription(e.target.value);
-                  setSaveStatus("Unsaved changes");
-                }}
-                placeholder="Describe what your students will learn, who this is for, and key outcomes..."
-                className="w-full bg-[#fcfbf9] border border-[#d6d3d1] rounded-xl p-3 text-[#1c1917] text-sm focus:outline-none focus:border-[#1e3a8a]"
-              />
             </div>
 
             {/* Thumbnail */}
@@ -1203,15 +1192,6 @@ export default function CourseBuilder() {
           </div>
         </div>
       )}
-
-      {/* Write With AI Modal */}
-      <WriteWithAIModal
-        isOpen={showWriteAIModal}
-        onClose={() => setShowWriteAIModal(false)}
-        onApply={handleApplyAIGenerated}
-        currentFields={{ title, subTitle, description, category, level, price }}
-        initialField={aiFieldTarget}
-      />
 
       <Footer />
     </div>
