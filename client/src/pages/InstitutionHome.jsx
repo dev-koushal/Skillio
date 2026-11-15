@@ -1,5 +1,15 @@
 import React, { useEffect, useMemo, useState } from "react";
-import { ArrowRight, BookOpen, Play, Search, GraduationCap, Radio, CheckCircle2 } from "lucide-react";
+import {
+  ArrowRight,
+  BookOpen,
+  Play,
+  Search,
+  GraduationCap,
+  Radio,
+  CheckCircle2,
+  FileText,
+  Sparkles,
+} from "lucide-react";
 import { Link, useParams } from "react-router-dom";
 import { useSelector } from "react-redux";
 import Navbar from "../components/Navbar";
@@ -168,6 +178,11 @@ export default function InstitutionHome() {
     return institutionCourses.filter((course) => enrolledCourseIds.has(String(course._id)));
   }, [institutionCourses, enrolledCourseIds]);
 
+  // Notes purchased by the student in this institution
+  const purchasedNotes = useMemo(() => {
+    return institutionNotes.filter((note) => Boolean(note.isPurchased));
+  }, [institutionNotes]);
+
   // Active enrolled course for "Continue learning" - strictly for students, never for educators/owners
   const activeCourse = !isEducator && enrolledInThisInstitution.length > 0 ? enrolledInThisInstitution[0] : null;
 
@@ -223,7 +238,129 @@ export default function InstitutionHome() {
               </div>
             </section>
 
-            {/* 2. Optional Live Broadcast Alert */}
+            {/* 2. Quick Action Controls for Students (Tactile & Mobile-First) */}
+            <section className="space-y-2.5" aria-label="Student Quick Actions">
+              <div className="flex items-center justify-between">
+                <h2 className="text-xs sm:text-sm font-bold uppercase tracking-wider text-[#78716c]">
+                  Quick Actions
+                </h2>
+              </div>
+
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 sm:gap-3.5 w-full">
+                {/* 1. Your Courses */}
+                <Link
+                  to={userData ? `/institution/${encodeURIComponent(resolvedSlug)}/my-courses` : "/login"}
+                  className="group bg-white border border-[#e8e5dc] hover:border-[#5b3cc4] p-3 sm:p-4 rounded-2xl flex flex-col justify-between h-24 sm:h-28 shadow-2xs hover:shadow-xs transition-all active:scale-[0.98] select-none"
+                >
+                  <div className="flex items-center justify-between">
+                    <div className="w-8 h-8 rounded-xl bg-[#f5f3ff] text-[#5b3cc4] flex items-center justify-center group-hover:scale-105 transition-transform">
+                      <GraduationCap size={16} />
+                    </div>
+                    {enrolledInThisInstitution.length > 0 && (
+                      <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200">
+                        {enrolledInThisInstitution.length} enrolled
+                      </span>
+                    )}
+                  </div>
+                  <div>
+                    <p className="font-bold text-xs sm:text-sm text-[#1c1917] group-hover:text-[#5b3cc4] transition truncate">
+                      Your Courses
+                    </p>
+                    <p className="text-[10px] text-[#78716c] truncate">
+                      {enrolledInThisInstitution.length > 0
+                        ? "Continue learning"
+                        : "Enrolled curriculum"}
+                    </p>
+                  </div>
+                </Link>
+
+                {/* 2. Paid Notes */}
+                <Link
+                  to={`/institution/${encodeURIComponent(resolvedSlug)}/notes?filter=purchased`}
+                  className="group bg-white border border-[#e8e5dc] hover:border-emerald-500 p-3 sm:p-4 rounded-2xl flex flex-col justify-between h-24 sm:h-28 shadow-2xs hover:shadow-xs transition-all active:scale-[0.98] select-none"
+                >
+                  <div className="flex items-center justify-between">
+                    <div className="w-8 h-8 rounded-xl bg-emerald-50 text-emerald-700 flex items-center justify-center group-hover:scale-105 transition-transform">
+                      <CheckCircle2 size={16} />
+                    </div>
+                    <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-[#f8f7f4] text-[#78716c] border border-[#e8e5dc]">
+                      {purchasedNotes.length} unlocked
+                    </span>
+                  </div>
+                  <div>
+                    <p className="font-bold text-xs sm:text-sm text-[#1c1917] group-hover:text-emerald-700 transition truncate">
+                      Paid Notes
+                    </p>
+                    <p className="text-[10px] text-[#78716c] truncate">
+                      {purchasedNotes.length > 0 ? "Ready to read" : "Unlocked material"}
+                    </p>
+                  </div>
+                </Link>
+
+                {/* 3. Institution Notes */}
+                <Link
+                  to={`/institution/${encodeURIComponent(resolvedSlug)}/notes`}
+                  className="group bg-white border border-[#e8e5dc] hover:border-[#5b3cc4] p-3 sm:p-4 rounded-2xl flex flex-col justify-between h-24 sm:h-28 shadow-2xs hover:shadow-xs transition-all active:scale-[0.98] select-none"
+                >
+                  <div className="flex items-center justify-between">
+                    <div className="w-8 h-8 rounded-xl bg-amber-50 text-amber-800 flex items-center justify-center group-hover:scale-105 transition-transform">
+                      <FileText size={16} />
+                    </div>
+                    <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-[#f8f7f4] text-[#78716c] border border-[#e8e5dc]">
+                      {institutionNotes.length}
+                    </span>
+                  </div>
+                  <div>
+                    <p className="font-bold text-xs sm:text-sm text-[#1c1917] group-hover:text-[#5b3cc4] transition truncate">
+                      Institution Notes
+                    </p>
+                    <p className="text-[10px] text-[#78716c] truncate">
+                      All study materials
+                    </p>
+                  </div>
+                </Link>
+
+                {/* 4. Live Classes */}
+                <Link
+                  to={`/institution/${encodeURIComponent(resolvedSlug)}/live`}
+                  className={`group bg-white border p-3 sm:p-4 rounded-2xl flex flex-col justify-between h-24 sm:h-28 shadow-2xs hover:shadow-xs transition-all active:scale-[0.98] select-none ${
+                    currentLiveClass
+                      ? "border-rose-300 hover:border-rose-500 bg-rose-50/20"
+                      : "border-[#e8e5dc] hover:border-[#1e3a8a]"
+                  }`}
+                >
+                  <div className="flex items-center justify-between">
+                    <div
+                      className={`w-8 h-8 rounded-xl flex items-center justify-center group-hover:scale-105 transition-transform ${
+                        currentLiveClass
+                          ? "bg-rose-100 text-rose-700"
+                          : "bg-blue-50 text-[#1e3a8a]"
+                      }`}
+                    >
+                      <Radio size={16} className={currentLiveClass ? "animate-pulse" : ""} />
+                    </div>
+                    {currentLiveClass ? (
+                      <span className="relative flex h-2.5 w-2.5">
+                        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-rose-400 opacity-75"></span>
+                        <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-rose-600"></span>
+                      </span>
+                    ) : (
+                      <span className="text-[10px] font-bold text-[#a8a29e]">Live</span>
+                    )}
+                  </div>
+                  <div>
+                    <p className="font-bold text-xs sm:text-sm text-[#1c1917] group-hover:text-[#1e3a8a] transition truncate">
+                      Live Classes
+                    </p>
+                    <p className="text-[10px] text-[#78716c] truncate">
+                      {currentLiveClass ? "Broadcasting live" : "Classroom stream"}
+                    </p>
+                  </div>
+                </Link>
+              </div>
+            </section>
+
+            {/* 3. Optional Live Broadcast Alert */}
             {currentLiveClass && (
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-3.5 sm:p-4 rounded-2xl bg-gradient-to-r from-rose-50 via-rose-50/60 to-white border border-rose-200 shadow-2xs">
                 <div className="flex items-center gap-3 min-w-0">
@@ -247,7 +384,7 @@ export default function InstitutionHome() {
               </div>
             )}
 
-            {/* 3. Continue Learning Section (strictly for students, never for educators) */}
+            {/* 4. Continue Learning Section (strictly for students, never for educators) */}
             {!isEducator && activeCourse && (
               <section className="space-y-3 sm:space-y-4">
                 <div className="flex items-center justify-between">
@@ -288,12 +425,73 @@ export default function InstitutionHome() {
               </section>
             )}
 
-            {/* 4. Study Notes Section (if notes exist) */}
+            {/* 5A. Your Paid Notes Section (shown when student has unlocked notes) */}
+            {purchasedNotes.length > 0 && (
+              <section className="space-y-3 sm:space-y-4">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <h2 className="text-base sm:text-xl font-bold text-[#1c1917]">Your Paid Notes</h2>
+                    <span className="px-2 py-0.5 bg-emerald-50 text-emerald-700 text-[11px] font-bold rounded-full border border-emerald-200">
+                      {purchasedNotes.length} unlocked
+                    </span>
+                  </div>
+                  <Link
+                    to={`/institution/${encodeURIComponent(resolvedSlug)}/notes?filter=purchased`}
+                    className="inline-flex items-center gap-1 text-xs font-bold text-emerald-700 hover:underline"
+                  >
+                    <span>View in reader</span>
+                    <ArrowRight size={13} />
+                  </Link>
+                </div>
+
+                <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-4">
+                  {purchasedNotes.slice(0, 4).map((note) => (
+                    <Link
+                      key={note._id}
+                      to={`/institution/${encodeURIComponent(resolvedSlug)}/notes/${note._id}/read`}
+                      className="group bg-white border border-[#e8e5dc] hover:border-emerald-600 rounded-2xl p-2.5 sm:p-3 flex flex-col justify-between shadow-2xs hover:shadow-sm hover:-translate-y-0.5 transition-all duration-200 h-full"
+                    >
+                      <div className="w-full aspect-[16/10] rounded-xl overflow-hidden mb-2 sm:mb-2.5 bg-[#f8f7f4] shrink-0">
+                        <NoteCover
+                          thumbnail={note.thumbnail}
+                          title={note.title}
+                          topic={note.topic}
+                          pageCount={note.pageCount}
+                          accentColor="#059669"
+                          className="w-full h-full object-cover group-hover:scale-103 transition duration-200"
+                        />
+                      </div>
+                      <div className="space-y-1 sm:space-y-1.5 flex-1 flex flex-col justify-between">
+                        <div>
+                          <span className="text-[10px] font-bold uppercase tracking-wider text-emerald-700 block truncate">
+                            {note.topic || "General"}
+                          </span>
+                          <h4 className="text-xs sm:text-sm font-bold text-[#1c1917] line-clamp-2 group-hover:text-emerald-700 transition leading-snug mt-0.5">
+                            {note.title}
+                          </h4>
+                        </div>
+                        <div className="flex items-center justify-between pt-1.5 sm:pt-2 border-t border-[#f2efe9]">
+                          <span className="inline-flex items-center gap-1 text-emerald-700 font-bold text-[11px] sm:text-xs">
+                            <CheckCircle2 size={12} className="text-emerald-600" />
+                            <span>Purchased</span>
+                          </span>
+                          <span className="text-[11px] font-semibold text-emerald-700 group-hover:translate-x-0.5 transition-transform">
+                            Read →
+                          </span>
+                        </div>
+                      </div>
+                    </Link>
+                  ))}
+                </div>
+              </section>
+            )}
+
+            {/* 5B. Institution Notes Section (all institution notes) */}
             {institutionNotes.length > 0 && (
               <section className="space-y-3 sm:space-y-4">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
-                    <h2 className="text-base sm:text-xl font-bold text-[#1c1917]">Study Notes</h2>
+                    <h2 className="text-base sm:text-xl font-bold text-[#1c1917]">Institution Notes</h2>
                     <span className="px-2 py-0.5 bg-[#f5f3ff] text-[#5b3cc4] text-[11px] font-bold rounded-full border border-[#ede9fe]">
                       {institutionNotes.length}
                     </span>
