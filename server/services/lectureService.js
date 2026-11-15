@@ -85,12 +85,40 @@ export const lectureService = {
           });
         } catch (bErr) {
           console.warn("[Bunny Upload Failed, fallback to Cloudinary]", bErr.message);
-          const uploaded = await uploadCloudinary(videoFile.path);
-          if (uploaded) finalVideoUrl = uploaded;
+          videoProvider = "cloudinary";
+          processingStatus = "processing";
+          const filePath = videoFile.path;
+          setImmediate(async () => {
+            try {
+              const uploaded = await uploadCloudinary(filePath);
+              if (uploaded) {
+                await Lecture.updateOne({ _id: lecture._id }, { $set: { videoUrl: uploaded, processingStatus: "ready" } });
+              } else {
+                await Lecture.updateOne({ _id: lecture._id }, { $set: { processingStatus: "failed" } });
+              }
+            } catch (cErr) {
+              console.error("[Background Cloudinary Upload Error]", cErr);
+              await Lecture.updateOne({ _id: lecture._id }, { $set: { processingStatus: "failed" } });
+            }
+          });
         }
       } else {
-        const uploaded = await uploadCloudinary(videoFile.path);
-        if (uploaded) finalVideoUrl = uploaded;
+        videoProvider = "cloudinary";
+        processingStatus = "processing";
+        const filePath = videoFile.path;
+        setImmediate(async () => {
+          try {
+            const uploaded = await uploadCloudinary(filePath);
+            if (uploaded) {
+              await Lecture.updateOne({ _id: lecture._id }, { $set: { videoUrl: uploaded, processingStatus: "ready" } });
+            } else {
+              await Lecture.updateOne({ _id: lecture._id }, { $set: { processingStatus: "failed" } });
+            }
+          } catch (cErr) {
+            console.error("[Background Cloudinary Upload Error]", cErr);
+            await Lecture.updateOne({ _id: lecture._id }, { $set: { processingStatus: "failed" } });
+          }
+        });
       }
     }
 
@@ -191,30 +219,52 @@ export const lectureService = {
             }
           });
         } catch (bErr) {
-          const uploaded = await uploadCloudinary(videoFile.path);
-          if (uploaded) {
-            lecture.videoUrl = uploaded;
-            lecture.videoProvider = "cloudinary";
-            lecture.bunnyVideoId = "";
-            lecture.bunnyLibraryId = "";
-            lecture.bunnyDirectUrl = "";
-            lecture.youtubeVideoId = "";
-            lecture.youtubeUrl = "";
-            lecture.processingStatus = "ready";
-          }
-        }
-      } else {
-        const uploaded = await uploadCloudinary(videoFile.path);
-        if (uploaded) {
-          lecture.videoUrl = uploaded;
           lecture.videoProvider = "cloudinary";
           lecture.bunnyVideoId = "";
           lecture.bunnyLibraryId = "";
           lecture.bunnyDirectUrl = "";
           lecture.youtubeVideoId = "";
           lecture.youtubeUrl = "";
-          lecture.processingStatus = "ready";
+          lecture.processingStatus = "processing";
+          const filePath = videoFile.path;
+          const targetLectureId = lecture._id;
+          setImmediate(async () => {
+            try {
+              const uploaded = await uploadCloudinary(filePath);
+              if (uploaded) {
+                await Lecture.updateOne({ _id: targetLectureId }, { $set: { videoUrl: uploaded, processingStatus: "ready" } });
+              } else {
+                await Lecture.updateOne({ _id: targetLectureId }, { $set: { processingStatus: "failed" } });
+              }
+            } catch (cErr) {
+              console.error("[Background Cloudinary Video Edit Error]", cErr);
+              await Lecture.updateOne({ _id: targetLectureId }, { $set: { processingStatus: "failed" } });
+            }
+          });
         }
+      } else {
+        lecture.videoProvider = "cloudinary";
+        lecture.bunnyVideoId = "";
+        lecture.bunnyLibraryId = "";
+        lecture.bunnyDirectUrl = "";
+        lecture.youtubeVideoId = "";
+        lecture.youtubeUrl = "";
+        lecture.processingStatus = "processing";
+        const filePath = videoFile.path;
+        const targetLectureId = lecture._id;
+        setImmediate(async () => {
+          try {
+            const uploaded = await uploadCloudinary(filePath);
+            if (uploaded) {
+              await Lecture.updateOne({ _id: targetLectureId }, { $set: { videoUrl: uploaded, processingStatus: "ready" } });
+            } else {
+              await Lecture.updateOne({ _id: targetLectureId }, { $set: { processingStatus: "failed" } });
+            }
+          } catch (cErr) {
+            console.error("[Background Cloudinary Video Edit Error]", cErr);
+            await Lecture.updateOne({ _id: targetLectureId }, { $set: { processingStatus: "failed" } });
+          }
+        });
       }
     } else if (["bunny", "cloudinary"].includes(requestedProvider)) {
       throw new Error("Select a video file to replace the current source.");

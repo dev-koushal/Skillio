@@ -7,6 +7,7 @@ import { toast } from "react-toastify";
 import { setUserData } from "../redux/userSlice";
 import Button from "../components/common/Button";
 import Navbar from "../components/Navbar";
+import { compressImage, directUploadImage } from "../utils/imageCompressor";
 
 const EditProfile = () => {
   const { userData } = useSelector((store) => store.user);
@@ -17,13 +18,37 @@ const EditProfile = () => {
   const [name, setName] = useState(userData?.name || "");
   const [description, setDescription] = useState(userData?.description || "");
   const [profilePicture, setProfilePicture] = useState(null);
+  const [directProfileUrl, setDirectProfileUrl] = useState("");
+  const [imageUploading, setImageUploading] = useState(false);
   const [previewImage, setPreviewImage] = useState(userData?.profilePicture || "");
 
-  const handleImageChange = (e) => {
+  const handleImageChange = async (e) => {
     const file = e.target.files[0];
-    if (file) {
-      setProfilePicture(file);
-      setPreviewImage(URL.createObjectURL(file));
+    if (!file) return;
+
+    setPreviewImage(URL.createObjectURL(file));
+    setImageUploading(true);
+
+    try {
+      const url = await directUploadImage(file, {
+        folder: "skillio/profiles",
+        maxWidth: 512,
+        maxHeight: 512,
+        quality: 0.85,
+      });
+      setDirectProfileUrl(url);
+      setProfilePicture(null);
+      toast.success("Profile photo uploaded!");
+    } catch (err) {
+      console.warn("[Direct Profile Upload Fallback]", err.message);
+      try {
+        const compressed = await compressImage(file, { maxWidth: 512, maxHeight: 512 });
+        setProfilePicture(compressed);
+      } catch {
+        setProfilePicture(file);
+      }
+    } finally {
+      setImageUploading(false);
     }
   };
 
@@ -40,7 +65,9 @@ const EditProfile = () => {
       formData.append("name", name.trim());
       formData.append("description", description.trim());
 
-      if (profilePicture) {
+      if (directProfileUrl) {
+        formData.append("profilePicture", directProfileUrl);
+      } else if (profilePicture) {
         formData.append("profilePicture", profilePicture);
       }
 

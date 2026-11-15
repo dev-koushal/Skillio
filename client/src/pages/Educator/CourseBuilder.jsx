@@ -28,6 +28,7 @@ import Navbar from "../../components/Navbar";
 import Footer from "../../components/Footer";
 import Button from "../../components/common/Button";
 import InlineFieldAIGenerateButton from "../../components/InlineFieldAIGenerateButton";
+import { compressImage, directUploadImage } from "../../utils/imageCompressor";
 import LectureVideoSourceFields from "../../components/video/LectureVideoSourceFields";
 import RequireInstitutionModal from "../../components/common/RequireInstitutionModal";
 import { hasEducatorInstitution } from "../../auth/permissions";
@@ -130,7 +131,10 @@ export default function CourseBuilder() {
 
     try {
       setFetching(true);
-      const res = await api.get(`/api/course/getcourse/${targetId}`);
+      const [res, resRes] = await Promise.all([
+        api.get(`/api/course/getcourse/${targetId}`),
+        api.get(`/api/resource/course/${targetId}`).catch(() => ({ data: { success: false, resources: [] } })),
+      ]);
       const course = res.data;
       if (course) {
         setActiveCourseId(course._id);
@@ -146,14 +150,8 @@ export default function CourseBuilder() {
         setSaveStatus(course.isPublished ? "Published" : "Draft saved");
       }
 
-      // Also load attached resources
-      try {
-        const resRes = await api.get(`/api/resource/course/${targetId}`);
-        if (resRes.data?.success) {
-          setResources(resRes.data.resources || []);
-        }
-      } catch (e) {
-        // no resources yet
+      if (resRes.data?.success) {
+        setResources(resRes.data.resources || []);
       }
     } catch (err) {
       console.error("[CourseBuilder Load Error]", err);
@@ -189,13 +187,38 @@ export default function CourseBuilder() {
     }
   }, [courseId]);
 
-  // Thumbnail change handler
-  const handleThumbnailChange = (e) => {
+  const [directThumbnailUrl, setDirectThumbnailUrl] = useState("");
+  const [thumbnailUploading, setThumbnailUploading] = useState(false);
+
+  // Thumbnail change handler: in-browser compression & direct upload
+  const handleThumbnailChange = async (e) => {
     const file = e.target.files[0];
-    if (file) {
-      setThumbnailFile(file);
-      setThumbnailPreview(URL.createObjectURL(file));
-      setSaveStatus("Unsaved changes");
+    if (!file) return;
+
+    setThumbnailPreview(URL.createObjectURL(file));
+    setSaveStatus("Unsaved changes");
+    setThumbnailUploading(true);
+
+    try {
+      const url = await directUploadImage(file, {
+        folder: "skillio/courses",
+        maxWidth: 1280,
+        maxHeight: 720,
+        quality: 0.82,
+      });
+      setDirectThumbnailUrl(url);
+      setThumbnailFile(null);
+      toast.success("Thumbnail uploaded directly!");
+    } catch (err) {
+      console.warn("[Direct Upload Fallback]", err.message);
+      try {
+        const compressed = await compressImage(file, { maxWidth: 1280, maxHeight: 720 });
+        setThumbnailFile(compressed);
+      } catch {
+        setThumbnailFile(file);
+      }
+    } finally {
+      setThumbnailUploading(false);
     }
   };
 
@@ -241,7 +264,9 @@ export default function CourseBuilder() {
       formData.append("price", Number(price) || 0);
       formData.append("isPublished", finalPublished);
 
-      if (thumbnailFile) {
+      if (directThumbnailUrl) {
+        formData.append("thumbnail", directThumbnailUrl);
+      } else if (thumbnailFile) {
         formData.append("thumbnail", thumbnailFile);
       }
 
@@ -253,12 +278,13 @@ export default function CourseBuilder() {
       setIsPublished(finalPublished);
       setSaveStatus(finalPublished ? "Published (Live)" : "Draft saved");
 
-      // Update Creator Courses in Redux
-      try {
-        const creatorRes = await api.get("/api/course/getcreator");
-        dispatch(setCreatorCourseData(creatorRes.data));
-      } catch (e) {
-        // ignore
+      // Update Creator Courses in Redux directly without a full network refetch
+      if (Array.isArray(creatorCourseData)) {
+        const nextCreator = creatorCourseData.map((c) => (c._id === updated._id ? updated : c));
+        if (!creatorCourseData.some((c) => c._id === updated._id)) {
+          nextCreator.unshift(updated);
+        }
+        dispatch(setCreatorCourseData(nextCreator));
       }
 
       if (!silent) {
@@ -355,8 +381,10 @@ export default function CourseBuilder() {
       setNewLectureNoteTitle("");
       setShowAddLecture(false);
 
-      // Refresh lectures in-place
-      loadCourse(targetId);
+      // Add lecture directly to local state without refetching the whole course
+      if (newLec) {
+        setLectures((prev) => [...prev, newLec]);
+      }
     } catch (err) {
       console.error("[AddLecture Error]", err);
       toast.error(err.response?.data?.message || "Failed to add lecture");
@@ -390,13 +418,19 @@ export default function CourseBuilder() {
         formData.append("videoUrl", editLectureVideo);
       }
 
-      await api.post(`/api/course/editlecture/${editingLecture._id}`, formData, {
+      const editRes = await api.post(`/api/course/editlecture/${editingLecture._id}`, formData, {
         headers: { "Content-Type": "multipart/form-data" },
       });
 
+      const updatedLecture = editRes.data?.lecture || {
+        ...editingLecture,
+        lectureTitle: editLectureTitle.trim(),
+        isPreviewFree: editLecturePreview,
+      };
+
       toast.success("Lecture updated!");
       setEditingLecture(null);
-      loadCourse(activeCourseId);
+      setLectures((prev) => prev.map((l) => (l._id === editingLecture._id ? { ...l, ...updatedLecture } : l)));
     } catch (err) {
       toast.error("Failed to update lecture");
     } finally {

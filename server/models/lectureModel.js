@@ -74,6 +74,8 @@ const lectureSchema = new mongoose.Schema(
 );
 
 lectureSchema.index({ tenantId: 1, courseId: 1 });
+lectureSchema.index({ bunnyVideoId: 1 }, { sparse: true });
+lectureSchema.index({ courseId: 1, createdAt: 1 });
 
 const Lecture = mongoose.model("Lecture", lectureSchema);
 export default Lecture;

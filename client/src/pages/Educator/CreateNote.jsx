@@ -21,6 +21,7 @@ import { hasEducatorInstitution } from "../../auth/permissions";
 import RequireInstitutionModal from "../../components/common/RequireInstitutionModal";
 import NoteCover from "../../components/notes/NoteCover";
 import PageHeader from "../../components/common/PageHeader";
+import { compressImage, directUploadImage } from "../../utils/imageCompressor";
 
 const MAX_PDF_SIZE = 25 * 1024 * 1024;
 const MAX_COVER_SIZE = 5 * 1024 * 1024;
@@ -329,7 +330,10 @@ export default function CreateNote() {
     });
   };
 
-  const handleCoverChange = (event) => {
+  const [directCoverUrl, setDirectCoverUrl] = useState("");
+  const [coverUploading, setCoverUploading] = useState(false);
+
+  const handleCoverChange = async (event) => {
     const file = event.target.files?.[0];
 
     if (!file) return;
@@ -358,6 +362,29 @@ export default function CreateNote() {
 
     setCoverFile(file);
     setCustomCover(true);
+    setCoverUploading(true);
+
+    try {
+      const url = await directUploadImage(file, {
+        folder: "skillio/notes",
+        maxWidth: 800,
+        maxHeight: 1000,
+        quality: 0.82,
+      });
+      setDirectCoverUrl(url);
+      setCoverFile(null);
+      toast.success("Cover image uploaded!");
+    } catch (err) {
+      console.warn("[Direct Note Cover Fallback]", err.message);
+      try {
+        const compressed = await compressImage(file, { maxWidth: 800, maxHeight: 1000 });
+        setCoverFile(compressed);
+      } catch {
+        setCoverFile(file);
+      }
+    } finally {
+      setCoverUploading(false);
+    }
 
     setErrors((current) => {
       const next = { ...current };
@@ -493,7 +520,9 @@ export default function CreateNote() {
         formData.append("file", pdfFile);
       }
 
-      if (coverFile) {
+      if (directCoverUrl) {
+        formData.append("thumbnail", directCoverUrl);
+      } else if (coverFile) {
         formData.append("thumbnail", coverFile);
       }
 

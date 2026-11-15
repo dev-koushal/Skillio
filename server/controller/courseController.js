@@ -177,7 +177,9 @@ export const editCourse = async (req, res) => {
     if (typeof isPublished !== "undefined") updateData.isPublished = isPublished === "true" || isPublished === true;
     if (typeof price !== "undefined") updateData.price = Number(price);
 
-    if (req.file) {
+    if (typeof req.body.thumbnail === "string" && req.body.thumbnail.trim()) {
+      updateData.thumbnail = req.body.thumbnail.trim();
+    } else if (req.file) {
       const thumbnail = await uploadCloudinary(req.file.path);
       if (thumbnail) updateData.thumbnail = thumbnail;
     }

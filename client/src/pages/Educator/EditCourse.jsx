@@ -21,7 +21,8 @@ import { useNavigate, useParams } from "react-router-dom";
 import api from "../../services/api";
 import { toast } from "react-toastify";
 import { useDispatch, useSelector } from "react-redux";
-import { setCourseData } from "../../redux/courseSlice";
+import { setCourseData, setCreatorCourseData } from "../../redux/courseSlice";
+import { compressImage, directUploadImage } from "../../utils/imageCompressor";
 import Button from "../../components/common/Button";
 import Navbar from "../../components/Navbar";
 import Footer from "../../components/Footer";
@@ -132,9 +133,11 @@ function EditCourse() {
     }
   };
 
+  const [thumbnailUploading, setThumbnailUploading] = useState(false);
+  const [uploadedThumbnailUrl, setUploadedThumbnailUrl] = useState("");
+
   useEffect(() => {
-    getCourseById();
-    loadResources();
+    Promise.all([getCourseById(), loadResources()]);
   }, [courseId]);
 
   useEffect(() => {
@@ -143,11 +146,36 @@ function EditCourse() {
     return () => clearTimeout(timer);
   }, [resources, courseId]);
 
-  const handleThumbnail = (e) => {
+  const handleThumbnail = async (e) => {
     const file = e.target.files[0];
-    if (file) {
-      setBackendImage(file);
-      setFrontendImage(URL.createObjectURL(file));
+    if (!file) return;
+
+    // Fast instant preview
+    const previewUrl = URL.createObjectURL(file);
+    setFrontendImage(previewUrl);
+    setThumbnailUploading(true);
+
+    try {
+      // Direct upload: Browser -> Cloudinary with client compression
+      const secureUrl = await directUploadImage(file, {
+        folder: "skillio/courses",
+        maxWidth: 1280,
+        maxHeight: 720,
+        quality: 0.82,
+      });
+      setUploadedThumbnailUrl(secureUrl);
+      setBackendImage(null);
+      toast.success("Thumbnail uploaded directly!");
+    } catch (err) {
+      console.warn("[Direct Upload Fallback]", err.message);
+      try {
+        const compressed = await compressImage(file, { maxWidth: 1280, maxHeight: 720 });
+        setBackendImage(compressed);
+      } catch {
+        setBackendImage(file);
+      }
+    } finally {
+      setThumbnailUploading(false);
     }
   };
 
@@ -169,7 +197,9 @@ function EditCourse() {
     formData.append("price", Number(price) || 0);
     formData.append("isPublished", isPublished);
 
-    if (backendImage) {
+    if (uploadedThumbnailUrl) {
+      formData.append("thumbnail", uploadedThumbnailUrl);
+    } else if (backendImage) {
       formData.append("thumbnail", backendImage);
     }
 
@@ -354,8 +384,8 @@ function EditCourse() {
               </h1>
               <span
                 className={`text-[11px] font-semibold px-2.5 py-0.5 rounded-full border ${isPublished
-                    ? "bg-emerald-50 text-emerald-700 border-emerald-200"
-                    : "bg-amber-50 text-amber-700 border-amber-200"
+                  ? "bg-emerald-50 text-emerald-700 border-emerald-200"
+                  : "bg-amber-50 text-amber-700 border-amber-200"
                   }`}
               >
                 {isPublished ? "Published" : "Draft"}
@@ -406,8 +436,8 @@ function EditCourse() {
           <button
             onClick={() => setActiveTab("info")}
             className={`px-4 py-3 text-xs sm:text-sm font-semibold border-b-2 whitespace-nowrap transition cursor-pointer flex items-center gap-2 ${activeTab === "info"
-                ? "border-[#1e3a8a] text-[#1e3a8a]"
-                : "border-transparent text-[#78716c] hover:text-[#1c1917]"
+              ? "border-[#1e3a8a] text-[#1e3a8a]"
+              : "border-transparent text-[#78716c] hover:text-[#1c1917]"
               }`}
           >
             <BookOpen size={15} />
@@ -417,8 +447,8 @@ function EditCourse() {
           <button
             onClick={() => setActiveTab("curriculum")}
             className={`px-4 py-3 text-xs sm:text-sm font-semibold border-b-2 whitespace-nowrap transition cursor-pointer flex items-center gap-2 ${activeTab === "curriculum"
-                ? "border-[#1e3a8a] text-[#1e3a8a]"
-                : "border-transparent text-[#78716c] hover:text-[#1c1917]"
+              ? "border-[#1e3a8a] text-[#1e3a8a]"
+              : "border-transparent text-[#78716c] hover:text-[#1c1917]"
               }`}
           >
             <Video size={15} />
@@ -428,8 +458,8 @@ function EditCourse() {
           <button
             onClick={() => setActiveTab("resources")}
             className={`px-4 py-3 text-xs sm:text-sm font-semibold border-b-2 whitespace-nowrap transition cursor-pointer flex items-center gap-2 ${activeTab === "resources"
-                ? "border-[#1e3a8a] text-[#1e3a8a]"
-                : "border-transparent text-[#78716c] hover:text-[#1c1917]"
+              ? "border-[#1e3a8a] text-[#1e3a8a]"
+              : "border-transparent text-[#78716c] hover:text-[#1c1917]"
               }`}
           >
             <FileText size={15} />
@@ -439,8 +469,8 @@ function EditCourse() {
           <button
             onClick={() => setActiveTab("pricing")}
             className={`px-4 py-3 text-xs sm:text-sm font-semibold border-b-2 whitespace-nowrap transition cursor-pointer flex items-center gap-2 ${activeTab === "pricing"
-                ? "border-[#1e3a8a] text-[#1e3a8a]"
-                : "border-transparent text-[#78716c] hover:text-[#1c1917]"
+              ? "border-[#1e3a8a] text-[#1e3a8a]"
+              : "border-transparent text-[#78716c] hover:text-[#1c1917]"
               }`}
           >
             <CreditCard size={15} />
@@ -450,8 +480,8 @@ function EditCourse() {
           <button
             onClick={() => setActiveTab("publish")}
             className={`px-4 py-3 text-xs sm:text-sm font-semibold border-b-2 whitespace-nowrap transition cursor-pointer flex items-center gap-2 ${activeTab === "publish"
-                ? "border-[#1e3a8a] text-[#1e3a8a]"
-                : "border-transparent text-[#78716c] hover:text-[#1c1917]"
+              ? "border-[#1e3a8a] text-[#1e3a8a]"
+              : "border-transparent text-[#78716c] hover:text-[#1c1917]"
               }`}
           >
             <Eye size={15} />
@@ -890,7 +920,7 @@ function EditCourse() {
                           <span className="uppercase font-mono bg-[#f8f7f4] px-1.5 py-0.5 rounded border border-[#e8e5dc]">
                             {r.type}
                           </span>
-                          {r.accessType === "paid" && (editingResourcePrice?.id === r._id ? <span className="inline-flex items-center gap-1"><span>₹</span><input type="number" min="0.01" max="1000000" step="0.01" inputMode="decimal" value={editingResourcePrice.value} onChange={(event) => setEditingResourcePrice({ id: r._id, value: event.target.value })} className="w-24 rounded border border-[#d6d3d1] bg-white px-1.5 py-1 text-xs"/><button type="button" onClick={() => saveResourcePrice(r._id)} className="rounded bg-[#254a39] px-2 py-1 text-white">Save</button><button type="button" onClick={() => setEditingResourcePrice(null)} className="px-1 py-1">Cancel</button></span> : <span className="inline-flex items-center gap-1">₹{(r.pricePaise / 100).toLocaleString("en-IN")}<button type="button" onClick={() => setEditingResourcePrice({ id: r._id, value: String((r.pricePaise / 100).toFixed(2)) })} className="ml-1 underline underline-offset-2">Edit price</button></span>)}
+                          {r.accessType === "paid" && (editingResourcePrice?.id === r._id ? <span className="inline-flex items-center gap-1"><span>₹</span><input type="number" min="0.01" max="1000000" step="0.01" inputMode="decimal" value={editingResourcePrice.value} onChange={(event) => setEditingResourcePrice({ id: r._id, value: event.target.value })} className="w-24 rounded border border-[#d6d3d1] bg-white px-1.5 py-1 text-xs" /><button type="button" onClick={() => saveResourcePrice(r._id)} className="rounded bg-[#254a39] px-2 py-1 text-white">Save</button><button type="button" onClick={() => setEditingResourcePrice(null)} className="px-1 py-1">Cancel</button></span> : <span className="inline-flex items-center gap-1">₹{(r.pricePaise / 100).toLocaleString("en-IN")}<button type="button" onClick={() => setEditingResourcePrice({ id: r._id, value: String((r.pricePaise / 100).toFixed(2)) })} className="ml-1 underline underline-offset-2">Edit price</button></span>)}
                           {r.storageProvider === "cloudinary_authenticated" && <span>{r.pageCount} pages · secure</span>}
                           {r.storageProvider === "cloudinary_authenticated" && r.processingStatus !== "ready" && <span>{r.processingStatus === "processing" ? "Preparing pages…" : "Processing failed"}</span>}
                           {r.accessType === "paid" && <span>{r.purchaseCount || 0} purchases</span>}
@@ -969,8 +999,8 @@ function EditCourse() {
                   type="button"
                   onClick={() => setPrice(0)}
                   className={`p-4 rounded-xl border text-left transition cursor-pointer ${!price || Number(price) === 0
-                      ? "bg-[#eff6ff] border-[#1e3a8a] text-[#1e3a8a]"
-                      : "bg-[#fcfbf9] border-[#e8e5dc] text-[#57534e] hover:bg-[#f1ede4]"
+                    ? "bg-[#eff6ff] border-[#1e3a8a] text-[#1e3a8a]"
+                    : "bg-[#fcfbf9] border-[#e8e5dc] text-[#57534e] hover:bg-[#f1ede4]"
                     }`}
                 >
                   <p className="text-sm font-bold">Free Course</p>
@@ -983,8 +1013,8 @@ function EditCourse() {
                     if (!price || Number(price) === 0) setPrice(499);
                   }}
                   className={`p-4 rounded-xl border text-left transition cursor-pointer ${price && Number(price) > 0
-                      ? "bg-[#eff6ff] border-[#1e3a8a] text-[#1e3a8a]"
-                      : "bg-[#fcfbf9] border-[#e8e5dc] text-[#57534e] hover:bg-[#f1ede4]"
+                    ? "bg-[#eff6ff] border-[#1e3a8a] text-[#1e3a8a]"
+                    : "bg-[#fcfbf9] border-[#e8e5dc] text-[#57534e] hover:bg-[#f1ede4]"
                     }`}
                 >
                   <p className="text-sm font-bold">Paid Tuition</p>
@@ -1058,8 +1088,8 @@ function EditCourse() {
                 <div className="flex items-center gap-2">
                   <span
                     className={`text-sm font-bold px-3 py-1 rounded-full border ${isPublished
-                        ? "bg-emerald-50 text-emerald-700 border-emerald-200"
-                        : "bg-amber-50 text-amber-800 border-amber-200"
+                      ? "bg-emerald-50 text-emerald-700 border-emerald-200"
+                      : "bg-amber-50 text-amber-800 border-amber-200"
                       }`}
                   >
                     {isPublished ? "Published (Live to Students)" : "Draft (Hidden from Catalog)"}
@@ -1076,8 +1106,8 @@ function EditCourse() {
                 type="button"
                 onClick={togglePublishState}
                 className={`inline-flex items-center gap-1.5 text-xs font-bold px-5 py-2.5 rounded-xl transition cursor-pointer min-h-[42px] ${isPublished
-                    ? "bg-amber-50 border border-amber-300 text-amber-800 hover:bg-amber-100"
-                    : "bg-emerald-50 border border-emerald-300 text-emerald-800 hover:bg-emerald-100"
+                  ? "bg-amber-50 border border-amber-300 text-amber-800 hover:bg-amber-100"
+                  : "bg-emerald-50 border border-emerald-300 text-emerald-800 hover:bg-emerald-100"
                   }`}
               >
                 {isPublished ? (

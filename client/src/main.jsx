@@ -11,35 +11,18 @@ createRoot(document.getElementById('root')).render(
   </Provider>
 );
 
-// Register production Service Worker for PWA with automatic cache refresh
-if ("serviceWorker" in navigator && process.env.NODE_ENV === "production") {
-  window.addEventListener("load", () => {
-    navigator.serviceWorker
-      .register("/sw.js")
-      .then((reg) => {
-        console.log("[PWA] Service Worker registered:", reg.scope);
-        // Force check for sw.js updates on every page load
-        reg.update();
-        reg.onupdatefound = () => {
-          const installingWorker = reg.installing;
-          if (installingWorker) {
-            installingWorker.onstatechange = () => {
-              if (installingWorker.state === "installed" && navigator.serviceWorker.controller) {
-                // Tell new service worker to take control immediately
-                installingWorker.postMessage({ type: "SKIP_WAITING" });
-              }
-            };
-          }
-        };
-      })
-      .catch((err) => console.log("[PWA] Service Worker registration failed:", err));
-
-    let refreshing = false;
-    navigator.serviceWorker.addEventListener("controllerchange", () => {
-      if (!refreshing) {
-        refreshing = true;
-        window.location.reload();
-      }
-    });
+// Ensure Service Workers and old caches are completely unregistered to prevent stale chunks
+if ("serviceWorker" in navigator) {
+  navigator.serviceWorker.getRegistrations().then((registrations) => {
+    for (const registration of registrations) {
+      registration.unregister();
+    }
+  });
+}
+if (typeof window !== "undefined" && "caches" in window) {
+  caches.keys().then((keys) => {
+    for (const key of keys) {
+      caches.delete(key);
+    }
   });
 }

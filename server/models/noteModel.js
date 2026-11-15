@@ -177,6 +177,7 @@ const noteSchema = new mongoose.Schema(
 
 noteSchema.index({ tenantId: 1, isPublished: 1, status: 1 });
 noteSchema.index({ tenantId: 1, topic: 1 });
+noteSchema.index({ tenantId: 1, createdAt: -1 });
 
 const Note = mongoose.models.Note || mongoose.model("Note", noteSchema);
 export default Note;

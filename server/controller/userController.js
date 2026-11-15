@@ -189,7 +189,9 @@ export const updateProfile = async (req, res) => {
     if (name) updateData.name = name.trim();
     if (typeof description !== "undefined") updateData.description = description.trim();
 
-    if (req.file) {
+    if (typeof req.body.profilePicture === "string" && req.body.profilePicture.trim()) {
+      updateData.profilePicture = req.body.profilePicture.trim();
+    } else if (req.file) {
       const profilePicture = await uploadCloudinary(req.file.path);
       if (profilePicture) updateData.profilePicture = profilePicture;
     }

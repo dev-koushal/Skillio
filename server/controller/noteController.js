@@ -218,7 +218,12 @@ export const createNote = async (req, res) => {
       { $setOnInsert: { tenantId, name: cleanTopic, description: "" } },
       { upsert: true, new: true }
     );
-    const thumbnailUrl = await uploadThumbnail(thumbFile, tenantId);
+    let thumbnailUrl = "";
+    if (typeof req.body.thumbnail === "string" && req.body.thumbnail.trim()) {
+      thumbnailUrl = req.body.thumbnail.trim();
+    } else if (thumbFile) {
+      thumbnailUrl = await uploadThumbnail(thumbFile, tenantId);
+    }
     const assetId = `skillio/protected-notes/${tenantId}/${crypto.randomUUID()}`;
 
     let note = await Note.create({
@@ -248,45 +253,47 @@ export const createNote = async (req, res) => {
       uploadedBy: userId,
     });
 
-    try {
-      const uploaded = await uploadProtectedPdf({
-        filePath: pdfFile.path,
-        tenantId,
-        kind: "note",
-        pageCount: inspection.pageCount,
-        assetId,
-      });
-      await Note.updateOne(
-        { _id: note._id },
-        {
-          $set: {
-            assetVersion: uploaded.assetVersion,
-            ...(uploaded.processingStatus === "ready"
-              ? { processingStatus: "ready", status, isPublished: status === "published" }
-              : {}),
-          },
-        }
-      );
-      note = await Note.findById(note._id);
-    } catch (error) {
-      await Note.updateOne({ _id: note._id }, { $set: { processingStatus: "failed", status: "draft", isPublished: false } });
-      throw error;
-    }
+    const tempPdfPath = pdfFile.path;
+    const noteId = note._id;
 
-    return res.status(note.processingStatus === "processing" ? 202 : 201).json({
+    // Process PDF in the background so educator UI is unblocked immediately
+    setImmediate(async () => {
+      try {
+        const uploaded = await uploadProtectedPdf({
+          filePath: tempPdfPath,
+          tenantId,
+          kind: "note",
+          pageCount: inspection.pageCount,
+          assetId,
+        });
+        await Note.updateOne(
+          { _id: noteId },
+          {
+            $set: {
+              assetVersion: uploaded.assetVersion,
+              ...(uploaded.processingStatus === "ready"
+                ? { processingStatus: "ready", status, isPublished: status === "published" }
+                : {}),
+            },
+          }
+        );
+      } catch (error) {
+        console.error("[Background Note PDF Upload Error]", error);
+        await Note.updateOne({ _id: noteId }, { $set: { processingStatus: "failed", status: "draft", isPublished: false } });
+      } finally {
+        if (tempPdfPath) await fs.promises.unlink(tempPdfPath).catch(() => {});
+      }
+    });
+
+    return res.status(202).json({
       success: true,
-      message: note.processingStatus === "processing"
-        ? "PDF processing has started. The note will remain a draft until the PDF is ready."
-        : status === "published"
-          ? "Note published."
-          : "Note saved.",
+      message: "PDF processing has started. The note will be ready shortly.",
       note: sanitizeNote(note),
     });
   } catch (error) {
     console.error("[Create Note Error]", error);
     return res.status(500).json({ success: false, message: error.message || "Failed to create note." });
   } finally {
-    if (pdfFile?.path) await fs.promises.unlink(pdfFile.path).catch(() => {});
     if (thumbFile?.path) await fs.promises.unlink(thumbFile.path).catch(() => {});
   }
 };
@@ -458,7 +465,10 @@ export const updateNote = async (req, res) => {
       }
     }
 
-    if (thumbFile) {
+    if (typeof req.body.thumbnail === "string" && req.body.thumbnail.trim()) {
+      note.thumbnail = req.body.thumbnail.trim();
+      note.thumbnailType = "custom";
+    } else if (thumbFile) {
       note.thumbnail = await uploadThumbnail(thumbFile, tenantId);
       note.thumbnailType = "custom";
     } else if (thumbnailType === "generated") {
@@ -471,10 +481,10 @@ export const updateNote = async (req, res) => {
     await note.save();
 
     let responseStatus = 200;
-    let     message = "Note updated successfully.";
+    let message = "Note updated successfully.";
     if (pdfFile) {
-    if (!pdfFile.path) return res.status(400).json({ success: false, message: "The uploaded PDF could not be read." });
-    if (!process.env.CLOUDINARY_NAME || !process.env.CLOUDINARY_API_KEY || !process.env.CLOUDINARY_API_SECRET) {
+      if (!pdfFile.path) return res.status(400).json({ success: false, message: "The uploaded PDF could not be read." });
+      if (!process.env.CLOUDINARY_NAME || !process.env.CLOUDINARY_API_KEY || !process.env.CLOUDINARY_API_SECRET) {
         return res.status(503).json({ success: false, message: "Secure PDF storage is not configured." });
       }
       let inspection;
@@ -492,28 +502,37 @@ export const updateNote = async (req, res) => {
       note.replacementProcessing = true;
       await note.save();
 
-      try {
-        const uploaded = await uploadProtectedPdf({
-          filePath: pdfFile.path,
-          tenantId,
-          kind: "note",
-          pageCount: inspection.pageCount,
-          assetId: pendingAssetId,
-        });
-        if (uploaded.processingStatus === "ready") {
-          await commitPendingNoteAsset(note._id, pendingAssetId, uploaded.assetVersion);
-        } else {
-          await Note.updateOne(
-            { _id: note._id, pendingAssetId },
-            { $set: { pendingAssetVersion: uploaded.assetVersion } }
-          );
-          responseStatus = 202;
-          message = "PDF replacement accepted and is processing. The current document remains available until it is ready.";
+      const tempUpdatePdfPath = pdfFile.path;
+      const targetNoteId = note._id;
+
+      // Process replacement PDF in the background
+      setImmediate(async () => {
+        try {
+          const uploaded = await uploadProtectedPdf({
+            filePath: tempUpdatePdfPath,
+            tenantId,
+            kind: "note",
+            pageCount: inspection.pageCount,
+            assetId: pendingAssetId,
+          });
+          if (uploaded.processingStatus === "ready") {
+            await commitPendingNoteAsset(targetNoteId, pendingAssetId, uploaded.assetVersion);
+          } else {
+            await Note.updateOne(
+              { _id: targetNoteId, pendingAssetId },
+              { $set: { pendingAssetVersion: uploaded.assetVersion } }
+            );
+          }
+        } catch (err) {
+          console.error("[Background Update PDF Error]", err);
+          await failPendingNoteAsset(targetNoteId, pendingAssetId);
+        } finally {
+          if (tempUpdatePdfPath) await fs.promises.unlink(tempUpdatePdfPath).catch(() => {});
         }
-      } catch (error) {
-        await failPendingNoteAsset(note._id, pendingAssetId);
-        throw error;
-      }
+      });
+
+      responseStatus = 202;
+      message = "PDF replacement accepted and is processing. The current document remains available until it is ready.";
     }
 
     const updatedNote = await Note.findOne({ _id: note._id, tenantId }).populate("relatedCourseId", "title thumbnail price");
@@ -522,7 +541,6 @@ export const updateNote = async (req, res) => {
     console.error("[Update Note Error]", error);
     return res.status(500).json({ success: false, message: error.message || "Failed to update note." });
   } finally {
-    if (pdfFile?.path) await fs.promises.unlink(pdfFile.path).catch(() => {});
     if (thumbFile?.path) await fs.promises.unlink(thumbFile.path).catch(() => {});
   }
 };
