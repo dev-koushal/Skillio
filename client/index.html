@@ -7,18 +7,59 @@
     <meta name="theme-color" content="#1e3a8a" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0" />
     <title id="tenant-title">Skillio — Modern LMS Platform</title>
-    <!-- Cache Buster & Service Worker Cleaner -->
+    <!-- Cache Buster, Stale-Chunk Recovery & Service Worker Cleaner -->
     <script>
-      if ('serviceWorker' in navigator) {
-        navigator.serviceWorker.getRegistrations().then(function(regs) {
-          for (var i = 0; i < regs.length; i++) regs[i].unregister();
+      (function() {
+        // Global safety fallbacks so stale/cached JS bundles never crash with ReferenceErrors
+        window.ArrowLeft = window.ArrowLeft || function() { return null; };
+        window.ArrowLeftCircle = window.ArrowLeftCircle || function() { return null; };
+        window.getStoredTenantSlug = window.getStoredTenantSlug || function() {
+          try { return localStorage.getItem("skillio_active_tenant") || null; } catch(e) { return null; }
+        };
+        window.setStoredTenantSlug = window.setStoredTenantSlug || function(s) {
+          try { if (s) localStorage.setItem("skillio_active_tenant", s); else localStorage.removeItem("skillio_active_tenant"); } catch(e) {}
+        };
+        window.clearStoredTenantSlug = window.clearStoredTenantSlug || function() {
+          try { localStorage.removeItem("skillio_active_tenant"); } catch(e) {}
+        };
+
+        // Purge old service workers and CacheStorage
+        if ('serviceWorker' in navigator) {
+          navigator.serviceWorker.getRegistrations().then(function(regs) {
+            for (var i = 0; i < regs.length; i++) {
+              regs[i].unregister();
+            }
+          });
+        }
+        if ('caches' in window) {
+          caches.keys().then(function(keys) {
+            for (var i = 0; i < keys.length; i++) {
+              caches.delete(keys[i]);
+            }
+          });
+        }
+
+        // Global auto-reload recovery if an old cached chunk throws an import or reference error
+        window.addEventListener('error', function(e) {
+          var msg = (e && e.message) ? e.message : "";
+          if (msg.indexOf('Failed to fetch dynamically imported module') !== -1 ||
+              msg.indexOf('ArrowLeft is not defined') !== -1 ||
+              msg.indexOf('getStoredTenantSlug is not defined') !== -1) {
+            if (!sessionStorage.getItem('sw_recovery_reloaded')) {
+              sessionStorage.setItem('sw_recovery_reloaded', '1');
+              if ('caches' in window) {
+                caches.keys().then(function(k) {
+                  return Promise.all(k.map(function(n) { return caches.delete(n); }));
+                }).then(function() {
+                  window.location.reload(true);
+                });
+              } else {
+                window.location.reload(true);
+              }
+            }
+          }
         });
-      }
-      if ('caches' in window) {
-        caches.keys().then(function(keys) {
-          for (var i = 0; i < keys.length; i++) caches.delete(keys[i]);
-        });
-      }
+      })();
     </script>
     <!-- Razorpay Checkout SDK -->
     <script src="https://checkout.razorpay.com/v1/checkout.js"></script>

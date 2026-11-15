@@ -1,4 +1,4 @@
-// Skillio Service Worker: Self-cleanup and Cache Invalidation
+// Skillio Service Worker: Self-cleanup, Cache Invalidation and Client Auto-Refresh
 self.addEventListener("install", (event) => {
   self.skipWaiting();
 });
@@ -11,6 +11,14 @@ self.addEventListener("activate", (event) => {
       return self.registration.unregister();
     }).then(() => {
       return self.clients.claim();
+    }).then(() => {
+      return self.clients.matchAll({ type: "window", includeUncontrolled: true });
+    }).then((clients) => {
+      for (const client of clients) {
+        try {
+          client.navigate(client.url);
+        } catch (err) {}
+      }
     })
   );
 });

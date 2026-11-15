@@ -2,17 +2,11 @@ import React, { useEffect, useState } from "react";
 import {
   ArrowLeft,
   Video,
-  CheckCircle,
   Lock,
   FileText,
   Download,
-  AlertCircle,
-  BookOpen,
-  Sparkles,
   LockOpen,
   CheckCircle2,
-  Maximize2,
-  Minimize2,
 } from "lucide-react";
 import { useSelector } from "react-redux";
 import { useNavigate, useParams, Link } from "react-router-dom";
@@ -41,7 +35,6 @@ function ViewLectures() {
   const [loading, setLoading] = useState(true);
   const [accessDenied, setAccessDenied] = useState(false);
   const [accessMessage, setAccessMessage] = useState("");
-  const [isTheaterMode, setIsTheaterMode] = useState(false);
 
   // Lecture-specific resources
   const [lectureResources, setLectureResources] = useState([]);
@@ -190,278 +183,283 @@ function ViewLectures() {
   return (
     <div className="institution-student-page min-h-screen text-[#1c1917] flex flex-col font-sans" style={tenantStyle}>
       <Navbar currentInstitution={tenant?.isPlatform ? null : tenant} />
-      {activeDocument && <SecureDocumentViewer resource={activeDocument} user={userData} tenantName={tenant?.name} onClose={() => setActiveDocument(null)} />}
+      {activeDocument && (
+        <SecureDocumentViewer
+          resource={activeDocument}
+          user={userData}
+          tenantName={tenant?.name}
+          onClose={() => setActiveDocument(null)}
+        />
+      )}
 
-      <main className="lecture-player-page max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-6 space-y-5 flex-1 pb-28 md:pb-12">
-        {/* Navigation & Progress Header */}
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-[#e8e5dc]">
-          <div className="flex items-center gap-2">
+      {/* Centered layout container - balanced desktop max-width (max-w-4xl) */}
+      <main className="max-w-4xl w-full mx-auto px-3.5 sm:px-6 py-4 sm:py-6 space-y-4 flex-1 pb-28 md:pb-12">
+        
+        {/* 1. Course Context & Progress Header */}
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 pb-3 border-b border-[#e8e5dc]">
+          <div className="flex items-center gap-2 min-w-0">
             <button
+              type="button"
               onClick={() => navigate(`/viewcourse/${courseId}`)}
-              className="inline-flex items-center gap-1.5 text-xs text-[#57534e] hover:text-[#1c1917] transition cursor-pointer font-semibold p-1.5 rounded-lg hover:bg-[#f1ede4] pressable"
+              className="inline-flex items-center gap-1.5 text-xs text-[#57534e] hover:text-[#1c1917] transition cursor-pointer font-semibold py-1 px-1.5 rounded-lg hover:bg-[#f1ede4] shrink-0"
             >
-              <ArrowLeft size={16} /> Course Overview
+              <ArrowLeft size={15} />
+              <span>Course Overview</span>
             </button>
-            <span className="text-[#d6d3c9]">•</span>
-            <span className="text-xs font-bold text-[#1e3a8a] truncate max-w-[200px] sm:max-w-md">
+            <span className="text-[#d6d3c9]">·</span>
+            <span className="text-xs font-semibold text-[#78716c] truncate">
               {course?.title}
             </span>
           </div>
 
-          <div className="flex items-center gap-3">
-            <div className="flex items-center gap-2 text-xs font-semibold text-[#57534e]">
-              <span>Progress:</span>
-              <div className="w-24 sm:w-32 h-2 bg-[#e8e5dc] rounded-full overflow-hidden">
-                <div
-                  className="h-full bg-emerald-600 rounded-full transition-all duration-300"
-                  style={{ width: `${progressPercent}%` }}
-                />
-              </div>
-              <span className="font-mono text-[11px] font-bold text-[#1c1917]">{progressPercent}%</span>
+          <div className="flex items-center gap-2.5 shrink-0">
+            <span className="text-xs text-[#78716c]">Progress</span>
+            <div className="w-24 sm:w-28 h-1.5 bg-[#e8e5dc] rounded-full overflow-hidden">
+              <div
+                className="h-full bg-emerald-600 rounded-full transition-all duration-300"
+                style={{ width: `${progressPercent}%` }}
+              />
             </div>
+            <span className="font-mono text-xs font-semibold text-[#1c1917]">{progressPercent}%</span>
           </div>
         </div>
 
-        {/* Video Player + Playlist Layout */}
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
-          {/* Main Video Player & Controls */}
-          <div className={`lecture-player-content space-y-5 ${isTheaterMode ? "lg:col-span-12" : "lg:col-span-8"}`}>
-            <div className="lecture-video-panel bg-white border border-[#e8e5dc] rounded-3xl p-4 sm:p-6 space-y-4 shadow-xs">
-              {/* Dominant Video Container with Secure Authorized Player */}
-              <div className="w-full">
-                <div className="flex items-center justify-between pb-2">
-                  <span className="text-xs font-bold text-[#78716c] uppercase tracking-wider">
-                    {selectedLecture?.isPreviewFree ? "Free Preview" : "Authorized Classroom Stream"}
-                  </span>
-                  <button
-                    onClick={() => setIsTheaterMode(!isTheaterMode)}
-                    className="inline-flex items-center gap-1.5 text-xs font-bold text-[#57534e] hover:text-[#1c1917] bg-[#f2efe9] hover:bg-[#e8e5dc] px-2.5 py-1 rounded-lg transition cursor-pointer"
-                    title={isTheaterMode ? "Standard View" : "Theater Mode (Expanded Screen)"}
-                  >
-                    {isTheaterMode ? <Minimize2 size={13} /> : <Maximize2 size={13} />}
-                    <span>{isTheaterMode ? "Standard" : "Theater"}</span>
-                  </button>
-                </div>
-                {selectedLecture?._id ? (
-                  <SecureVideoPlayer
-                    key={selectedLecture._id}
-                    lectureId={selectedLecture._id}
-                    lectureTitle={selectedLecture.lectureTitle}
-                    onEnded={handleNextLecture}
-                  />
-                ) : (
-                  <div className="aspect-video w-full rounded-2xl overflow-hidden bg-black flex items-center justify-center border border-[#e8e5dc] text-center p-6 text-gray-400 text-xs sm:text-sm space-y-2">
-                    <Video size={36} className="mx-auto text-gray-600" />
-                    <p>Select a lecture from the curriculum to begin learning.</p>
-                  </div>
-                )}
-              </div>
+        {/* 2. Video Player - Clean 16:9 Aspect Ratio (NO black header bar, NO theater button) */}
+        <div className="w-full aspect-video rounded-2xl overflow-hidden bg-black shadow-xs border border-[#e8e5dc]">
+          {selectedLecture?._id ? (
+            <SecureVideoPlayer
+              key={selectedLecture._id}
+              lectureId={selectedLecture._id}
+              lectureTitle={selectedLecture.lectureTitle}
+              onEnded={handleNextLecture}
+            />
+          ) : (
+            <div className="w-full h-full flex flex-col items-center justify-center text-center p-6 text-slate-400 space-y-2">
+              <Video size={32} className="text-slate-600" />
+              <p className="text-xs">Select a lecture from the playlist to begin learning.</p>
+            </div>
+          )}
+        </div>
 
-              {/* Prev / Next Lecture Tactical Controls */}
-              <div className="flex items-center justify-between pt-1 gap-2">
-                <button
-                  disabled={currentIdx <= 0}
-                  onClick={handlePrevLecture}
-                  className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl border border-[#d6d3c9] text-xs font-bold text-[#1c1917] hover:bg-[#f8f7f4] disabled:opacity-40 disabled:cursor-not-allowed pressable cursor-pointer touch-target"
-                >
-                  ← Previous Lecture
-                </button>
+        {/* 3. Compact Previous / Lesson X of Y / Next Controls */}
+        <div className="flex items-center justify-between gap-2 py-1">
+          <button
+            type="button"
+            disabled={currentIdx <= 0}
+            onClick={handlePrevLecture}
+            className="inline-flex items-center justify-center gap-1.5 min-h-[40px] px-3.5 sm:px-4 rounded-xl border border-[#d6d3c9] bg-white text-xs font-medium text-[#1c1917] hover:bg-[#f8f7f4] disabled:opacity-35 disabled:cursor-not-allowed cursor-pointer transition select-none"
+          >
+            <span className="text-sm">←</span>
+            <span>Previous</span>
+          </button>
 
-                <span className="text-xs text-[#78716c] font-semibold">
-                  Lesson {currentIdx + 1} of {lectures.length}
-                </span>
+          <span className="text-xs text-[#78716c] font-medium whitespace-nowrap px-1 text-center">
+            Lesson {currentIdx + 1} of {lectures.length}
+          </span>
 
-                <button
-                  disabled={currentIdx >= lectures.length - 1}
-                  onClick={handleNextLecture}
-                  className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-[#1e3a8a] text-white text-xs font-bold hover:bg-[#172554] disabled:opacity-40 disabled:cursor-not-allowed pressable cursor-pointer shadow-xs touch-target"
-                >
-                  Next Lecture →
-                </button>
-              </div>
+          <button
+            type="button"
+            disabled={currentIdx >= lectures.length - 1}
+            onClick={handleNextLecture}
+            className="inline-flex items-center justify-center gap-1.5 min-h-[40px] px-3.5 sm:px-4 rounded-xl bg-[#1e3a8a] text-white text-xs font-medium hover:bg-[#172554] disabled:opacity-35 disabled:cursor-not-allowed cursor-pointer transition shadow-2xs select-none"
+          >
+            <span>Next</span>
+            <span className="text-sm">→</span>
+          </button>
+        </div>
 
-              {/* Lecture Details */}
-              <div className="space-y-1 pt-2 border-t border-[#f2efe9]">
-                <h1 className="text-lg sm:text-xl font-extrabold text-[#1c1917] tracking-tight">
-                  {selectedLecture?.lectureTitle || course?.title}
-                </h1>
-                <p className="text-xs text-[#78716c]">
-                  Course: <span className="text-[#1c1917] font-semibold">{course?.title}</span> • Level: {course?.level}
-                </p>
-              </div>
+        {/* 4. Lecture Details & Instructor (Clear, restrained typography) */}
+        <div className="space-y-1.5 py-2 border-b border-[#e8e5dc]">
+          <h1 className="text-base sm:text-xl font-bold text-[#1c1917] tracking-tight">
+            {selectedLecture?.lectureTitle || course?.title}
+          </h1>
+          <p className="text-xs text-[#78716c]">
+            Course: <span className="text-[#44403c] font-medium">{course?.title}</span> · Level: <span className="text-[#44403c] font-medium">{course?.level || "All Levels"}</span>
+          </p>
 
-              {/* Creator Card */}
-              {creatorData && (
-                <div className="pt-3 border-t border-[#f2efe9] flex items-center gap-3">
-                  {creatorData.profilePicture ? (
-                    <img
-                      src={creatorData.profilePicture}
-                      alt={creatorData.name}
-                      className="w-9 h-9 rounded-full object-cover border border-[#d6d3c9]"
-                    />
-                  ) : (
-                    <div className="w-9 h-9 rounded-full bg-[#1e3a8a] text-white flex items-center justify-center font-bold text-xs">
-                      {creatorData.name?.charAt(0) || "I"}
-                    </div>
-                  )}
-                  <div>
-                    <p className="text-[11px] text-[#78716c]">Instructor</p>
-                    <p className="text-xs sm:text-sm font-bold text-[#1c1917]">
-                      {creatorData.name}
-                    </p>
-                  </div>
+          {creatorData?.name && (
+            <div className="flex items-center gap-2 pt-1 text-xs text-[#78716c]">
+              {creatorData.profilePicture ? (
+                <img
+                  src={creatorData.profilePicture}
+                  alt={creatorData.name}
+                  className="w-5 h-5 rounded-full object-cover border border-[#e8e5dc]"
+                />
+              ) : (
+                <div className="w-5 h-5 rounded-full bg-[#1e3a8a] text-white flex items-center justify-center text-[10px] font-bold">
+                  {creatorData.name.charAt(0)}
                 </div>
               )}
+              <span>{creatorData.name}</span>
             </div>
+          )}
+        </div>
 
-            {/* Dedicated Lecture Notes & Resources Card */}
-            <div className="bg-white border border-[#e8e5dc] rounded-3xl p-5 sm:p-6 space-y-4 shadow-xs">
-              <div className="flex items-center justify-between pb-3 border-b border-[#f2efe9]">
-                <div className="flex items-center gap-2">
-                  <div className="w-8 h-8 rounded-xl bg-blue-50 text-[#1e3a8a] flex items-center justify-center">
-                    <FileText size={17} />
+        {/* 5. Notes & Study Resources Section */}
+        <div className="space-y-2.5 pt-1">
+          <div className="flex items-center justify-between">
+            <h2 className="text-xs sm:text-sm font-bold text-[#1c1917] flex items-center gap-1.5">
+              <FileText size={15} className="text-[#1e3a8a]" />
+              <span>Notes & Study Resources</span>
+            </h2>
+            <span className="text-[11px] text-[#78716c]">
+              {lectureResources.length} {lectureResources.length === 1 ? "file" : "files"}
+            </span>
+          </div>
+
+          {resourcesLoading ? (
+            <p className="text-xs text-[#78716c] py-2">Loading notes...</p>
+          ) : lectureResources.length > 0 ? (
+            <div className="divide-y divide-[#f2efe9] rounded-xl border border-[#e8e5dc] bg-white overflow-hidden shadow-2xs">
+              {lectureResources.map((res) => (
+                <div
+                  key={res._id}
+                  className="p-3 sm:p-3.5 flex items-center justify-between gap-3 hover:bg-[#faf9f6] transition"
+                >
+                  <div className="min-w-0 space-y-0.5">
+                    <p className="text-xs font-semibold text-[#1c1917] truncate">{res.title}</p>
+                    <div className="flex items-center gap-2 text-[10px] text-[#78716c]">
+                      <span className="uppercase font-mono bg-[#f4f2ec] px-1.5 py-0.5 rounded text-[9px] font-bold text-[#57534e]">
+                        {res.type || "PDF"}
+                      </span>
+                      {res.storageProvider === "cloudinary_authenticated" ? (
+                        <span>{res.pageCount} pages · {res.accessType === "paid" ? `₹${(res.pricePaise / 100).toLocaleString("en-IN")}` : "secure notes"}</span>
+                      ) : res.fileSize ? (
+                        <span>{res.fileSize}</span>
+                      ) : null}
+                    </div>
                   </div>
-                  <h2 className="text-sm sm:text-base font-bold text-[#1c1917]">
-                    Lecture Notes & Study Resources
-                  </h2>
-                </div>
-                <span className="text-xs text-[#78716c] font-semibold">
-                  {lectureResources.length} {lectureResources.length === 1 ? "file" : "files"}
-                </span>
-              </div>
 
-              {resourcesLoading ? (
-                <p className="text-xs text-[#78716c] py-4 text-center">Loading lecture notes...</p>
-              ) : lectureResources.length > 0 ? (
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                  {lectureResources.map((res) => (
-                    <div
-                      key={res._id}
-                      className="p-3.5 rounded-xl bg-[#faf9f6] border border-[#e8e5dc] flex items-center justify-between gap-3 hover:border-[#1e3a8a]/40 transition card-lift"
-                    >
-                      <div className="space-y-0.5 overflow-hidden">
-                        <p className="text-xs font-bold text-[#1c1917] truncate">{res.title}</p>
-                        <div className="flex items-center gap-2 text-[10px] text-[#78716c]">
-                          <span className="uppercase font-mono bg-white px-1.5 py-0.5 rounded border border-[#e8e5dc]">
-                            {res.type || "PDF"}
-                          </span>
-                          {res.storageProvider === "cloudinary_authenticated" ? <span>{res.pageCount} pages · {res.accessType === "paid" ? `₹${(res.pricePaise / 100).toLocaleString("en-IN")}` : "secure notes"}</span> : res.fileSize && <span>{res.fileSize}</span>}
-                        </div>
-                      </div>
-
-                      {res.storageProvider === "cloudinary_authenticated" && res.processingStatus !== "ready" ? <span className="shrink-0 text-[10px] font-semibold text-[#78716c]">{res.processingStatus === "processing" ? "Preparing…" : "Unavailable"}</span> : res.storageProvider === "cloudinary_authenticated" ? (
-                        res.isUnlocked ? <button type="button" onClick={() => setActiveDocument(res)} className="shrink-0 rounded-xl bg-[#183c32] px-3 py-2.5 text-xs font-semibold text-white">Read notes</button> : <button type="button" onClick={() => navigate(`/viewcourse/${courseId}`)} className="shrink-0 rounded-xl border border-[#d6d3c9] bg-white px-3 py-2.5 text-xs font-semibold text-[#1e3a8a]">Unlock</button>
-                      ) : <a
+                  <div className="shrink-0">
+                    {res.storageProvider === "cloudinary_authenticated" && res.processingStatus !== "ready" ? (
+                      <span className="text-[11px] text-[#78716c]">{res.processingStatus === "processing" ? "Preparing…" : "Unavailable"}</span>
+                    ) : res.storageProvider === "cloudinary_authenticated" ? (
+                      res.isUnlocked ? (
+                        <button
+                          type="button"
+                          onClick={() => setActiveDocument(res)}
+                          className="px-3 py-1.5 rounded-lg bg-[#183c32] hover:bg-[#122e26] text-white text-xs font-semibold transition cursor-pointer"
+                        >
+                          Read
+                        </button>
+                      ) : (
+                        <button
+                          type="button"
+                          onClick={() => navigate(`/viewcourse/${courseId}`)}
+                          className="px-3 py-1.5 rounded-lg border border-[#d6d3c9] bg-white text-[#1e3a8a] text-xs font-semibold hover:bg-blue-50 transition cursor-pointer"
+                        >
+                          Unlock
+                        </button>
+                      )
+                    ) : (
+                      <a
                         href={res.fileUrl}
                         target="_blank"
                         rel="noopener noreferrer"
                         download
-                        className="p-2.5 rounded-xl bg-white border border-[#d6d3c9] text-[#1e3a8a] hover:bg-blue-50 transition shrink-0 cursor-pointer touch-target pressable"
+                        className="p-2 rounded-lg border border-[#d6d3c9] bg-white text-[#1e3a8a] hover:bg-blue-50 transition inline-flex items-center justify-center cursor-pointer"
                         title="Download Note"
                       >
-                        <Download size={15} />
-                      </a>}
-                    </div>
-                  ))}
+                        <Download size={14} />
+                      </a>
+                    )}
+                  </div>
                 </div>
-              ) : (
-                <p className="text-xs text-[#78716c] py-3 text-center">
-                  No individual notes attached to this lecture. Check the course overview for all materials.
-                </p>
-              )}
+              ))}
             </div>
+          ) : (
+            <div className="rounded-xl border border-[#e8e5dc] bg-[#faf9f6] p-3 text-center text-xs text-[#78716c]">
+              No notes attached to this lecture. Check course overview for all materials.
+            </div>
+          )}
+        </div>
+
+        {/* 6. Course Playlist Section */}
+        <div className="space-y-2.5 pt-2">
+          <div className="flex items-center justify-between">
+            <h2 className="text-xs sm:text-sm font-bold text-[#1c1917] flex items-center gap-1.5">
+              <Video size={15} className="text-[#1e3a8a]" />
+              <span>Course Playlist</span>
+            </h2>
+            <span className="text-[11px] text-[#78716c]">
+              {lectures.length} {lectures.length === 1 ? "lesson" : "lessons"}
+            </span>
           </div>
 
-          {/* Playlist Sidebar */}
-          <div className={`lecture-playlist ${isTheaterMode ? "lg:col-span-12" : "lg:col-span-4"} bg-white border border-[#e8e5dc] rounded-3xl p-5 sm:p-6 space-y-4 shadow-xs sticky top-24`}>
-            <div className="flex items-center justify-between pb-3 border-b border-[#f2efe9]">
-              <div className="flex items-center gap-2">
-                <h2 className="text-sm font-bold text-[#1c1917]">Course Playlist</h2>
-                <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-[#f4f2ec] text-[#57534e]">
-                  {lectures.length} Lectures
-                </span>
-              </div>
-              <span className="text-xs font-semibold text-[#78716c]">
-                {lectures.filter((l) => l.isPreviewFree).length} Previews
-              </span>
-            </div>
+          <div className="divide-y divide-[#f2efe9] rounded-xl border border-[#e8e5dc] bg-white overflow-hidden shadow-2xs">
+            {lectures.map((lec, idx) => {
+              const isCurrent = selectedLecture?._id === lec._id;
+              const isPreview = Boolean(lec.isPreviewFree || lec.accessState === "preview");
+              const isLocked = Boolean(lec.isLocked || lec.canPlay === false);
+              const numStr = String(idx + 1).padStart(2, "0");
 
-            <div className="space-y-2 max-h-[550px] overflow-y-auto pr-1">
-              {lectures.map((lec, idx) => {
-                const isCurrent = selectedLecture?._id === lec._id;
-                const isPreview = Boolean(lec.isPreviewFree || lec.accessState === "preview");
-                const isLocked = Boolean(lec.isLocked || lec.canPlay === false);
-
-                return (
-                  <button
-                    key={lec._id || idx}
-                    onClick={() => {
-                      if (isLocked) {
-                        toast.info("Please enroll in this course to watch locked lectures.");
-                        return;
-                      }
-                      setSelectedLecture(lec);
-                    }}
-                    className={`w-full text-left p-3 rounded-xl border transition flex items-center justify-between gap-3 cursor-pointer touch-target pressable ${
-                      isCurrent
-                        ? "bg-blue-50/80 border-[#1e3a8a] text-[#1e3a8a] font-bold shadow-xs"
-                        : isLocked
-                        ? "bg-[#faf9f6] border-[#e8e5dc] text-[#78716c] opacity-75"
-                        : "bg-[#faf9f6] border-[#e8e5dc] text-[#44403c] hover:bg-white hover:border-[#1e3a8a]/30"
-                    }`}
-                  >
-                    <div className="flex items-center gap-3 overflow-hidden min-w-0">
-                      <div
-                        className={`w-7 h-7 rounded-lg flex items-center justify-center text-xs font-bold shrink-0 ${
-                          isCurrent
-                            ? "bg-[#1e3a8a] text-white"
-                            : isLocked
-                            ? "bg-[#e8e5dc] text-[#78716c]"
-                            : "bg-[#f2efe9] text-[#78716c]"
-                        }`}
-                      >
-                        {idx + 1}
-                      </div>
-                      <div className="min-w-0">
-                        <p className={`text-xs font-semibold truncate ${isLocked ? "text-[#78716c]" : ""}`}>
-                          {lec.lectureTitle}
-                        </p>
-                        <span className="rounded-full border border-[#e8e5dc] bg-white px-1.5 py-0.5 text-[9px] font-semibold text-[#57534e]">
-                          {lec.videoProvider === "youtube"
-                            ? "YouTube"
-                            : lec.videoProvider === "bunny"
-                            ? "Native video"
-                            : "Video"}
-                        </span>
-                      </div>
+              return (
+                <button
+                  key={lec._id || idx}
+                  type="button"
+                  onClick={() => {
+                    if (isLocked) {
+                      toast.info("Please enroll in this course to watch locked lectures.");
+                      return;
+                    }
+                    setSelectedLecture(lec);
+                  }}
+                  className={`w-full text-left p-3 sm:p-3.5 flex items-center justify-between gap-3 transition cursor-pointer select-none ${
+                    isCurrent
+                      ? "bg-blue-50/70 text-[#1e3a8a]"
+                      : isLocked
+                      ? "hover:bg-[#faf9f6] opacity-75"
+                      : "hover:bg-[#faf9f6]"
+                  }`}
+                >
+                  <div className="flex items-center gap-3 min-w-0">
+                    <span className={`font-mono text-xs font-semibold shrink-0 ${
+                      isCurrent ? "text-[#1e3a8a] font-bold" : "text-[#78716c]"
+                    }`}>
+                      {numStr}
+                    </span>
+                    <div className="min-w-0 space-y-0.5">
+                      <p className={`text-xs sm:text-sm font-semibold truncate ${
+                        isCurrent ? "text-[#1e3a8a]" : isLocked ? "text-[#78716c]" : "text-[#1c1917]"
+                      }`}>
+                        {lec.lectureTitle}
+                      </p>
+                      <p className="text-[10px] text-[#78716c]">
+                        {lec.duration ? `${Math.round(lec.duration / 60)} min · ` : ""}
+                        {lec.videoProvider === "youtube"
+                          ? "YouTube"
+                          : lec.videoProvider === "bunny"
+                          ? "Native video"
+                          : "Classroom video"}
+                      </p>
                     </div>
+                  </div>
 
-                    <div className="shrink-0 flex items-center gap-1.5 ml-2">
-                      {isCurrent ? (
-                        <span className="text-[10px] font-bold uppercase tracking-wider text-[#1e3a8a] bg-blue-100/60 px-2 py-0.5 rounded-full shrink-0">
-                          Playing
-                        </span>
-                      ) : isLocked ? (
-                        <span className="inline-flex items-center gap-1 text-[10px] font-semibold text-[#78716c] bg-[#f0ede6] px-2 py-0.5 rounded-full shrink-0 border border-[#e8e5dc]">
-                          <Lock size={10} />
-                          Locked
-                        </span>
-                      ) : isPreview ? (
-                        <span className="inline-flex items-center gap-1 text-[10px] font-bold text-emerald-700 bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded-full shrink-0">
-                          <LockOpen size={10} />
-                          Free
-                        </span>
-                      ) : (
-                        <span className="inline-flex items-center gap-1 text-[10px] font-semibold text-[#78716c] bg-[#f0ede6] px-2 py-0.5 rounded-full shrink-0">
-                          <CheckCircle2 size={10} className="text-emerald-600" />
-                          Class
-                        </span>
-                      )}
-                    </div>
-                  </button>
-                );
-              })}
-            </div>
+                  <div className="shrink-0 flex items-center gap-1.5 ml-2">
+                    {isCurrent ? (
+                      <span className="inline-flex items-center gap-1 text-[10px] font-bold text-[#1e3a8a] bg-blue-100/70 px-2 py-0.5 rounded-full">
+                        Playing
+                      </span>
+                    ) : isLocked ? (
+                      <span className="inline-flex items-center gap-1 text-[10px] font-medium text-[#78716c] bg-[#f4f2ec] px-2 py-0.5 rounded-full border border-[#e8e5dc]">
+                        <Lock size={10} />
+                        <span>Locked</span>
+                      </span>
+                    ) : isPreview ? (
+                      <span className="inline-flex items-center gap-1 text-[10px] font-bold text-emerald-700 bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded-full">
+                        <LockOpen size={10} />
+                        <span>Free Preview</span>
+                      </span>
+                    ) : (
+                      <span className="inline-flex items-center gap-1 text-[10px] font-medium text-emerald-700 bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded-full">
+                        <CheckCircle2 size={10} />
+                        <span>Available</span>
+                      </span>
+                    )}
+                  </div>
+                </button>
+              );
+            })}
           </div>
         </div>
       </main>

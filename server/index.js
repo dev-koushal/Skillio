@@ -113,18 +113,74 @@ app.use("/api/upload", uploadRouter);
 // Serve static client assets in production
 if (process.env.NODE_ENV === "production") {
   const clientDistPath = path.join(__dirname, "../client/dist");
+
+  // Dynamic self-healing service worker that forcefully clears browser caches and refreshes tabs
+  app.get("/sw.js", (req, res) => {
+    res.setHeader("Content-Type", "application/javascript");
+    res.setHeader("Cache-Control", "no-cache, no-store, must-revalidate, max-age=0, s-maxage=0");
+    res.setHeader("Pragma", "no-cache");
+    res.setHeader("Expires", "0");
+    res.setHeader("Surrogate-Control", "no-store");
+    res.send(`
+      self.addEventListener("install", (e) => self.skipWaiting());
+      self.addEventListener("activate", (e) => {
+        e.waitUntil(
+          caches.keys().then((keys) => Promise.all(keys.map((k) => caches.delete(k))))
+            .then(() => self.registration.unregister())
+            .then(() => self.clients.claim())
+            .then(() => self.clients.matchAll({ type: "window", includeUncontrolled: true }))
+            .then((clients) => {
+              clients.forEach((c) => {
+                try { c.navigate(c.url); } catch(err) {}
+              });
+            })
+        );
+      });
+      self.addEventListener("fetch", (e) => {});
+    `);
+  });
+
+  // Stale chunk auto-recovery: If an old browser with a cached index.html requests an obsolete chunk,
+  // wipe caches and hard reload rather than crashing with ReferenceErrors or white screens.
+  app.get(["/assets/CreateNote-COZX-ut2.js", "/assets/index-DQcvL7yC.js"], (req, res) => {
+    res.setHeader("Content-Type", "application/javascript");
+    res.setHeader("Cache-Control", "no-cache, no-store, must-revalidate, max-age=0, s-maxage=0");
+    res.setHeader("Pragma", "no-cache");
+    res.setHeader("Expires", "0");
+    res.send(`
+      if (typeof window !== "undefined") {
+        if ("caches" in window) {
+          caches.keys().then(function(keys) {
+            return Promise.all(keys.map(function(k) { return caches.delete(k); }));
+          }).then(function() {
+            window.location.reload(true);
+          });
+        } else {
+          window.location.reload(true);
+        }
+      }
+    `);
+  });
+
   app.use(express.static(clientDistPath, {
     setHeaders: (res, filePath) => {
       if (filePath.endsWith("index.html") || filePath.endsWith("sw.js")) {
-        res.setHeader("Cache-Control", "no-cache, no-store, must-revalidate");
+        res.setHeader("Cache-Control", "no-cache, no-store, must-revalidate, max-age=0, s-maxage=0");
+        res.setHeader("Pragma", "no-cache");
+        res.setHeader("Expires", "0");
+        res.setHeader("Surrogate-Control", "no-store");
       }
     },
   }));
+
   // path-to-regexp v8 requires named wildcards. Use a RegExp here so this
   // SPA fallback matches the root path as well as nested client routes.
   app.get(/.*/, (req, res, next) => {
     if (req.originalUrl.startsWith("/api/")) return next();
-    res.setHeader("Cache-Control", "no-cache, no-store, must-revalidate");
+    res.setHeader("Cache-Control", "no-cache, no-store, must-revalidate, max-age=0, s-maxage=0");
+    res.setHeader("Pragma", "no-cache");
+    res.setHeader("Expires", "0");
+    res.setHeader("Surrogate-Control", "no-store");
     res.sendFile(path.join(clientDistPath, "index.html"));
   });
 }

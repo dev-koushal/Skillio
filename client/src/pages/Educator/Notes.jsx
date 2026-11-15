@@ -190,7 +190,7 @@ export default function EducatorNotes() {
             </div>
           ) : notes.length === 0 ? (
             <div className="bg-white border border-[#e8e5dc] rounded-2xl p-10 text-center max-w-lg mx-auto">
-              <div className="w-12 h-12 rounded-2xl bg-[#f5f3ff] text-[#5b3cc4] flex items-center justify-center mx-auto mb-3">
+              <div className="w-10 h-10 rounded-2xl bg-[#f5f3ff] text-[#5b3cc4] flex items-center justify-center mx-auto mb-3">
                 <FileText size={24} />
               </div>
               <h3 className="text-base font-bold text-[#1c1917]">No notes found</h3>
@@ -215,7 +215,7 @@ export default function EducatorNotes() {
                   key={note._id}
                   className="group bg-white border border-[#e8e5dc] hover:border-[#d6d3c9] rounded-2xl overflow-hidden shadow-2xs hover:shadow-xs transition flex flex-col justify-between h-full"
                 >
-                  <div className="p-3.5 flex flex-col flex-1">
+                  <div className="p-3 flex flex-col flex-1">
                     {/* Note Cover */}
                     <div className="w-full aspect-[16/10] rounded-xl overflow-hidden mb-3 bg-[#f8f7f4] shrink-0">
                       <NoteCover
@@ -235,15 +235,14 @@ export default function EducatorNotes() {
                           {note.topic}
                         </span>
                         <span
-                          className={`text-[10px] font-semibold px-2 py-0.5 rounded-md ${
-                            note.processingStatus === "processing" || note.replacementProcessing
-                              ? "bg-sky-50 text-sky-800 border border-sky-200"
-                              : note.status === "published"
+                          className={`text-[10px] font-semibold px-2 py-0.5 rounded-md ${note.processingStatus === "processing" || note.replacementProcessing
+                            ? "bg-sky-50 text-sky-800 border border-sky-200"
+                            : note.status === "published"
                               ? "bg-emerald-50 text-emerald-800 border border-emerald-200"
                               : note.status === "disabled"
                                 ? "bg-stone-100 text-stone-700 border border-stone-200"
                                 : "bg-amber-50 text-amber-800 border border-amber-200"
-                          }`}
+                            }`}
                         >
                           {note.replacementProcessing
                             ? "Processing replacement"
