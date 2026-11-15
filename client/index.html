@@ -11,8 +11,15 @@
     <script>
       (function() {
         // Global safety fallbacks so stale/cached JS bundles never crash with ReferenceErrors
-        window.ArrowLeft = window.ArrowLeft || function() { return null; };
-        window.ArrowLeftCircle = window.ArrowLeftCircle || function() { return null; };
+        var dummyComponent = function() { return null; };
+        ['ArrowLeft', 'ArrowLeftCircle', 'ArrowRight', 'ChevronDown', 'ChevronRight',
+         'Check', 'CheckCircle2', 'X', 'FileText', 'AlertCircle', 'LoaderCircle',
+         'Plus', 'PlusCircle', 'Upload', 'Sparkles', 'Users', 'LayoutDashboard', 'Radio', 'Play'].forEach(function(icon) {
+          if (typeof window[icon] === 'undefined') {
+            window[icon] = dummyComponent;
+          }
+        });
+
         window.getStoredTenantSlug = window.getStoredTenantSlug || function() {
           try { return localStorage.getItem("skillio_active_tenant") || null; } catch(e) { return null; }
         };
@@ -43,10 +50,14 @@
         window.addEventListener('error', function(e) {
           var msg = (e && e.message) ? e.message : "";
           if (msg.indexOf('Failed to fetch dynamically imported module') !== -1 ||
-              msg.indexOf('ArrowLeft is not defined') !== -1 ||
-              msg.indexOf('getStoredTenantSlug is not defined') !== -1) {
-            if (!sessionStorage.getItem('sw_recovery_reloaded')) {
-              sessionStorage.setItem('sw_recovery_reloaded', '1');
+              msg.indexOf('ArrowLef') !== -1 ||
+              msg.indexOf('ArrowLeft') !== -1 ||
+              msg.indexOf('is not defined') !== -1 ||
+              msg.indexOf('getStoredTenantSlug') !== -1) {
+            var now = Date.now();
+            var lastReload = parseInt(sessionStorage.getItem('sw_recovery_reloaded_ts') || '0', 10);
+            if (now - lastReload > 3000) {
+              sessionStorage.setItem('sw_recovery_reloaded_ts', String(now));
               if ('caches' in window) {
                 caches.keys().then(function(k) {
                   return Promise.all(k.map(function(n) { return caches.delete(n); }));

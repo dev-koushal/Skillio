@@ -9,6 +9,7 @@ import {
   CheckCircle2,
   FileText,
   Sparkles,
+  ShieldCheck,
 } from "lucide-react";
 import { Link, useParams } from "react-router-dom";
 import { useSelector } from "react-redux";
@@ -222,19 +223,175 @@ export default function InstitutionHome() {
           </div>
         ) : (
           <div className="space-y-6 sm:space-y-8">
-            {/* 1. Welcoming Hero Banner */}
-            <section className="relative rounded-2xl sm:rounded-3xl bg-gradient-to-br from-white via-[#fcfbf9] to-[#f8f7f4] border border-[#e8e5dc] p-4 sm:p-6 lg:p-8 shadow-xs overflow-hidden">
-              <div className="relative z-10 space-y-2.5 sm:space-y-3">
-                <div className="inline-flex items-center gap-2 px-2.5 py-0.5 sm:px-3 sm:py-1 rounded-full bg-[#f5f3ff] border border-[#e0e7ff] text-[#5b3cc4] text-[11px] sm:text-xs font-bold">
-                  <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-                  <span>{activeTenant?.institutionType || "Academy"} • {institutionName}</span>
+            {/* 1. Welcoming Hero Section (High-Craft Purple & White 3D Editorial for Students) */}
+            <section className="relative rounded-3xl bg-gradient-to-br from-white via-[#faf8ff] to-[#f4f0fb] border border-[#e6e0f2] p-4 sm:p-8 lg:p-10 shadow-sm overflow-hidden">
+              {/* Subtle Technical Purple Dot Matrix Background */}
+              <div className="absolute inset-0 opacity-40 pointer-events-none overflow-hidden rounded-3xl">
+                <svg className="w-full h-full" xmlns="http://www.w3.org/2000/svg">
+                  <defs>
+                    <pattern id="student-purple-grid" width="32" height="32" patternUnits="userSpaceOnUse">
+                      <path d="M 32 0 L 0 0 0 32" fill="none" stroke="#e8e0f5" strokeWidth="0.75" strokeDasharray="3 3" />
+                      <circle cx="32" cy="32" r="1" fill="#7c3aed" opacity="0.3" />
+                    </pattern>
+                  </defs>
+                  <rect width="100%" height="100%" fill="url(#student-purple-grid)" />
+                </svg>
+              </div>
+
+              {/* Soft Radial Ambient Glow */}
+              <div className="absolute -top-16 -right-16 w-96 h-96 bg-purple-200/50 rounded-full blur-3xl pointer-events-none" />
+              <div className="absolute -bottom-16 -left-16 w-80 h-80 bg-indigo-100/50 rounded-full blur-3xl pointer-events-none" />
+
+              <div className="relative z-10 grid grid-cols-1 lg:grid-cols-12 gap-6 lg:gap-10 items-center">
+                {/* Left Column: Greeting, Institution Indicator, Pitch & Actions */}
+                <div className="lg:col-span-7 space-y-4 text-left">
+                  {/* Institution Badge */}
+                  <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-[#f5f0ff] border border-[#e2d5fa] text-[#6b35d8] text-xs font-bold shadow-2xs">
+                    <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+                    <span className="truncate max-w-[260px] sm:max-w-none">
+                      {activeTenant?.institutionType || "Academy"} • {institutionName}
+                    </span>
+                  </div>
+
+                  {/* Personalized Student Greeting */}
+                  <h1 className="text-2xl sm:text-4xl lg:text-[40px] font-extrabold tracking-tight text-[#1e1533] leading-tight">
+                    {timeGreeting},{" "}
+                    <span className="bg-gradient-to-r from-[#6b35d8] via-[#7c3aed] to-[#9333ea] bg-clip-text text-transparent">
+                      {studentFirstName}
+                    </span>
+                  </h1>
+
+                  <p className="text-sm sm:text-base text-[#5f5872] max-w-xl leading-relaxed">
+                    {activeTenant?.title ||
+                      `Welcome to ${institutionName}. Explore curriculum tracks, access verified study notes, and master new concepts.`}
+                  </p>
+
+                  {/* Quick Action Navigation Buttons */}
+                  <div className="pt-2 flex flex-wrap gap-2.5 items-center">
+                    <Link
+                      to={courseCatalogPath}
+                      className="inline-flex items-center gap-2 bg-[#6b35d8] hover:bg-[#5a2abf] text-white font-bold text-xs sm:text-sm px-4 sm:px-5 py-2.5 rounded-xl transition active:scale-98 cursor-pointer touch-target pressable shadow-sm"
+                    >
+                      <BookOpen size={16} />
+                      <span>Explore Courses</span>
+                    </Link>
+
+                    <Link
+                      to={`/institution/${encodeURIComponent(resolvedSlug)}/notes`}
+                      className="inline-flex items-center gap-2 bg-white hover:bg-[#f6f2fe] border border-[#dccff3] text-[#6b35d8] font-bold text-xs sm:text-sm px-4 sm:px-5 py-2.5 rounded-xl transition active:scale-98 cursor-pointer touch-target pressable shadow-2xs"
+                    >
+                      <FileText size={16} />
+                      <span>Study Notes</span>
+                    </Link>
+                  </div>
+
+                  {/* Micro Trust Indicators Strip */}
+                  <div className="pt-2 flex flex-wrap items-center gap-2 text-xs font-semibold text-[#665e77]">
+                    <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-white/80 border border-[#e8e2f2]">
+                      <CheckCircle2 size={13} className="text-emerald-600" />
+                      <span>Verified Curriculum</span>
+                    </span>
+                    <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-white/80 border border-[#e8e2f2]">
+                      <ShieldCheck size={13} className="text-purple-600" />
+                      <span>Official Materials</span>
+                    </span>
+                    <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-white/80 border border-[#e8e2f2]">
+                      <GraduationCap size={13} className="text-[#6b35d8]" />
+                      <span>Self-Paced Mastery</span>
+                    </span>
+                  </div>
                 </div>
-                <h1 className="text-xl sm:text-3xl lg:text-4xl font-extrabold text-[#1c1917] tracking-tight">
-                  {timeGreeting}, {studentFirstName}
-                </h1>
-                <p className="text-xs sm:text-base text-[#57534e] max-w-2xl leading-relaxed">
-                  {activeTenant?.title || `Welcome to ${institutionName}. Explore curriculum, study notes, and master new concepts.`}
-                </p>
+
+                {/* Right Column: Visual Tactile 3D Hero Artwork with Frosted Glass Badges */}
+                <div className="lg:col-span-5 flex justify-center w-full">
+                  <div className="relative w-full max-w-[420px] rounded-2xl overflow-hidden border border-[#e3daf4] shadow-md bg-white group">
+                    {/* 3D Editorial Illustration */}
+                    <div className="relative aspect-[16/10] sm:aspect-[16/9] w-full overflow-hidden bg-gradient-to-br from-[#f3eefe] to-[#e8ddfb]">
+                      <img
+                        src="/educator-hero.jpg"
+                        alt={`${institutionName} Student Learning`}
+                        className="w-full h-full object-cover group-hover:scale-[1.02] transition duration-500 select-none"
+                        loading="eager"
+                      />
+                      {/* Subtle Gradient Vignette */}
+                      <div className="absolute inset-0 bg-gradient-to-t from-[#1d1330]/75 via-transparent to-black/10 pointer-events-none" />
+
+                      {/* Top Floating Badge: Institution Branding & Status */}
+                      <div className="absolute top-2.5 left-2.5 right-2.5 flex items-center justify-between gap-2 pointer-events-none z-10">
+                        <div className="inline-flex items-center gap-2 bg-white/70 hover:bg-white/85 backdrop-blur-xl border border-white/80 px-2.5 py-1 rounded-xl shadow-xs transition">
+                          <div className="w-5 h-5 rounded-md bg-[#6b35d8] text-white flex items-center justify-center font-bold text-[10px] shrink-0">
+                            {activeTenant?.logo ? (
+                              <img
+                                src={activeTenant.logo}
+                                alt=""
+                                className="w-full h-full object-contain rounded-md"
+                                onError={(e) => { e.currentTarget.style.display = "none"; }}
+                              />
+                            ) : (
+                              institutionName.charAt(0).toUpperCase()
+                            )}
+                          </div>
+                          <span className="text-[11px] font-bold text-[#1f1733] truncate max-w-[150px]">
+                            {institutionName}
+                          </span>
+                        </div>
+
+                        <span className="inline-flex items-center gap-1 text-[10px] font-bold text-emerald-800 bg-white/70 backdrop-blur-xl px-2 py-1 rounded-xl border border-white/80 shadow-xs shrink-0">
+                          <CheckCircle2 size={11} className="text-emerald-600" />
+                          <span>Verified Academy</span>
+                        </span>
+                      </div>
+
+                      {/* Bottom Floating Badge: Ultra-Compact Translucent Glass HUD for Students */}
+                      <div className="absolute bottom-2.5 left-2.5 right-2.5 bg-white/60 hover:bg-white/80 backdrop-blur-xl border border-white/75 rounded-xl px-3 py-2 shadow-lg transition-all duration-300 transform translate-y-0.5 hover:translate-y-0 flex items-center justify-between gap-2 z-10">
+                        {/* Live Indicator & Label */}
+                        <div className="flex items-center gap-1.5 shrink-0">
+                          <span className="relative flex h-2 w-2">
+                            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                            <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-600"></span>
+                          </span>
+                          <span className="text-[10px] font-extrabold uppercase tracking-wider text-[#4c1d95] hidden xs:inline">
+                            Live Space
+                          </span>
+                        </div>
+
+                        {/* Inline Academic Metrics with Perfect Equal Distance */}
+                        <div className="flex items-center text-center font-mono text-[11px] sm:text-xs">
+                          <div className="px-2 sm:px-3 flex items-baseline gap-1">
+                            <span className="font-extrabold text-[#1f1733]">{institutionCourses.length}</span>
+                            <span className="text-[9px] text-[#6d6680] font-sans uppercase tracking-wider">Courses</span>
+                          </div>
+
+                          <span className="h-3.5 w-px bg-purple-300/70 shrink-0" aria-hidden="true" />
+
+                          <div className="px-2 sm:px-3 flex items-baseline gap-1">
+                            <span className="font-extrabold text-[#1f1733]">{institutionNotes.length}</span>
+                            <span className="text-[9px] text-[#6d6680] font-sans uppercase tracking-wider">Notes</span>
+                          </div>
+
+                          <span className="h-3.5 w-px bg-purple-300/70 shrink-0" aria-hidden="true" />
+
+                          <div className="px-2 sm:px-3">
+                            <span className="font-extrabold text-[#6b35d8]">
+                              {enrolledInThisInstitution.length > 0
+                                ? `${enrolledInThisInstitution.length} Enrolled`
+                                : "Open Access"}
+                            </span>
+                          </div>
+                        </div>
+
+                        {/* Fast Action CTA */}
+                        <Link
+                          to={courseCatalogPath}
+                          className="shrink-0 text-[10px] font-bold text-white bg-[#6b35d8] hover:bg-[#5825b5] px-2.5 py-1 rounded-lg transition active:scale-95 shadow-xs flex items-center gap-1 cursor-pointer"
+                        >
+                          <span>Explore</span>
+                          <ArrowRight size={10} />
+                        </Link>
+                      </div>
+                    </div>
+                  </div>
+                </div>
               </div>
             </section>
 

@@ -107,108 +107,172 @@ export default function EducatorHome() {
 
       <main className="max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8 space-y-8 flex-1 ">
         {/* ============================================================== */}
-        {/* 2. WELCOMING HERO & GREETING SECTION                            */}
+        {/* 2. WELCOMING HERO & GREETING SECTION (Purple & White 3D Editorial) */}
         {/* ============================================================== */}
-        <section className="relative rounded-3xl bg-gradient-to-br from-white via-[#fcfbf9] to-[#f8f7f4] border border-[#e8e5dc] p-2 sm:p-8 lg:p-10 shadow-sm overflow-hidden">
-          {/* Subtle Technical Grid Background */}
+        <section className="relative rounded-3xl bg-gradient-to-br from-white via-[#faf8ff] to-[#f4f0fb] border border-[#e6e0f2] p-4 sm:p-8 lg:p-10 shadow-sm overflow-hidden">
+          {/* Subtle Technical Purple Dot Matrix Background */}
           <div className="absolute inset-0 opacity-40 pointer-events-none overflow-hidden rounded-3xl">
             <svg className="w-full h-full" xmlns="http://www.w3.org/2000/svg">
               <defs>
-                <pattern id="educator-grid" width="32" height="32" patternUnits="userSpaceOnUse">
-                  <path d="M 32 0 L 0 0 0 32" fill="none" stroke="#e8e5dc" strokeWidth="0.75" strokeDasharray="3 3" />
-                  <circle cx="32" cy="32" r="1" fill="#1e3a8a" opacity="0.25" />
+                <pattern id="educator-purple-grid" width="32" height="32" patternUnits="userSpaceOnUse">
+                  <path d="M 32 0 L 0 0 0 32" fill="none" stroke="#e8e0f5" strokeWidth="0.75" strokeDasharray="3 3" />
+                  <circle cx="32" cy="32" r="1" fill="#7c3aed" opacity="0.3" />
                 </pattern>
               </defs>
-              <rect width="100%" height="100%" fill="url(#educator-grid)" />
+              <rect width="100%" height="100%" fill="url(#educator-purple-grid)" />
             </svg>
           </div>
 
-          {/* Soft Radial Ambient Glow */}
-          <div className="absolute -top-12 -right-12 w-80 h-80 bg-blue-100/60 rounded-full blur-3xl pointer-events-none" />
-          <div className="absolute -bottom-12 -left-12 w-80 h-80 bg-amber-100/50 rounded-full blur-3xl pointer-events-none" />
+          {/* Soft Purple Radial Ambient Glow */}
+          <div className="absolute -top-16 -right-16 w-96 h-96 bg-purple-200/50 rounded-full blur-3xl pointer-events-none" />
+          <div className="absolute -bottom-16 -left-16 w-80 h-80 bg-indigo-100/50 rounded-full blur-3xl pointer-events-none" />
 
-          <div className="relative z-10 grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-10 items-center">
-            {/* Left Column: Greeting, Institution Indicator & Pitch */}
+          <div className="relative z-10 grid grid-cols-1 lg:grid-cols-12 gap-6 lg:gap-10 items-center">
+            {/* Left Column: Greeting, Institution Indicator, Pitch & Actions */}
             <div className="lg:col-span-7 space-y-4 text-left">
-              <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-[#eff6ff] border border-[#bfdbfe] text-[#1e3a8a] text-xs font-bold shadow-2xs">
+              {/* Institution Pill */}
+              <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-[#f5f0ff] border border-[#e2d5fa] text-[#6b35d8] text-xs font-bold shadow-2xs">
                 <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-                <span>{tenantName} • Educator Home</span>
+                <span className="truncate max-w-[260px] sm:max-w-none">{tenantName} • Educator Studio</span>
               </div>
 
-              <h1 className="text-2xl sm:text-4xl lg:text-5xl font-extrabold tracking-tight text-[#1c1917] leading-tight">
-                {getGreeting()}, {educatorName}
+              {/* Dynamic Personalized Heading */}
+              <h1 className="text-2xl sm:text-4xl lg:text-[42px] font-extrabold tracking-tight text-[#1e1533] leading-tight">
+                {getGreeting()},{" "}
+                <span className="bg-gradient-to-r from-[#6b35d8] via-[#7c3aed] to-[#9333ea] bg-clip-text text-transparent">
+                  {educatorName}
+                </span>
               </h1>
 
-              <p className="text-sm sm:text-base text-[#57534e] max-w-xl leading-relaxed">
-                {tenantName} is active and operating. Here is your institution's live performance, recent learner activity, and quick curriculum controls at a glance.
+              <p className="text-sm sm:text-base text-[#5f5872] max-w-xl leading-relaxed">
+                {tenantName} is active and operating. Manage your curriculum, track learner activity, and grow your institution.
               </p>
 
               {/* Quick Action Navigation Buttons */}
               <div className="pt-2 flex flex-wrap gap-2.5 items-center">
-
-
                 <button
                   onClick={() => navigate("/students")}
-                  className="inline-flex items-center gap-2 bg-white hover:bg-[#f8f7f4] border border-[#d6d3c9] text-[#1c1917] font-bold text-xs sm:text-sm px-4 sm:px-5 py-2.5 rounded-xl transition active:scale-98 cursor-pointer touch-target pressable shadow-2xs"
+                  className="inline-flex items-center gap-2 bg-[#6b35d8] hover:bg-[#5a2abf] text-white font-bold text-xs sm:text-sm px-4 sm:px-5 py-2.5 rounded-xl transition active:scale-98 cursor-pointer touch-target pressable shadow-sm"
                 >
-                  <Users size={16} className="text-[#1e3a8a]" />
-                  <span>Manage Students</span>
+                  <Users size={16} />
+                  <span>Students</span>
                 </button>
 
                 <button
                   onClick={() => navigate("/dashboard")}
-                  className="inline-flex items-center gap-2 bg-[#eff6ff] hover:bg-blue-100/70 border border-[#bfdbfe] text-[#1e3a8a] font-bold text-xs sm:text-sm px-4 sm:px-5 py-2.5 rounded-xl transition active:scale-98 cursor-pointer touch-target pressable"
+                  className="inline-flex items-center gap-2 bg-white hover:bg-[#f6f2fe] border border-[#dccff3] text-[#6b35d8] font-bold text-xs sm:text-sm px-4 sm:px-5 py-2.5 rounded-xl transition active:scale-98 cursor-pointer touch-target pressable shadow-2xs"
                 >
                   <LayoutDashboard size={16} />
                   <span>Dashboard</span>
                 </button>
               </div>
+
+              {/* Institutional Capabilities & Security Badges Strip */}
+              <div className="pt-2 flex flex-wrap items-center gap-2 text-xs font-semibold text-[#665e77]">
+                <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-white/80 border border-[#e8e2f2]">
+                  <ShieldCheck size={13} className="text-emerald-600" />
+                  <span>Multi-Tenant Isolated</span>
+                </span>
+                <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-white/80 border border-[#e8e2f2]">
+                  <Radio size={13} className="text-[#6b35d8]" />
+                  <span>DRM Live Stream</span>
+                </span>
+                <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-white/80 border border-[#e8e2f2]">
+                  <FileText size={13} className="text-amber-600" />
+                  <span>Protected Notes</span>
+                </span>
+              </div>
             </div>
 
-            {/* Right Column: Visual Tactile Educator Composition (Anti-Slop Editorial Motif) */}
-            <div className="lg:col-span-5 flex justify-center">
-              <div className="relative w-full max-w-[360px] bg-white/95 backdrop-blur-md rounded-2xl border border-[#e8e5dc] p-4 sm:p-5 shadow-lg space-y-3.5">
-                {/* Visual Header */}
-                <div className="flex items-center justify-between pb-3 border-b border-[#f2efe9]">
-                  <div className="flex items-center gap-2.5">
-                    <div className="educator-home-mark w-8 h-8 rounded-lg bg-[#1e3a8a] text-white flex items-center justify-center font-bold text-xs shadow-2xs">
-                      {tenant?.logo ? <img className="educator-home-logo" src={tenant.logo} alt="" onError={(event) => { event.currentTarget.style.display = "none"; }} /> : tenantName.charAt(0).toUpperCase()}
-                    </div>
-                    <div className="min-w-0">
-                      <p className="text-xs font-bold text-[#1c1917] truncate">{tenantName}</p>
-                      <p className="text-[10px] text-[#78716c] font-medium">Learning institution</p>
-                    </div>
-                  </div>
-                  <span className="inline-flex items-center gap-1 text-[10px] font-bold text-emerald-800 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200">
-                    <CheckCircle2 size={11} className="text-emerald-600" />
-                    Operational
-                  </span>
-                </div>
+            {/* Right Column: Visual Tactile 3D Hero Artwork with Frosted Glass Badges */}
+            <div className="lg:col-span-5 flex justify-center w-full">
+              <div className="relative w-full max-w-[420px] rounded-2xl overflow-hidden border border-[#e3daf4] shadow-md bg-white group">
+                {/* 3D Editorial Illustration */}
+                <div className="relative aspect-[16/10] sm:aspect-[16/9] w-full overflow-hidden bg-gradient-to-br from-[#f3eefe] to-[#e8ddfb]">
+                  <img
+                    src="/educator-hero.jpg"
+                    alt={`${tenantName} Educator Studio`}
+                    className="w-full h-full object-cover group-hover:scale-[1.02] transition duration-500 select-none"
+                    loading="eager"
+                  />
+                  {/* Subtle Gradient Vignette */}
+                  <div className="absolute inset-0 bg-gradient-to-t from-[#1d1330]/75 via-transparent to-black/10 pointer-events-none" />
 
-                {/* Simulated Quick Focus Pill */}
-                <div className="p-3 rounded-xl bg-gradient-to-br from-[#0f172a] via-[#1e3a8a] to-[#0f172a] text-white space-y-2">
-                  <div className="flex items-center justify-between text-[10px] text-blue-200 font-mono">
-                    <span>Active Curriculum</span>
-                    <span>{stats.publishedCourses} Live Courses</span>
-                  </div>
-                  <p className="font-bold text-xs sm:text-sm truncate text-white">
-                    {recentCourses[0]?.title || "Verified Course Tracks"}
-                  </p>
-                  <div className="flex items-center justify-between text-[10px] text-white/80 pt-1 border-t border-white/10">
-                    <span>Total Enrollment</span>
-                    <span className="font-bold font-mono text-amber-300">{stats.totalStudents} Learners</span>
-                  </div>
-                </div>
+                  {/* Top Floating Badge: Translucent Frosted Glass Branding */}
+                  <div className="absolute top-2.5 left-2.5 right-2.5 flex items-center justify-between gap-2 pointer-events-none z-10">
+                    <div className="inline-flex items-center gap-2 bg-white/70 hover:bg-white/85 backdrop-blur-xl border border-white/80 px-2.5 py-1 rounded-xl shadow-xs transition">
+                      <div className="w-5 h-5 rounded-md bg-[#6b35d8] text-white flex items-center justify-center font-bold text-[10px] shrink-0">
+                        {tenant?.logo ? (
+                          <img
+                            src={tenant.logo}
+                            alt=""
+                            className="w-full h-full object-contain rounded-md"
+                            onError={(e) => { e.currentTarget.style.display = "none"; }}
+                          />
+                        ) : (
+                          tenantName.charAt(0).toUpperCase()
+                        )}
+                      </div>
+                      <span className="text-[11px] font-bold text-[#1f1733] truncate max-w-[150px]">
+                        {tenantName}
+                      </span>
+                    </div>
 
-                {/* Supporting Trust & Security Badge */}
-                <div className="flex items-center justify-between text-[11px] text-[#78716c] pt-0.5">
-                  <span className="flex items-center gap-1.5 font-medium">
-                    <ShieldCheck size={14} className="text-emerald-600" />
-                    Strict Tenant Isolation
-                  </span>
-                  <span className="font-mono font-bold text-[#1e3a8a]">
-                    ₹{stats.totalRevenue.toLocaleString("en-IN")}
-                  </span>
+                    <span className="inline-flex items-center gap-1 text-[10px] font-bold text-emerald-800 bg-white/70 backdrop-blur-xl px-2 py-1 rounded-xl border border-white/80 shadow-xs shrink-0">
+                      <CheckCircle2 size={11} className="text-emerald-600" />
+                      <span>Operational</span>
+                    </span>
+                  </div>
+
+                  {/* Bottom Floating Badge: Ultra-Compact Translucent Glass HUD with Y-Transform */}
+                  <div className="absolute bottom-2.5 left-2.5 right-2.5 bg-white/60 hover:bg-white/80 backdrop-blur-xl border border-white/75 rounded-xl px-3 py-2 shadow-lg transition-all duration-300 transform translate-y-0.5 hover:translate-y-0 flex items-center justify-between gap-2 z-10">
+                    {/* Live Pulse Dot & Label */}
+                    <div className="flex items-center gap-1.5 shrink-0">
+                      <span className="relative flex h-2 w-2">
+                        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                        <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-600"></span>
+                      </span>
+                      <span className="text-[10px] font-extrabold uppercase tracking-wider text-[#4c1d95] hidden xs:inline">
+                        Pulse
+                      </span>
+                    </div>
+
+                    {/* 3 Compact Inline Metrics with Perfect Equal Distance */}
+                    <div className="flex items-center text-center font-mono text-[11px] sm:text-xs">
+                      <div className="px-2 sm:px-3 flex items-baseline gap-1">
+                        <span className="font-extrabold text-[#1f1733]">{stats.publishedCourses}</span>
+                        <span className="text-[9px] text-[#6d6680] font-sans uppercase tracking-wider">Courses</span>
+                      </div>
+
+                      <span className="h-3.5 w-px bg-purple-300/70 shrink-0" aria-hidden="true" />
+
+                      <div className="px-2 sm:px-3 flex items-baseline gap-1">
+                        <span className="font-extrabold text-[#1f1733]">{stats.totalStudents}</span>
+                        <span className="text-[9px] text-[#6d6680] font-sans uppercase tracking-wider">Learners</span>
+                      </div>
+
+                      <span className="h-3.5 w-px bg-purple-300/70 shrink-0" aria-hidden="true" />
+
+                      <div className="px-2 sm:px-3">
+                        <span className="font-extrabold text-[#6b35d8]">₹{stats.totalRevenue.toLocaleString("en-IN")}</span>
+                      </div>
+                    </div>
+
+                    {/* Sleek Action CTA */}
+                    <button
+                      onClick={() => {
+                        if (!hasEducatorInstitution(userData, tenant)) {
+                          setRequireInstitutionModalOpen(true);
+                          return;
+                        }
+                        navigate(stats.publishedCourses === 0 ? "/builder/new" : "/educator/courses");
+                      }}
+                      className="shrink-0 text-[10px] font-bold text-white bg-[#6b35d8] hover:bg-[#5825b5] px-2.5 py-1 rounded-lg transition active:scale-95 shadow-xs flex items-center gap-1 cursor-pointer"
+                    >
+                      <span>{stats.publishedCourses === 0 ? "+ Create" : "Manage"}</span>
+                      <ArrowRight size={10} />
+                    </button>
+                  </div>
                 </div>
               </div>
             </div>
@@ -515,11 +579,10 @@ export default function EducatorHome() {
                           <div className="min-w-0 flex-1">
                             <div className="flex items-center gap-2">
                               <span
-                                className={`text-[10px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wider ${
-                                  course.isPublished
-                                    ? "bg-emerald-50 text-emerald-800 border border-emerald-200"
-                                    : "bg-amber-50 text-amber-800 border border-amber-200"
-                                }`}
+                                className={`text-[10px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wider ${course.isPublished
+                                  ? "bg-emerald-50 text-emerald-800 border border-emerald-200"
+                                  : "bg-amber-50 text-amber-800 border border-amber-200"
+                                  }`}
                               >
                                 {course.isPublished ? "Live" : "Draft"}
                               </span>
@@ -639,15 +702,14 @@ export default function EducatorHome() {
                     return (
                       <div key={act.id} className="relative flex items-start gap-3 text-xs group">
                         <div
-                          className={`w-6 h-6 rounded-full flex items-center justify-center shrink-0 z-10 border ${
-                            isPublished
-                              ? "bg-blue-50 border-blue-200 text-[#1e3a8a]"
-                              : isEnrolled
+                          className={`w-6 h-6 rounded-full flex items-center justify-center shrink-0 z-10 border ${isPublished
+                            ? "bg-blue-50 border-blue-200 text-[#1e3a8a]"
+                            : isEnrolled
                               ? "bg-emerald-50 border-emerald-200 text-emerald-700"
                               : isJoined
-                              ? "bg-purple-50 border-purple-200 text-purple-700"
-                              : "bg-amber-50 border-amber-200 text-amber-700"
-                          }`}
+                                ? "bg-purple-50 border-purple-200 text-purple-700"
+                                : "bg-amber-50 border-amber-200 text-amber-700"
+                            }`}
                         >
                           {isPublished ? (
                             <Sparkles size={11} />
@@ -667,11 +729,11 @@ export default function EducatorHome() {
                           <p className="text-[10px] text-[#78716c] mt-1 font-mono">
                             {act.timestamp
                               ? new Date(act.timestamp).toLocaleDateString("en-IN", {
-                                  month: "short",
-                                  day: "numeric",
-                                  hour: "2-digit",
-                                  minute: "2-digit",
-                                })
+                                month: "short",
+                                day: "numeric",
+                                hour: "2-digit",
+                                minute: "2-digit",
+                              })
                               : "Recent"}
                           </p>
                         </div>

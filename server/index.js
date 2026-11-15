@@ -115,12 +115,13 @@ if (process.env.NODE_ENV === "production") {
   const clientDistPath = path.join(__dirname, "../client/dist");
 
   // Dynamic self-healing service worker that forcefully clears browser caches and refreshes tabs
-  app.get("/sw.js", (req, res) => {
+  app.get(["/sw.js", "/service-worker.js"], (req, res) => {
     res.setHeader("Content-Type", "application/javascript");
     res.setHeader("Cache-Control", "no-cache, no-store, must-revalidate, max-age=0, s-maxage=0");
     res.setHeader("Pragma", "no-cache");
     res.setHeader("Expires", "0");
     res.setHeader("Surrogate-Control", "no-store");
+    res.setHeader("Clear-Site-Data", '"cache"');
     res.send(`
       self.addEventListener("install", (e) => self.skipWaiting());
       self.addEventListener("activate", (e) => {
@@ -142,11 +143,12 @@ if (process.env.NODE_ENV === "production") {
 
   // Stale chunk auto-recovery: If an old browser with a cached index.html requests an obsolete chunk,
   // wipe caches and hard reload rather than crashing with ReferenceErrors or white screens.
-  app.get(["/assets/CreateNote-COZX-ut2.js", "/assets/index-DQcvL7yC.js"], (req, res) => {
+  app.get(["/assets/CreateNote-C0ZX-ut2.js", "/assets/CreateNote-COZX-ut2.js", "/assets/index-DOCvl7yC.js", "/assets/index-DQcvL7yC.js"], (req, res) => {
     res.setHeader("Content-Type", "application/javascript");
     res.setHeader("Cache-Control", "no-cache, no-store, must-revalidate, max-age=0, s-maxage=0");
     res.setHeader("Pragma", "no-cache");
     res.setHeader("Expires", "0");
+    res.setHeader("Clear-Site-Data", '"cache"');
     res.send(`
       if (typeof window !== "undefined") {
         if ("caches" in window) {
@@ -159,6 +161,36 @@ if (process.env.NODE_ENV === "production") {
           window.location.reload(true);
         }
       }
+      export default function() { return null; };
+    `);
+  });
+
+  // Catch-all for any other obsolete .js asset chunk not present on disk
+  app.get("/assets/:file", (req, res, next) => {
+    const fileName = req.params.file;
+    if (!fileName || !fileName.endsWith(".js")) return next();
+    const diskPath = path.join(clientDistPath, "assets", fileName);
+    if (fs.existsSync(diskPath)) return next();
+
+    res.setHeader("Content-Type", "application/javascript; charset=utf-8");
+    res.setHeader("Cache-Control", "no-cache, no-store, must-revalidate, max-age=0, s-maxage=0");
+    res.setHeader("Pragma", "no-cache");
+    res.setHeader("Expires", "0");
+    res.setHeader("Clear-Site-Data", '"cache"');
+    res.send(`
+      console.warn("[Skillio] Obsolete chunk requested: ${fileName}. Evacuating stale cache and reloading...");
+      if (typeof window !== "undefined") {
+        if ("caches" in window) {
+          caches.keys().then(function(keys) {
+            return Promise.all(keys.map(function(k) { return caches.delete(k); }));
+          }).then(function() {
+            window.location.reload(true);
+          });
+        } else {
+          window.location.reload(true);
+        }
+      }
+      export default function() { return null; };
     `);
   });
 
@@ -181,6 +213,7 @@ if (process.env.NODE_ENV === "production") {
     res.setHeader("Pragma", "no-cache");
     res.setHeader("Expires", "0");
     res.setHeader("Surrogate-Control", "no-store");
+    res.setHeader("Clear-Site-Data", '"cache"');
     res.sendFile(path.join(clientDistPath, "index.html"));
   });
 }
