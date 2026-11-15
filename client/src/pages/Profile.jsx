@@ -36,7 +36,7 @@ import Navbar from "../components/Navbar";
 import { useTenant } from "../context/TenantContext";
 import { getRoleLabel, ROLES } from "../auth/permissions";
 import api from "../services/api";
-import { performLogout } from "../services/authStorage";
+import { performLogout, setAuthSession } from "../services/authStorage";
 import { setStoredTenantSlug } from "../services/tenantStorage";
 import "./Profile.css";
 
@@ -281,7 +281,17 @@ function Profile() {
 
     const handleSwitchAcademy = async (targetSlug, targetName) => {
       try {
-        const { data } = await api.post("/api/auth/select-institution", { institutionSlug: targetSlug });
+        let res;
+        try {
+          res = await api.post("/api/auth/select-institution", { institutionSlug: targetSlug });
+        } catch (selectErr) {
+          if (selectErr.response?.data?.code === "INSTITUTION_MEMBERSHIP_REQUIRED" || selectErr.response?.status === 403) {
+            res = await api.post("/api/auth/join-institution", { institutionSlug: targetSlug });
+          } else {
+            throw selectErr;
+          }
+        }
+        const data = res?.data;
         if (data?.success && data.token && data.user) {
           setAuthSession(data.token, data.user);
           dispatch(setUserData(data.user));
@@ -290,13 +300,11 @@ function Profile() {
         toast.success(`Switched to ${targetName || targetSlug}!`);
         setSelectorModalOpen(false);
         switchTenant(targetSlug);
-        navigate(`/institution/${targetSlug}`);
       } catch (err) {
         console.error("[Profile Switch Academy Error]", err);
         setStoredTenantSlug(targetSlug);
         setSelectorModalOpen(false);
         switchTenant(targetSlug);
-        navigate(`/institution/${targetSlug}`);
       }
     };
 

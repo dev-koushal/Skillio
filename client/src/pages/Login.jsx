@@ -103,15 +103,17 @@ export default function Login() {
 
     const memberships = Array.isArray(data.user.memberships) ? data.user.memberships : [];
 
-    // Direct future login to the student's last active institution without re-showing selector
-    const storedSlug = getStoredTenantSlug();
-    const activeStoredMembership = memberships.find((m) => m.slug === storedSlug);
+    // If logging in from a direct institution domain/URL, prioritize it over stale stored slug
     const urlMembership = isDirectInstitution && tenant?.slug
       ? memberships.find((m) => m.slug === tenant.slug)
       : null;
 
-    const targetSlug = activeStoredMembership?.slug
-      || urlMembership?.slug
+    const storedSlug = getStoredTenantSlug();
+    const activeStoredMembership = storedSlug ? memberships.find((m) => m.slug === storedSlug) : null;
+
+    const targetSlug = urlMembership?.slug
+      || (isDirectInstitution && tenant?.slug ? tenant.slug : null)
+      || activeStoredMembership?.slug
       || (memberships.length > 0 ? memberships[0].slug : null);
 
     if (targetSlug) {
@@ -163,10 +165,18 @@ export default function Login() {
   const handleSelectInstitution = async (selectedSlug) => {
     try {
       setLoadingInstitutions(true);
-      const { data } = await api.post("/api/auth/select-institution", { institutionSlug: selectedSlug });
-      const membershipIsActive = Array.isArray(data?.user?.memberships)
-        && data.user.memberships.some((membership) => membership.slug === selectedSlug);
-      if (!data?.success || !data.token || !data.user || !membershipIsActive) {
+      let res;
+      try {
+        res = await api.post("/api/auth/select-institution", { institutionSlug: selectedSlug });
+      } catch (selectErr) {
+        if (selectErr.response?.data?.code === "INSTITUTION_MEMBERSHIP_REQUIRED" || selectErr.response?.status === 403) {
+          res = await api.post("/api/auth/join-institution", { institutionSlug: selectedSlug });
+        } else {
+          throw selectErr;
+        }
+      }
+      const data = res?.data;
+      if (!data?.success || !data.token || !data.user) {
         throw new Error(data?.message || "We couldn't confirm your institution access. Please try again.");
       }
       setAuthSession(data.token, data.user);

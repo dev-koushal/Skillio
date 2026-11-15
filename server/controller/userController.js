@@ -103,16 +103,27 @@ export const getCurrentUser = async (req, res) => {
       }
     }
 
+    // For students: if req.tenantId is present and valid, sync user.tenantId to active tenant
+    if (safeUser.role === "student" && tenantId) {
+      if (!safeUser.tenantId || safeUser.tenantId.toString() !== tenantId.toString()) {
+        safeUser.tenantId = tenantId;
+        user.tenantId = tenantId;
+        User.updateOne({ _id: user._id }, { $set: { tenantId } }).catch(() => {});
+      }
+    }
+
     // Attach tenant doc if tenantId exists or if owned
-    if (safeUser.tenantId) {
+    const activeTenantDocId = (safeUser.role === "student" && tenantId) ? tenantId : safeUser.tenantId;
+    if (activeTenantDocId) {
       try {
-        const tenantDoc = await Tenant.findById(safeUser.tenantId)
+        const tenantDoc = await Tenant.findById(activeTenantDocId)
           .select("name slug logo institutionType title ownerId")
           .lean();
         if (tenantDoc) {
           safeUser.isInstitutionOwner = tenantDoc.ownerId?.toString() === safeUser._id.toString();
           delete tenantDoc.ownerId;
           safeUser.tenant = tenantDoc;
+          safeUser.tenantId = tenantDoc._id;
         }
       } catch (e) {}
     } else if (safeUser.role === "educator") {
