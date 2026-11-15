@@ -439,17 +439,17 @@ export default function InstitutionHome() {
                     to={`/institution/${encodeURIComponent(resolvedSlug)}/notes?filter=purchased`}
                     className="inline-flex items-center gap-1 text-xs font-bold text-emerald-700 hover:underline"
                   >
-                    <span>View in reader</span>
+                    <span>View all</span>
                     <ArrowRight size={13} />
                   </Link>
                 </div>
 
-                <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-4">
-                  {purchasedNotes.slice(0, 4).map((note) => (
+                <div className="flex overflow-x-auto sm:grid sm:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-4 pb-2 pt-1 -mx-3.5 px-3.5 sm:mx-0 sm:px-0 snap-x snap-mandatory [-webkit-overflow-scrolling:touch] [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
+                  {purchasedNotes.slice(0, 6).map((note) => (
                     <Link
                       key={note._id}
                       to={`/institution/${encodeURIComponent(resolvedSlug)}/notes/${note._id}/read`}
-                      className="group bg-white border border-[#e8e5dc] hover:border-emerald-600 rounded-2xl p-2.5 sm:p-3 flex flex-col justify-between shadow-2xs hover:shadow-sm hover:-translate-y-0.5 transition-all duration-200 h-full"
+                      className="w-[175px] sm:w-auto shrink-0 snap-start group bg-white border border-[#e8e5dc] hover:border-emerald-600 rounded-2xl p-2.5 sm:p-3 flex flex-col justify-between shadow-2xs hover:shadow-sm hover:-translate-y-0.5 transition-all duration-200 h-[225px] sm:h-full select-none"
                     >
                       <div className="w-full aspect-[16/10] rounded-xl overflow-hidden mb-2 sm:mb-2.5 bg-[#f8f7f4] shrink-0">
                         <NoteCover
@@ -505,8 +505,8 @@ export default function InstitutionHome() {
                   </Link>
                 </div>
 
-                <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-4">
-                  {institutionNotes.slice(0, 4).map((note) => (
+                <div className="flex overflow-x-auto sm:grid sm:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-4 pb-2 pt-1 -mx-3.5 px-3.5 sm:mx-0 sm:px-0 snap-x snap-mandatory [-webkit-overflow-scrolling:touch] [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
+                  {institutionNotes.slice(0, 6).map((note) => (
                     <Link
                       key={note._id}
                       to={
@@ -514,7 +514,7 @@ export default function InstitutionHome() {
                           ? `/institution/${encodeURIComponent(resolvedSlug)}/notes/${note._id}/read`
                           : `/institution/${encodeURIComponent(resolvedSlug)}/notes/${note._id}`
                       }
-                      className="group bg-white border border-[#e8e5dc] hover:border-[#5b3cc4] rounded-2xl p-2.5 sm:p-3 flex flex-col justify-between shadow-2xs hover:shadow-sm hover:-translate-y-0.5 transition-all duration-200 h-full"
+                      className="w-[175px] sm:w-auto shrink-0 snap-start group bg-white border border-[#e8e5dc] hover:border-[#5b3cc4] rounded-2xl p-2.5 sm:p-3 flex flex-col justify-between shadow-2xs hover:shadow-sm hover:-translate-y-0.5 transition-all duration-200 h-[225px] sm:h-full select-none"
                     >
                       <div className="w-full aspect-[16/10] rounded-xl overflow-hidden mb-2 sm:mb-2.5 bg-[#f8f7f4] shrink-0">
                         <NoteCover
@@ -597,7 +597,7 @@ export default function InstitutionHome() {
               </div>
 
               {visibleCourses.length > 0 ? (
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-5">
+                <div className="flex overflow-x-auto sm:grid sm:grid-cols-2 lg:grid-cols-3 gap-3.5 sm:gap-5 pb-2 pt-1 -mx-3.5 px-3.5 sm:mx-0 sm:px-0 snap-x snap-mandatory [-webkit-overflow-scrolling:touch] [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
                   {visibleCourses.map((course) => {
                     const isEnrolled = enrolledCourseIds.has(String(course._id));
                     const lectureCount = Array.isArray(course.lectures) ? course.lectures.length : 0;
@@ -606,7 +606,7 @@ export default function InstitutionHome() {
                       <Link
                         key={course._id}
                         to={`/institution/${encodeURIComponent(resolvedSlug)}/course/${course._id}`}
-                        className="group bg-white border border-[#e8e5dc] hover:border-[#5b3cc4] rounded-2xl overflow-hidden flex flex-col justify-between shadow-2xs hover:shadow-md transition duration-200 h-full"
+                        className="w-[280px] sm:w-auto shrink-0 snap-start group bg-white border border-[#e8e5dc] hover:border-[#5b3cc4] rounded-2xl overflow-hidden flex flex-col justify-between shadow-2xs hover:shadow-md transition duration-200 select-none"
                       >
                         <div className="aspect-video w-full overflow-hidden bg-slate-900 relative shrink-0">
                           <CourseThumbnail course={course} />
