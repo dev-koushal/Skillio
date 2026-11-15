@@ -1,12 +1,10 @@
-const CACHE_NAME = "skillio-shell-v1";
+const CACHE_NAME = "skillio-shell-v3";
 const STATIC_ASSETS = [
-  "/",
-  "/index.html",
   "/skillio.png",
   "/manifest.json"
 ];
 
-// Install: cache minimal app shell
+// Install: cache only non-HTML static assets and activate immediately
 self.addEventListener("install", (event) => {
   event.waitUntil(
     caches.open(CACHE_NAME).then((cache) => {
@@ -16,7 +14,7 @@ self.addEventListener("install", (event) => {
   self.skipWaiting();
 });
 
-// Activate: clean up older caches
+// Activate: clean up ALL older caches immediately and claim clients
 self.addEventListener("activate", (event) => {
   event.waitUntil(
     caches.keys().then((keys) => {
@@ -28,18 +26,19 @@ self.addEventListener("activate", (event) => {
   self.clients.claim();
 });
 
-// Fetch: Stale-while-revalidate for static assets only. NEVER cache API, video, or auth endpoints.
+// Message listener to trigger immediate skip waiting if signaled
+self.addEventListener("message", (event) => {
+  if (event.data && event.data.type === "SKIP_WAITING") {
+    self.skipWaiting();
+  }
+});
+
+// Fetch: NEVER cache API, video, auth, HTML, or navigation requests.
 self.addEventListener("fetch", (event) => {
   const url = new URL(event.request.url);
 
   // Security guard: Bypass SW cache completely for sensitive endpoints, video streams, and tokens
   if (
-    url.pathname.startsWith("/api/notes/") ||
-    url.pathname.startsWith("/api/paid-notes/") ||
-    url.pathname.startsWith("/api/resource/") ||
-    url.pathname.startsWith("/api/resources/") ||
-    url.pathname.startsWith("/api/paid-resources/") ||
-    url.pathname.includes("/pages/") ||
     url.pathname.startsWith("/api/") ||
     url.pathname.includes("/video/") ||
     url.pathname.includes("/playback") ||
@@ -56,7 +55,15 @@ self.addEventListener("fetch", (event) => {
     return;
   }
 
-  // Handle static assets with Network-first falling back to cache
+  // Navigation requests and HTML files: ALWAYS go to network first
+  if (event.request.mode === "navigate" || url.pathname.endsWith(".html") || url.pathname === "/") {
+    event.respondWith(
+      fetch(event.request).catch(() => caches.match(event.request))
+    );
+    return;
+  }
+
+  // Static assets (CSS/JS/images) with network-first falling back to cache
   event.respondWith(
     fetch(event.request)
       .then((networkResponse) => {
@@ -68,15 +75,7 @@ self.addEventListener("fetch", (event) => {
         }
         return networkResponse;
       })
-      .catch(() => {
-        return caches.match(event.request).then((cachedResponse) => {
-          if (cachedResponse) return cachedResponse;
-          if (event.request.mode === "navigate") {
-            return caches.match("/index.html");
-          }
-          return null;
-        });
-      })
+      .catch(() => caches.match(event.request))
   );
 });
 

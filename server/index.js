@@ -111,11 +111,18 @@ app.use("/api/notes", noteRouter);
 // Serve static client assets in production
 if (process.env.NODE_ENV === "production") {
   const clientDistPath = path.join(__dirname, "../client/dist");
-  app.use(express.static(clientDistPath));
+  app.use(express.static(clientDistPath, {
+    setHeaders: (res, filePath) => {
+      if (filePath.endsWith("index.html") || filePath.endsWith("sw.js")) {
+        res.setHeader("Cache-Control", "no-cache, no-store, must-revalidate");
+      }
+    },
+  }));
   // path-to-regexp v8 requires named wildcards. Use a RegExp here so this
   // SPA fallback matches the root path as well as nested client routes.
   app.get(/.*/, (req, res, next) => {
     if (req.originalUrl.startsWith("/api/")) return next();
+    res.setHeader("Cache-Control", "no-cache, no-store, must-revalidate");
     res.sendFile(path.join(clientDistPath, "index.html"));
   });
 }
