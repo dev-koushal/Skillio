@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from "react";
-import { Loader2, Lock, AlertCircle, RefreshCw, Play, ShieldAlert } from "lucide-react";
+import { Loader2, Lock, AlertCircle, RefreshCw, Play, ShieldAlert, ExternalLink } from "lucide-react";
 import api from "../../services/api";
 import YouTubePlayerFrame from "./YouTubePlayerFrame";
 
@@ -180,6 +180,17 @@ export default function SecureVideoPlayer({ lectureId, liveClassId = null, lectu
             <AlertCircle size={22} className="text-amber-300" aria-hidden="true" />
             <p className="max-w-sm text-sm font-semibold">Video unavailable</p>
             <p className="max-w-sm text-xs text-white/75">{youtubeError}</p>
+            {playback.youtubeLiveUrl && (
+              <a
+                href={playback.youtubeLiveUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="mt-2 inline-flex items-center gap-1.5 px-3.5 py-1.5 bg-rose-600 hover:bg-rose-700 text-white text-xs font-bold rounded-lg transition"
+              >
+                <span>Watch on YouTube</span>
+                <ExternalLink size={13} />
+              </a>
+            )}
           </div>
         )}
       </div>

@@ -219,7 +219,7 @@ export default function InstitutionStudents() {
       });
       setGeneratedInviteUrl(data.inviteUrl || "");
       if (data.inviteUrl && navigator.clipboard?.writeText) {
-        await navigator.clipboard.writeText(data.inviteUrl).catch(() => {});
+        await navigator.clipboard.writeText(data.inviteUrl).catch(() => { });
         setLinkCopied(true);
         setTimeout(() => setLinkCopied(false), 3000);
       }
@@ -812,7 +812,7 @@ export default function InstitutionStudents() {
 
       {/* Invite Student Modal */}
       {inviteModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-black/50 backdrop-blur-xs animate-in fade-in duration-200">
+        <div className="fixed inset-0  md:mb-0 sm:mb-0 lg:mb-0 mb-12 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-black/50 backdrop-blur-xs animate-in fade-in duration-200">
           <div className="bg-white border border-[#e8e5dc] rounded-t-3xl sm:rounded-3xl w-full max-w-lg shadow-2xl overflow-hidden">
             <div className="flex items-center justify-between px-6 py-4 border-b border-[#f2efe9] bg-[#faf9f6]">
               <div className="flex items-center gap-2.5">

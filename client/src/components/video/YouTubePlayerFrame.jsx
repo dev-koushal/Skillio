@@ -77,7 +77,7 @@ export default function YouTubePlayerFrame({ videoId, title, isLive = false, onE
       src={buildYouTubeEmbedUrl(videoId)}
       title={title || "Skillio video"}
       className="h-full w-full border-0"
-      loading="lazy"
+      loading="eager"
       allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
       allowFullScreen
       referrerPolicy="strict-origin-when-cross-origin"

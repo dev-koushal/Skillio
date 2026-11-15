@@ -3,6 +3,8 @@ import { Link, useNavigate, useParams } from "react-router-dom";
 import { useSelector } from "react-redux";
 import {
   AlertCircle,
+  ArrowLeft,
+  ArrowLeftCircle,
   Check,
   ChevronDown,
   FileText,
@@ -24,10 +26,9 @@ const MAX_PDF_SIZE = 25 * 1024 * 1024;
 const MAX_COVER_SIZE = 5 * 1024 * 1024;
 
 const fieldClass = (hasError = false) =>
-  `w-full min-h-12 rounded-xl border bg-white px-4 py-3 text-[15px] text-[#29233a] outline-none transition-all placeholder:text-[#aaa5b5] ${
-    hasError
-      ? "border-red-400 focus:border-red-500 focus:ring-4 focus:ring-red-500/10"
-      : "border-[#e5e1ec] hover:border-[#d4cee0] focus:border-[#7057c8] focus:ring-4 focus:ring-[#7057c8]/10"
+  `w-full min-h-12 rounded-xl border bg-white px-4 py-3 text-[15px] text-[#29233a] outline-none transition-all placeholder:text-[#aaa5b5] ${hasError
+    ? "border-red-400 focus:border-red-500 focus:ring-4 focus:ring-red-500/10"
+    : "border-[#e5e1ec] hover:border-[#d4cee0] focus:border-[#7057c8] focus:ring-4 focus:ring-[#7057c8]/10"
   }`;
 
 export default function CreateNote() {
@@ -498,15 +499,15 @@ export default function CreateNote() {
 
       const response = isEditing
         ? await api.put(`/api/notes/${id}`, formData, {
-            headers: {
-              "Content-Type": "multipart/form-data",
-            },
-          })
+          headers: {
+            "Content-Type": "multipart/form-data",
+          },
+        })
         : await api.post("/api/notes", formData, {
-            headers: {
-              "Content-Type": "multipart/form-data",
-            },
-          });
+          headers: {
+            "Content-Type": "multipart/form-data",
+          },
+        });
 
       const note = response.data?.note;
 
@@ -580,12 +581,12 @@ export default function CreateNote() {
       } else if (status === 503) {
         toast.error(
           serverMessage ||
-            "Secure PDF storage is temporarily unavailable. Try again later.",
+          "Secure PDF storage is temporarily unavailable. Try again later.",
         );
       } else {
         toast.error(
           serverMessage ||
-            "Couldn't save the note. Check your details and try again.",
+          "Couldn't save the note. Check your details and try again.",
         );
       }
     } finally {
@@ -622,7 +623,7 @@ export default function CreateNote() {
             to="/educator/notes"
             className="mb-4 inline-flex min-h-9 items-center gap-1.5 rounded-lg px-2 text-sm font-medium text-[#716b7d] transition hover:bg-white hover:text-[#4c4163]"
           >
-            <ArrowLeft size={16} />
+            <ArrowLeftCircle size={16} />
             <span>Notes</span>
           </Link>
 
@@ -728,13 +729,12 @@ export default function CreateNote() {
 
             <label
               htmlFor="note-pdf"
-              className={`group block cursor-pointer rounded-2xl border-2 border-dashed p-5 transition-all sm:p-7 ${
-                errors.pdf
-                  ? "border-red-300 bg-red-50/40"
-                  : pdfName
-                    ? "border-[#cfc4eb] bg-[#faf8ff] hover:border-[#b7a8dc]"
-                    : "border-[#e2dfe8] bg-[#fcfbfd] hover:border-[#b8a9dc] hover:bg-[#faf8ff]"
-              }`}
+              className={`group block cursor-pointer rounded-2xl border-2 border-dashed p-5 transition-all sm:p-7 ${errors.pdf
+                ? "border-red-300 bg-red-50/40"
+                : pdfName
+                  ? "border-[#cfc4eb] bg-[#faf8ff] hover:border-[#b7a8dc]"
+                  : "border-[#e2dfe8] bg-[#fcfbfd] hover:border-[#b8a9dc] hover:bg-[#faf8ff]"
+                }`}
             >
               <input
                 id="note-pdf"
@@ -759,13 +759,12 @@ export default function CreateNote() {
                     <p className="mt-1 text-xs text-[#85808e]">
                       {pdfFile
                         ? `${pdfSize} · PDF selected`
-                        : `${existingPageCount || "—"} pages · ${
-                            processingStatus === "ready"
-                              ? "Ready"
-                              : processingStatus === "failed"
-                                ? "Failed"
-                                : "Processing"
-                          }`}
+                        : `${existingPageCount || "—"} pages · ${processingStatus === "ready"
+                          ? "Ready"
+                          : processingStatus === "failed"
+                            ? "Failed"
+                            : "Processing"
+                        }`}
                     </p>
                   </div>
 
@@ -1121,9 +1120,8 @@ export default function CreateNote() {
               >
                 <ChevronDown
                   size={14}
-                  className={`transition-transform ${
-                    showDescription ? "rotate-180" : ""
-                  }`}
+                  className={`transition-transform ${showDescription ? "rotate-180" : ""
+                    }`}
                 />
 
                 {description
@@ -1164,9 +1162,8 @@ export default function CreateNote() {
 
                   <ChevronDown
                     size={17}
-                    className={`text-[#8a8492] transition-transform ${
-                      showAdvanced ? "rotate-180" : ""
-                    }`}
+                    className={`text-[#8a8492] transition-transform ${showAdvanced ? "rotate-180" : ""
+                      }`}
                   />
                 </button>
 
@@ -1315,11 +1312,10 @@ export default function CreateNote() {
                       }
                     }}
                     aria-pressed={active}
-                    className={`min-h-12 rounded-xl px-3 text-sm font-bold transition-all ${
-                      active
-                        ? "bg-white text-[#4f3e78] shadow-[0_2px_8px_rgba(45,32,72,0.08)]"
-                        : "text-[#85808e] hover:text-[#5e5668]"
-                    }`}
+                    className={`min-h-12 rounded-xl px-3 text-sm font-bold transition-all ${active
+                      ? "bg-white text-[#4f3e78] shadow-[0_2px_8px_rgba(45,32,72,0.08)]"
+                      : "text-[#85808e] hover:text-[#5e5668]"
+                      }`}
                   >
                     <span className="flex items-center justify-center gap-2">
                       {active && (

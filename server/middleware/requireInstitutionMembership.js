@@ -63,16 +63,31 @@ const requireInstitutionMembership = async (req, res, next) => {
       return next();
     }
 
+    // Allow if student's primary tenant matches
+    if (user?.tenantId && user.tenantId.toString() === req.tenantId.toString()) {
+      return next();
+    }
+
     const membership = await InstitutionMembership.findOne({
       userId: req.userId,
       tenantId: req.tenantId,
       role: "student",
       status: { $in: ["active", "enrolled", "ACTIVE", "ENROLLED"] },
     }).select("_id");
-    if (!membership) {
-      return apiError(res, 403, "INSTITUTION_ACCESS_DENIED");
+    if (membership) {
+      return next();
     }
-    return next();
+
+    // Check if student is enrolled in any course of this institution
+    if (Array.isArray(user?.enrolledCourses) && user.enrolledCourses.length > 0) {
+      const hasEnrolled = await Course.exists({
+        _id: { $in: user.enrolledCourses },
+        tenantId: req.tenantId,
+      });
+      if (hasEnrolled) return next();
+    }
+
+    return apiError(res, 403, "INSTITUTION_ACCESS_DENIED");
   } catch (error) {
     return res.status(500).json({ success: false, message: "Could not verify institution access." });
   }

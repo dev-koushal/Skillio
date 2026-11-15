@@ -1,7 +1,7 @@
 import LiveClass from "../models/liveClassModel.js";
 import { parseYouTubeVideoUrl } from "../utils/youtubeVideo.js";
 
-const liveClassFields = "_id title description scheduledAt status isActive startsAt endsAt createdBy createdAt updatedAt";
+const liveClassFields = "_id title description scheduledAt status isActive startsAt endsAt createdBy createdAt updatedAt youtubeLiveUrl youtubeVideoId";
 const getScopedLiveClass = (id, tenantId) => LiveClass.findOne({ _id: id, tenantId });
 
 export const listLiveClasses = async (req, res) => {
@@ -137,7 +137,14 @@ export const getCurrentLiveClass = async (req, res) => {
     .select(liveClassFields)
     .populate("createdBy", "name")
     .lean();
-  return res.json({ success: true, liveClass: liveClass || null });
+  if (!liveClass) return res.json({ success: true, liveClass: null });
+  return res.json({
+    success: true,
+    liveClass: {
+      ...liveClass,
+      youtubeUrl: liveClass.youtubeLiveUrl || (liveClass.youtubeVideoId ? `https://www.youtube.com/watch?v=${liveClass.youtubeVideoId}` : ""),
+    },
+  });
 };
 
 export const getLiveClassPlayback = async (req, res) => {
@@ -146,11 +153,19 @@ export const getLiveClassPlayback = async (req, res) => {
     tenantId: req.tenantId,
     isActive: true,
     status: "live",
-  }).select("title description youtubeVideoId startsAt").lean();
+  }).select("title description youtubeVideoId youtubeLiveUrl startsAt").lean();
   if (!liveClass) return res.status(404).json({ success: false, message: "This live class is not currently available." });
   return res.json({
     success: true,
-    playback: { authorized: true, videoProvider: "youtube", youtubeVideoId: liveClass.youtubeVideoId, title: liveClass.title, isLive: true, startsAt: liveClass.startsAt },
+    playback: {
+      authorized: true,
+      videoProvider: "youtube",
+      youtubeVideoId: liveClass.youtubeVideoId,
+      youtubeLiveUrl: liveClass.youtubeLiveUrl,
+      title: liveClass.title,
+      isLive: true,
+      startsAt: liveClass.startsAt,
+    },
   });
 };
 

@@ -16,7 +16,7 @@ export function parseYouTubeVideoUrl(value) {
   }
 
   let cleanValue = value.trim();
-  if (!/^https?:\/\//i.test(cleanValue)) {
+  if (!/^[a-zA-Z][a-zA-Z\d+\-.]*:\/\//.test(cleanValue)) {
     cleanValue = `https://${cleanValue}`;
   }
 
@@ -29,10 +29,11 @@ export function parseYouTubeVideoUrl(value) {
 
   const host = url.hostname.toLowerCase();
   if (
+    url.protocol !== "https:" ||
     !YOUTUBE_HOSTS.has(host) ||
     url.username ||
     url.password ||
-    (url.port && url.port !== "443" && url.port !== "80")
+    (url.port && url.port !== "443")
   ) {
     throw new YouTubeUrlError("Use a secure YouTube video link from youtube.com or youtu.be.");
   }
