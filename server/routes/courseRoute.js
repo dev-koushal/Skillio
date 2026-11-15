@@ -9,6 +9,7 @@ import {
   getCreatorById,
   getCreatorCourses,
   getLecturePlayback,
+  handleBunnyVideoWebhook,
   getPublishedCourses,
   getPublishedCoursesBySlug,
   removeCourse,
@@ -33,6 +34,7 @@ courseRouter.post("/creator", isAuth, requireInstitutionMembership, getCreatorBy
 // Authenticated Student Endpoints
 courseRouter.get("/courselecture/:courseId", isAuth, requireInstitutionMembership, getCourseLecture);
 courseRouter.get("/lecture/:lectureId/playback", isAuth, requireInstitutionMembership, getLecturePlayback);
+courseRouter.post("/bunny-webhook", handleBunnyVideoWebhook);
 
 // Educator / Admin Management Endpoints
 courseRouter.post("/create", isAuth, requireEducatorInstitution, requirePermission(PERMISSIONS.CREATE_COURSE), createCourse);

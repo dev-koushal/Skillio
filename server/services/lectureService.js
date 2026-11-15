@@ -1,3 +1,4 @@
+import fs from "fs";
 import Course from "../models/coursesModel.js";
 import Lecture from "../models/lectureModel.js";
 import Resource from "../models/resourceModel.js";
@@ -65,11 +66,23 @@ export const lectureService = {
       if (bunnyVideoService.isConfigured()) {
         try {
           const bunnyRes = await bunnyVideoService.createVideo(lectureTitle.trim());
-          await bunnyVideoService.uploadVideo(bunnyRes.videoId, videoFile.path);
           videoProvider = "bunny";
           bunnyVideoId = bunnyRes.videoId;
           bunnyLibraryId = bunnyRes.libraryId;
           processingStatus = "processing";
+
+          // Perform video upload to Bunny asynchronously in the background so educator is unblocked immediately
+          const filePath = videoFile.path;
+          const bgVideoId = bunnyRes.videoId;
+          setImmediate(async () => {
+            try {
+              await bunnyVideoService.uploadVideo(bgVideoId, filePath);
+              try { await fs.promises.unlink(filePath); } catch {}
+            } catch (upErr) {
+              console.error("[Bunny Background Upload Failed]", upErr.message);
+              await Lecture.updateOne({ bunnyVideoId: bgVideoId }, { $set: { processingStatus: "failed" } });
+            }
+          });
         } catch (bErr) {
           console.warn("[Bunny Upload Failed, fallback to Cloudinary]", bErr.message);
           const uploaded = await uploadCloudinary(videoFile.path);
@@ -157,7 +170,6 @@ export const lectureService = {
         try {
           const title = lectureTitle ? lectureTitle.trim() : lecture.lectureTitle;
           const bunnyRes = await bunnyVideoService.createVideo(title);
-          await bunnyVideoService.uploadVideo(bunnyRes.videoId, videoFile.path);
           lecture.videoProvider = "bunny";
           lecture.bunnyVideoId = bunnyRes.videoId;
           lecture.bunnyLibraryId = bunnyRes.libraryId;
@@ -166,6 +178,18 @@ export const lectureService = {
           lecture.youtubeVideoId = "";
           lecture.youtubeUrl = "";
           lecture.processingStatus = "processing";
+
+          const filePath = videoFile.path;
+          const bgVideoId = bunnyRes.videoId;
+          setImmediate(async () => {
+            try {
+              await bunnyVideoService.uploadVideo(bgVideoId, filePath);
+              try { await fs.promises.unlink(filePath); } catch {}
+            } catch (upErr) {
+              console.error("[Bunny Background Upload Failed]", upErr.message);
+              await Lecture.updateOne({ bunnyVideoId: bgVideoId }, { $set: { processingStatus: "failed" } });
+            }
+          });
         } catch (bErr) {
           const uploaded = await uploadCloudinary(videoFile.path);
           if (uploaded) {

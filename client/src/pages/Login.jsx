@@ -20,7 +20,7 @@ import { useTenant } from "../context/TenantContext";
 import Button from "../components/common/Button";
 import { setAuthSession } from "../services/authStorage";
 import { canUseEducatorWorkspace } from "../auth/permissions";
-import { setStoredTenantSlug } from "../services/tenantStorage";
+import { getStoredTenantSlug, setStoredTenantSlug, clearStoredTenantSlug } from "../services/tenantStorage";
 import { getSafeInternalReturnUrl } from "../services/safeReturnUrl";
 import "./AuthPages.css";
 
@@ -84,6 +84,12 @@ export default function Login() {
     if (canUseEducatorWorkspace(data.user)) {
       dispatch(setUserData(data.user));
       toast.success(`Welcome back, ${data.user.name}!`);
+      const educatorTenant = data.user?.tenant?.slug;
+      if (educatorTenant && !["default", "platform"].includes(educatorTenant)) {
+        setStoredTenantSlug(educatorTenant);
+      } else {
+        clearStoredTenantSlug();
+      }
       navigate("/educator/home");
       return;
     }

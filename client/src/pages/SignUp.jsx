@@ -164,6 +164,7 @@ export default function SignUp() {
       }
 
       if (role === "educator") {
+        clearStoredTenantSlug();
         navigate("/educator/home");
       } else if (chosenSlug && chosenSlug !== "platform" && chosenSlug !== "default") {
         setStoredTenantSlug(chosenSlug);

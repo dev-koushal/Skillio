@@ -10,7 +10,7 @@ import { courseService } from "../services/courseService.js";
 import { lectureService } from "../services/lectureService.js";
 import videoPlaybackService from "../services/video/videoPlaybackService.js";
 import { parseYouTubeVideoUrl } from "../utils/youtubeVideo.js";
-import { canManageCourse, isInstitutionOwner } from "../utils/permissions.js";
+import { canManageCourse, isInstitutionOwner, normalizeRole } from "../utils/permissions.js";
 
 export const createCourse = async (req, res) => {
   try {
@@ -199,20 +199,28 @@ export const getCourseById = async (req, res) => {
     const { courseId } = req.params;
     const tenantId = req.tenantId;
 
-    const course = await Course.findOne({ _id: courseId, tenantId })
-      .populate("lectures reviews")
-      .populate("creator", "name email profilePicture description");
-
-    if (!course) {
-      return res.status(404).json({ success: false, message: "Course not found" });
-    }
-
     const access = await verifyCourseAccess({
       courseId,
       userId: req.userId,
       userRole: req.userRole,
       tenantId,
     });
+
+    if (!access.hasAccess && !access.course) {
+      return res.status(404).json({ success: false, message: access.reason || "Course not found" });
+    }
+
+    const course = access.course
+      ? await Course.findById(courseId)
+          .populate("lectures reviews")
+          .populate("creator", "name email profilePicture description")
+      : await Course.findOne({ _id: courseId, tenantId })
+          .populate("lectures reviews")
+          .populate("creator", "name email profilePicture description");
+
+    if (!course) {
+      return res.status(404).json({ success: false, message: "Course not found" });
+    }
 
     if (req.userRole === "student" && !course.isPublished && !access.isEnrolled) {
       return res.status(404).json({ success: false, message: "Course not found" });
@@ -337,9 +345,13 @@ export const getCourseLecture = async (req, res) => {
       });
     }
 
-    const course = await Course.findOne({ _id: courseId, tenantId })
-      .populate("lectures")
-      .populate("creator", "name email profilePicture description");
+    const course = access.course
+      ? await Course.findById(courseId)
+          .populate("lectures")
+          .populate("creator", "name email profilePicture description")
+      : await Course.findOne({ _id: courseId, tenantId })
+          .populate("lectures")
+          .populate("creator", "name email profilePicture description");
 
     if (!course) {
       return res.status(404).json({ success: false, message: "Course not found!" });
@@ -473,7 +485,7 @@ export const getLecturePlayback = async (req, res) => {
           const decoded = jwt.verify(rawToken, process.env.JWT_SECRET);
           if (decoded && decoded.userId) {
             userId = decoded.userId;
-            userRole = decoded.role;
+            userRole = normalizeRole(decoded.role);
           }
         }
       } catch (e) {}
@@ -502,7 +514,46 @@ export const getLecturePlayback = async (req, res) => {
     console.error("[GetLecturePlayback Error]", error);
     return res.status(500).json({
       success: false,
-      message: "An unexpected error occurred verifying video authorization.",
+      message: error.message || "An unexpected error occurred verifying video authorization.",
     });
+  }
+};
+
+/**
+ * Idempotent Bunny Stream Webhook Handler.
+ * Receives transcoding completion events from Bunny Stream and marks lecture ready.
+ */
+export const handleBunnyVideoWebhook = async (req, res) => {
+  try {
+    const payload = req.body || {};
+    const videoGuid = payload.VideoGuid || payload.VideoId || payload.guid;
+    const status = payload.Status;
+
+    if (!videoGuid) {
+      return res.status(400).json({ success: false, message: "Missing video identifier" });
+    }
+
+    // Bunny Status: 4 = Finished (Ready), 5 = Failed
+    let processingStatus = "processing";
+    if (status === 4) {
+      processingStatus = "ready";
+    } else if (status === 5) {
+      processingStatus = "failed";
+    }
+
+    const updated = await Lecture.findOneAndUpdate(
+      { bunnyVideoId: videoGuid },
+      { $set: { processingStatus } },
+      { returnDocument: "after" }
+    );
+
+    return res.status(200).json({
+      success: true,
+      processingStatus,
+      updated: Boolean(updated),
+    });
+  } catch (error) {
+    console.error("[Bunny Webhook Error]", error.message);
+    return res.status(500).json({ success: false, message: "Webhook handling failed" });
   }
 };

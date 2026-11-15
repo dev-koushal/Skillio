@@ -1,6 +1,8 @@
+import mongoose from "mongoose";
 import Lecture from "../../models/lectureModel.js";
 import Course from "../../models/coursesModel.js";
 import { verifyCourseAccess } from "../../utils/courseAccess.js";
+import { isInstitutionOwner, normalizeRole } from "../../utils/permissions.js";
 import bunnyVideoService from "./bunnyVideoService.js";
 
 /**
@@ -16,30 +18,38 @@ class VideoPlaybackService {
    * @param {string} params.lectureId
    * @param {string} [params.userId]
    * @param {string} [params.userRole]
-   * @param {string} params.tenantId
+   * @param {string} [params.tenantId]
    * @returns {Promise<Object>}
    */
-  async getLecturePlayback({ lectureId, userId = null, userRole = null, tenantId }) {
-    if (!lectureId || !tenantId) {
+  async getLecturePlayback({ lectureId, userId = null, userRole = null, tenantId = null }) {
+    if (!lectureId || !mongoose.Types.ObjectId.isValid(lectureId)) {
       return {
         authorized: false,
         status: 400,
-        message: "Missing lecture or organization parameter",
+        message: "Missing or invalid lecture parameter",
       };
     }
 
-    // 1. Verify lecture exists strictly within this institution
-    const lecture = await Lecture.findOne({ _id: lectureId, tenantId });
+    // 1. Verify lecture exists
+    const lecture = await Lecture.findById(lectureId);
     if (!lecture) {
       return {
         authorized: false,
         status: 404,
-        message: "Lecture not found in this organization",
+        message: "Lecture not found",
       };
     }
 
-    // 2. Verify parent course belongs to same institution
-    const course = await Course.findOne({ _id: lecture.courseId, tenantId });
+    // 2. Verify parent course exists
+    if (!lecture.courseId || !mongoose.Types.ObjectId.isValid(lecture.courseId)) {
+      return {
+        authorized: false,
+        status: 404,
+        message: "Course not found",
+      };
+    }
+
+    const course = await Course.findById(lecture.courseId);
     if (!course) {
       return {
         authorized: false,
@@ -48,18 +58,34 @@ class VideoPlaybackService {
       };
     }
 
-    // 3. Authorization Check: Free preview OR verified course access
+    const courseTenantId = course.tenantId || lecture.tenantId || tenantId;
+    const normalizedRole = normalizeRole(userRole);
+
+    // 3. Creator or Admin check: Course builder can ALWAYS view their own course!
+    const isCreator = Boolean(
+      userId && (
+        (course.creator && course.creator.toString() === userId.toString()) ||
+        (lecture.creator && lecture.creator.toString() === userId.toString())
+      )
+    );
+    const isAdmin = Boolean(
+      userId && courseTenantId && (await isInstitutionOwner({ tenantId: courseTenantId, userId, userRole: normalizedRole }))
+    );
+
+    // 4. Authorization Check: Creator/Admin OR Free preview OR verified course access
     let isAuthorized = false;
     let accessReason = "";
 
-    if (lecture.isPreviewFree) {
+    if (isCreator || isAdmin) {
+      isAuthorized = true;
+    } else if (lecture.isPreviewFree) {
       isAuthorized = true;
     } else if (userId) {
       const access = await verifyCourseAccess({
         courseId: course._id,
         userId,
-        userRole,
-        tenantId,
+        userRole: normalizedRole,
+        tenantId: courseTenantId,
       });
 
       if (access.hasAccess) {
@@ -101,6 +127,19 @@ class VideoPlaybackService {
     }
 
     if (provider === "bunny" && lecture.bunnyVideoId) {
+      let currentStatus = lecture.processingStatus || "ready";
+      if (currentStatus === "processing" || currentStatus === "uploading") {
+        try {
+          const liveStatus = await bunnyVideoService.getVideoStatus(lecture.bunnyVideoId);
+          if (liveStatus && liveStatus !== currentStatus) {
+            currentStatus = liveStatus;
+            await Lecture.updateOne({ _id: lecture._id }, { $set: { processingStatus: liveStatus } });
+          }
+        } catch (err) {
+          console.warn("[VideoPlaybackService] Error checking live Bunny video status:", err.message);
+        }
+      }
+
       const tokenData = bunnyVideoService.generatePlaybackToken({
         videoId: lecture.bunnyVideoId,
         libraryId: lecture.bunnyLibraryId,
@@ -117,7 +156,7 @@ class VideoPlaybackService {
         duration: lecture.duration || 0,
         lectureTitle: lecture.lectureTitle,
         isPreviewFree: Boolean(lecture.isPreviewFree),
-        processingStatus: lecture.processingStatus || "ready",
+        processingStatus: currentStatus,
       };
     }
 

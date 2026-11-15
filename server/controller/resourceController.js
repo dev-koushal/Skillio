@@ -11,8 +11,13 @@ import crypto from "crypto";
 import ResourceEntitlement from "../models/resourceEntitlementModel.js";
 import User from "../models/userModel.js";
 import InstitutionMembership from "../models/institutionMembershipModel.js";
-import { fileTypeFromFile } from "file-type";
-import { getDocument } from "pdfjs-dist/legacy/build/pdf.mjs";
+import Note from "../models/noteModel.js";
+import {
+  fetchProtectedPdfPage,
+  inspectProtectedPdf,
+  uploadProtectedPdf,
+} from "../services/protectedPdf.js";
+import { completeNotePdfProcessing } from "../services/noteProcessing.js";
 
 /**
  * Upload a new resource (either course-level or associated with a specific lecture)
@@ -75,31 +80,13 @@ export const uploadResource = async (req, res) => {
     }
 
     if (isProtectedPdf) {
-      const ext = path.extname(req.file.originalname || "").toLowerCase();
-      const detected = await fileTypeFromFile(req.file.path);
-      const bytes = await fs.promises.readFile(req.file.path);
-      const head = bytes.subarray(0, Math.min(bytes.length, 4096)).toString("latin1");
-      const tail = bytes.subarray(Math.max(0, bytes.length - 4096)).toString("latin1");
-      const pdfHeaderOffset = head.indexOf("%PDF-");
-      if (ext !== ".pdf" || detected?.mime !== "application/pdf" || pdfHeaderOffset < 0 || pdfHeaderOffset > 1024 || !tail.includes("%%EOF")) {
-        return res.status(400).json({ success: false, message: "This file is not a supported, safe PDF." });
-      }
-      let parsedPdf;
+      let inspection;
       try {
-        parsedPdf = await getDocument({ data: new Uint8Array(bytes), isEvalSupported: false, disableFontFace: true, useSystemFonts: false }).promise;
-        pageCount = parsedPdf.numPages;
-        const [hasJSActions, attachments] = await Promise.all([parsedPdf.hasJSActions(), parsedPdf.getAttachments()]);
-        if (hasJSActions || (attachments && Object.keys(attachments).length > 0)) {
-          return res.status(400).json({ success: false, message: "PDFs with scripts or embedded files are not supported." });
-        }
-      } catch {
-        return res.status(400).json({ success: false, message: "This PDF is damaged or could not be processed." });
-      } finally {
-        await parsedPdf?.destroy().catch(() => {});
+        inspection = await inspectProtectedPdf(req.file);
+      } catch (error) {
+        return res.status(400).json({ success: false, message: error.message });
       }
-      if (!Number.isSafeInteger(pageCount) || pageCount < 1 || pageCount > 120) {
-        return res.status(400).json({ success: false, message: "Secure notes can contain between 1 and 120 pages." });
-      }
+      pageCount = inspection.pageCount;
       if (!process.env.CLOUDINARY_NAME || !process.env.CLOUDINARY_API_KEY || !process.env.CLOUDINARY_API_SECRET) {
         return res.status(503).json({ success: false, message: "Secure PDF storage is not configured." });
       }
@@ -118,42 +105,38 @@ export const uploadResource = async (req, res) => {
         ...(req.referenceLecture ? { referenceVideo: { provider: req.referenceLecture.videoProvider || "lecture", videoId: req.referenceLecture.youtubeVideoId || req.referenceLecture.bunnyVideoId || req.referenceLecture._id.toString() } } : {}),
         uploadedBy: userId,
       });
-      const webhookUrl = process.env.CLOUDINARY_EAGER_WEBHOOK_URL?.trim() ||
-        (process.env.RENDER_EXTERNAL_URL ? `${process.env.RENDER_EXTERNAL_URL.replace(/\/$/, "")}/api/resource/cloudinary-eager-webhook` : "");
-      let uploadResult;
+      resource = await Resource.create({
+        tenantId, courseId, lectureId: lectureId || null, title: title.trim(),
+        description: typeof description === "string" ? description.trim().slice(0, 1000) : "",
+        topic: typeof topic === "string" && topic.trim() ? topic.trim().slice(0, 120) : "General",
+        type: "pdf", fileUrl: "", fileName, fileSize, accessType, pricePaise,
+        storageProvider: "cloudinary_authenticated", assetId, pageCount,
+        assetVersion: 0,
+        processingStatus: "processing", processingStartedAt: new Date(),
+        ...(req.referenceLecture ? { referenceVideo: { provider: req.referenceLecture.videoProvider || "lecture", videoId: req.referenceLecture.youtubeVideoId || req.referenceLecture.bunnyVideoId || req.referenceLecture._id.toString() } } : {}),
+        uploadedBy: userId,
+      });
       try {
-        uploadResult = await cloudinary.uploader.upload(req.file.path, {
-        resource_type: "image",
-        type: "authenticated",
-        format: "pdf",
-        public_id: assetId,
-        overwrite: false,
-        eager: Array.from({ length: pageCount }, (_, index) => ({
-          transformation: [{ page: index + 1, width: 1600, crop: "limit" }],
-          format: "jpg",
-        })),
-        eager_async: Boolean(webhookUrl),
-          ...(webhookUrl ? { eager_notification_url: webhookUrl } : {}),
+        const uploaded = await uploadProtectedPdf({
+          filePath: req.file.path,
+          tenantId,
+          kind: "note",
+          pageCount,
+          assetId,
         });
-      } catch (error) {
-        resource.processingStatus = "failed";
-        await resource.save().catch(() => {});
-        throw error;
-      }
-      if (webhookUrl) {
-        // A fast eager callback may have completed before the upload response arrived.
-        if (Number.isSafeInteger(Number(uploadResult.version))) await Resource.updateOne({ _id: resource._id }, { $set: { assetVersion: Number(uploadResult.version) } });
+        await Resource.updateOne(
+          { _id: resource._id },
+          {
+            $set: {
+              assetVersion: uploaded.assetVersion,
+              ...(uploaded.processingStatus === "ready" ? { processingStatus: "ready" } : {}),
+            },
+          }
+        );
         resource = await Resource.findById(resource._id);
-      } else {
-        if (!Array.isArray(uploadResult.eager) || uploadResult.eager.length !== pageCount || uploadResult.eager.some((pageResult) => !pageResult.secure_url)) {
-          resource.processingStatus = "failed";
-          await resource.save();
-          await cloudinary.uploader.destroy(assetId, { resource_type: "image", type: "authenticated" }).catch(() => {});
-          return res.status(422).json({ success: false, message: "We could not process this PDF. Please try another file." });
-        }
-        resource.processingStatus = "ready";
-        resource.assetVersion = Number(uploadResult.version) || 0;
-        await resource.save();
+      } catch (error) {
+        await Resource.updateOne({ _id: resource._id }, { $set: { processingStatus: "failed" } });
+        throw error;
       }
       fileUrl = "";
     }
@@ -237,10 +220,35 @@ export const handleCloudinaryEagerNotification = async (req, res) => {
   let notification;
   try { notification = JSON.parse(req.body.toString("utf8")); } catch { return res.status(400).json({ success: false }); }
   if (notification.notification_type !== "eager" || typeof notification.public_id !== "string" || !Array.isArray(notification.eager)) return res.status(400).json({ success: false });
-  const resource = await Resource.findOne({ assetId: notification.public_id, storageProvider: "cloudinary_authenticated", processingStatus: "processing" }).select("_id pageCount");
-  if (!resource) return res.status(200).json({ success: true, ignored: true });
-  const succeeded = notification.eager.length === resource.pageCount && notification.eager.every((item) => item.secure_url && item.status !== "failed");
-  await Resource.updateOne({ _id: resource._id, processingStatus: "processing" }, { $set: { processingStatus: succeeded ? "ready" : "failed" } });
+  const [resource, note] = await Promise.all([
+    Resource.findOne({ assetId: notification.public_id, storageProvider: "cloudinary_authenticated", processingStatus: "processing" }).select("_id pageCount"),
+    Note.findOne({
+      storageProvider: "cloudinary_authenticated",
+      $or: [
+        { assetId: notification.public_id, processingStatus: "processing" },
+        { pendingAssetId: notification.public_id, replacementProcessing: true },
+      ],
+    }).select("_id pageCount +assetId +pendingAssetId +pendingPageCount +pendingFileName +pendingFileSize"),
+  ]);
+  const asset = resource || note;
+  if (!asset) return res.status(200).json({ success: true, ignored: true });
+  const expectedPages = note?.pendingAssetId === notification.public_id
+    ? note.pendingPageCount
+    : asset.pageCount;
+  const succeeded = notification.eager.length === expectedPages &&
+    notification.eager.every((item) => item.secure_url && item.status !== "failed");
+  if (resource) {
+    await Resource.updateOne(
+      { _id: resource._id, processingStatus: "processing" },
+      { $set: { processingStatus: succeeded ? "ready" : "failed", ...(Number.isSafeInteger(Number(notification.version)) ? { assetVersion: Number(notification.version) } : {}) } }
+    );
+  } else {
+    await completeNotePdfProcessing({
+      assetId: notification.public_id,
+      succeeded,
+      assetVersion: Number.isSafeInteger(Number(notification.version)) ? Number(notification.version) : 0,
+    });
+  }
   return res.status(200).json({ success: true, status: succeeded ? "ready" : "failed" });
 };
 
@@ -342,19 +350,11 @@ export const getProtectedResourcePage = async (req, res) => {
     if (bucket.count > 180) return res.status(429).set("Retry-After", "60").json({ success: false, message: "Please slow down page requests." });
     if (ipBucket.count > 600) return res.status(429).set("Retry-After", "60").json({ success: false, message: "Please slow down page requests." });
 
-    const signedPageUrl = cloudinary.url(resource.assetId, {
-      secure: true,
-      resource_type: "image",
-      type: "authenticated",
-      version: resource.assetVersion || undefined,
-      format: "jpg",
-      sign_url: true,
-      transformation: [{ page, width: 1600, crop: "limit" }],
+    const imageBytes = await fetchProtectedPdfPage({
+      assetId: resource.assetId,
+      assetVersion: resource.assetVersion,
+      page,
     });
-    const pageResponse = await fetch(signedPageUrl, { signal: AbortSignal.timeout(15_000) });
-    if (!pageResponse.ok) return res.status(502).json({ success: false, message: "This page is temporarily unavailable." });
-    const imageBytes = Buffer.from(await pageResponse.arrayBuffer());
-    if (imageBytes.length > 12 * 1024 * 1024) return res.status(502).end();
     res.set({ "Content-Type": "image/jpeg", "Content-Length": String(imageBytes.length), "Cache-Control": "private, no-store, no-cache, must-revalidate", Pragma: "no-cache", Expires: "0", "X-Content-Type-Options": "nosniff", "Content-Disposition": "inline", "Cross-Origin-Resource-Policy": "same-site" });
     res.set("X-Page-Watermark", Buffer.from(`${requester.email || requester.name} · ${req.tenant?.name || "Skillio"}`).toString("base64"));
     return res.status(200).send(imageBytes);
@@ -545,4 +545,3 @@ export const deleteResource = async (req, res) => {
     });
   }
 };
-

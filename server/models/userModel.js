@@ -100,11 +100,10 @@ userSchema.index({ phoneNumber: 1 }, { unique: true, sparse: true });
 userSchema.index({ tenantId: 1, role: 1 });
 
 // Auto-migrate legacy tenant_admin to educator before validation/save
-userSchema.pre("validate", function (next) {
+userSchema.pre("validate", function () {
   if (this.role === "tenant_admin") {
     this.role = "educator";
   }
-  next();
 });
 
 const User = mongoose.model("User", userSchema);

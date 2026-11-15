@@ -18,14 +18,14 @@ export default function SecureVideoPlayer({ lectureId, liveClassId = null, lectu
 
   const expiryTimerRef = useRef(null);
 
-  const fetchPlaybackAuthorization = async () => {
+  const fetchPlaybackAuthorization = async (silent = false) => {
     const playbackEndpoint = liveClassId
       ? `/api/institution/live/${liveClassId}/playback`
       : lectureId ? `/api/lectures/${lectureId}/playback` : null;
     if (!playbackEndpoint) return;
 
     try {
-      setLoading(true);
+      if (!silent) setLoading(true);
       setError(null);
       setIsExpired(false);
       setYoutubeError("");
@@ -53,7 +53,7 @@ export default function SecureVideoPlayer({ lectureId, liveClassId = null, lectu
       console.warn("[SecureVideoPlayer Authorization Error]", err.response?.data?.message || err.message);
       setError(err.response?.data?.message || "Course access or enrollment required to watch this lecture.");
     } finally {
-      setLoading(false);
+      if (!silent) setLoading(false);
     }
   };
 
@@ -66,6 +66,16 @@ export default function SecureVideoPlayer({ lectureId, liveClassId = null, lectu
       setPlayback(null);
     };
   }, [lectureId, liveClassId]);
+
+  // Auto-poll video status while Bunny transcodes in the background
+  useEffect(() => {
+    if (playback?.processingStatus === "processing" || playback?.processingStatus === "uploading") {
+      const pollTimer = setTimeout(() => {
+        fetchPlaybackAuthorization(true);
+      }, 2500);
+      return () => clearTimeout(pollTimer);
+    }
+  }, [playback?.processingStatus]);
 
   const playerShell = "relative w-full aspect-video overflow-hidden rounded-2xl border border-[#e8e5dc] bg-[#111018] shadow-xs";
 
@@ -144,7 +154,7 @@ export default function SecureVideoPlayer({ lectureId, liveClassId = null, lectu
       <div className={playerShell}>
         <iframe
           src={playback.embedUrl}
-          loading="lazy"
+          loading="eager"
           className="border-0 w-full h-full"
           allow="accelerometer; gyroscope; autoplay; encrypted-media; picture-in-picture;"
           allowFullScreen
@@ -183,6 +193,7 @@ export default function SecureVideoPlayer({ lectureId, liveClassId = null, lectu
         <video
           src={playback.streamUrl}
           controls
+          preload="auto"
           controlsList="nodownload"
           onContextMenu={(e) => e.preventDefault()}
           onEnded={onEnded}

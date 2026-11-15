@@ -1,6 +1,5 @@
 import React, { useEffect, useState, useRef } from "react";
 import {
-  ArrowLeft,
   Sparkles,
   Video,
   FileText,
@@ -34,6 +33,7 @@ import RequireInstitutionModal from "../../components/common/RequireInstitutionM
 import { hasEducatorInstitution } from "../../auth/permissions";
 import { useTenant } from "../../context/TenantContext";
 import "./CourseBuilder.css";
+import PageHeader from "../../components/common/PageHeader";
 
 const SUGGESTED_TOPICS = [
   "Spoken English",
@@ -228,6 +228,7 @@ export default function CourseBuilder() {
         });
         savedCourseId = data._id;
         setActiveCourseId(data._id);
+        navigate(`/builder/${data._id}`, { replace: true });
       }
 
       // Update details & thumbnail
@@ -470,35 +471,27 @@ export default function CourseBuilder() {
       <Navbar />
 
       <main className="course-builder-main max-w-5xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-6 space-y-4 flex-1 pb-28 md:pb-12">
-        {/* Workspace Sticky Top Bar */}
+        <PageHeader title={title || "Course Builder"} onBack={() => navigate("/courses")} />
+
         <div className="course-builder-toolbar bg-white border border-[#e8e5dc] rounded-2xl p-4 sm:p-5 shadow-xs flex flex-col sm:flex-row sm:items-center justify-between gap-4 sticky top-20 z-30 backdrop-blur-md">
-          <div className="flex items-center gap-3 min-w-0">
-            <button
-              onClick={() => navigate("/courses")}
-              className="p-2 rounded-xl text-[#78716c] hover:text-[#1c1917] hover:bg-[#f1ede4] transition cursor-pointer shrink-0"
-              title="Back to courses"
-            >
-              <ArrowLeft size={18} />
-            </button>
-            <div className="min-w-0">
-              <div className="flex items-center gap-2">
-                <h1 className="text-base sm:text-lg font-bold text-[#1c1917] truncate max-w-sm sm:max-w-md">
-                  {title || "Untitled Course Builder"}
-                </h1>
-                <span
-                  className={`text-[11px] font-semibold px-2.5 py-0.5 rounded-full border shrink-0 ${isPublished
-                    ? "bg-emerald-50 text-emerald-700 border-emerald-200"
-                    : "bg-amber-50 text-amber-700 border-amber-200"
-                    }`}
-                >
-                  {isPublished ? "Published (Live)" : "Draft"}
-                </span>
-              </div>
-              <p className="text-[11px] text-[#78716c] flex items-center gap-1.5 mt-0.5">
-                <Check size={12} className="text-emerald-600" />
-                <span>{saveStatus}</span>
-              </p>
+          <div className="min-w-0">
+            <div className="flex items-center gap-2">
+              <h1 className="text-base sm:text-lg font-bold text-[#1c1917] truncate max-w-sm sm:max-w-md">
+                {title || "Untitled Course Builder"}
+              </h1>
+              <span
+                className={`text-[11px] font-semibold px-2.5 py-0.5 rounded-full border shrink-0 ${isPublished
+                  ? "bg-emerald-50 text-emerald-700 border-emerald-200"
+                  : "bg-amber-50 text-amber-700 border-amber-200"
+                  }`}
+              >
+                {isPublished ? "Published (Live)" : "Draft"}
+              </span>
             </div>
+            <p className="text-[11px] text-[#78716c] flex items-center gap-1.5 mt-0.5">
+              <Check size={12} className="text-emerald-600" />
+              <span>{saveStatus}</span>
+            </p>
           </div>
 
           <div className="flex items-center gap-2 shrink-0">
@@ -1026,10 +1019,6 @@ export default function CourseBuilder() {
               </div>
             </div>
           </div>
-          <div className="flex flex-col gap-2 rounded-xl border border-[#d9e5db] bg-[#f3f7f2] p-4 sm:flex-row sm:items-center sm:justify-between">
-            <div><p className="text-sm font-semibold text-[#254a39]">Course notes and resources</p><p className="mt-1 text-xs text-[#68756a]">Create free or paid secure PDF notes for this course.</p></div>
-            <button type="button" onClick={async () => { const saved = await handleSaveCourse(null, true); const id = saved?._id || activeCourseId; if (id) navigate(`/course-resources/${id}`); }} className="min-h-10 shrink-0 rounded-xl bg-[#254a39] px-4 text-xs font-semibold text-white hover:bg-[#1c392c]">Manage notes</button>
-          </div>
         </section>
 
         {/* BOTTOM SAVE FOOTER */}
@@ -1052,25 +1041,25 @@ export default function CourseBuilder() {
           <div className="course-step-actions flex items-center gap-2.5">
             {builderStep > 0 && <button type="button" onClick={() => setBuilderStep((step) => step - 1)} className="course-step-button">Back</button>}
             {builderStep < 2 ? <button type="button" onClick={() => setBuilderStep((step) => step + 1)} className="course-step-button primary">Continue</button> : <>
-            <button
-              type="button"
-              disabled={loading}
-              onClick={() => handleSaveCourse(false)}
-              className="bg-white hover:bg-[#f1ede4] text-[#1c1917] border border-[#d6d3d1] text-xs font-semibold px-5 py-2.5 rounded-xl transition cursor-pointer shadow-xs disabled:opacity-50"
-            >
-              Save Draft
-            </button>
+              <button
+                type="button"
+                disabled={loading}
+                onClick={() => handleSaveCourse(false)}
+                className="bg-white hover:bg-[#f1ede4] text-[#1c1917] border border-[#d6d3d1] text-xs font-semibold px-5 py-2.5 rounded-xl transition cursor-pointer shadow-xs disabled:opacity-50"
+              >
+                Save Draft
+              </button>
 
-            <Button
-              type="button"
-              variant="primary"
-              size="md"
-              loading={loading}
-              onClick={() => handleSaveCourse(true)}
-              className="!bg-[#1e3a8a] inline hover:!bg-[#172554] text-white font-semibold px-6 py-2.5 rounded-xl shadow-xs"
-            >
-              <Save size={15} className="inline-block" /> Save & Publish
-            </Button>
+              <Button
+                type="button"
+                variant="primary"
+                size="md"
+                loading={loading}
+                onClick={() => handleSaveCourse(true)}
+                className="!bg-[#1e3a8a] inline hover:!bg-[#172554] text-white font-semibold px-6 py-2.5 rounded-xl shadow-xs"
+              >
+                <Save size={15} className="inline-block" /> Save & Publish
+              </Button>
             </>}
           </div>
         </div>

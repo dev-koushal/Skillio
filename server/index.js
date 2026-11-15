@@ -24,6 +24,7 @@ import aiRouter from "./routes/aiRoute.js";
 import institutionStudentRouter from "./routes/institutionStudentRoute.js";
 import invitationRouter from "./routes/invitationRoute.js";
 import liveClassRouter from "./routes/liveClassRoute.js";
+import noteRouter from "./routes/noteRoute.js";
 import { startYouTubeLiveSync } from "./services/youtubeLiveSync.js";
 import { getLecturePlayback } from "./controller/courseController.js";
 import { handleResourcePaymentWebhook } from "./controller/paidResourceController.js";
@@ -105,6 +106,7 @@ app.use("/api/resource", resourceRouter);
 app.use("/api/ai", aiRouter);
 app.use("/api/invitations", invitationRouter);
 app.use("/api/institution/live", liveClassRouter);
+app.use("/api/notes", noteRouter);
 
 // Serve static client assets in production
 if (process.env.NODE_ENV === "production") {

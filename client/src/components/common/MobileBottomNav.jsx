@@ -9,6 +9,7 @@ import {
   Users,
   BarChart3,
   Building2,
+  FileText,
 } from "lucide-react";
 import { useSelector } from "react-redux";
 import { useTenant } from "../../context/TenantContext";
@@ -51,6 +52,12 @@ export default function MobileBottomNav({ currentInstitution = null }) {
       isActive: location.pathname.includes("/courses") || location.pathname.startsWith("/viewcourse/"),
     },
     {
+      label: "Notes",
+      path: activeInstitution ? `/institution/${activeInstitution.slug}/notes` : "/notes",
+      icon: FileText,
+      isActive: location.pathname.includes("/notes"),
+    },
+    {
       label: "My Courses",
       path: userData ? (activeInstitution ? `/institution/${activeInstitution.slug}/my-courses` : "/mycourses") : "/login",
       icon: GraduationCap,
@@ -88,6 +95,12 @@ export default function MobileBottomNav({ currentInstitution = null }) {
       path: "/courses",
       icon: BookOpen,
       isActive: location.pathname === "/courses" || location.pathname.startsWith("/builder"),
+    },
+    {
+      label: "Notes",
+      path: "/educator/notes",
+      icon: FileText,
+      isActive: location.pathname.startsWith("/educator/notes"),
     },
     {
       label: "Students",

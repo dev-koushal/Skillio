@@ -1,16 +1,21 @@
 import React, { useCallback, useEffect, useState } from "react";
 import { ArrowLeft, CircleDot, Radio } from "lucide-react";
 import { Link, useNavigate, useParams } from "react-router-dom";
+import { useSelector } from "react-redux";
 import Navbar from "../components/Navbar";
 import Footer from "../components/Footer";
 import SecureVideoPlayer from "../components/video/SecureVideoPlayer";
+import EducatorLiveClassPanel from "../components/video/EducatorLiveClassPanel";
 import { useTenant } from "../context/TenantContext";
+import { canUseEducatorWorkspace } from "../auth/permissions";
 import api from "../services/api";
 
 export default function InstitutionLiveClass() {
   const { slug } = useParams();
   const navigate = useNavigate();
   const { tenant } = useTenant();
+  const { userData } = useSelector((state) => state.user);
+  const isEducator = canUseEducatorWorkspace(userData);
   const [liveClass, setLiveClass] = useState(null);
   const [loading, setLoading] = useState(true);
   const [message, setMessage] = useState("");
@@ -44,6 +49,12 @@ export default function InstitutionLiveClass() {
       <Navbar currentInstitution={tenant?.isPlatform ? null : tenant} />
       <main className="mx-auto w-full max-w-5xl flex-1 px-3 py-4 pb-24 sm:px-6 sm:py-6 md:pb-12">
         <Link to={institutionPath} className="mb-4 inline-flex min-h-10 items-center gap-1.5 rounded-lg px-2 text-xs font-semibold text-[#57534e] hover:bg-white hover:text-[#1c1917] focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#5b3cc4]"><ArrowLeft size={15} aria-hidden="true" /> Back to institution</Link>
+
+        {isEducator && (
+          <div className="mb-6">
+            <EducatorLiveClassPanel />
+          </div>
+        )}
         {loading ? (
           <div role="status" className="grid aspect-video place-items-center rounded-2xl border border-[#e8e5dc] bg-white text-sm text-[#78716c]">Loading live class…</div>
         ) : liveClass ? (

@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useState } from "react";
-import { CircleDot, Link2, LoaderCircle, Plus, Radio, Trash2, X } from "lucide-react";
+import { CircleDot, Edit3, ExternalLink, Link2, LoaderCircle, Plus, Radio, Trash2, X } from "lucide-react";
 import { useSelector } from "react-redux";
 import api from "../../services/api";
 import { toast } from "react-toastify";
@@ -15,6 +15,7 @@ export default function EducatorLiveClassPanel() {
   const [saving, setSaving] = useState(false);
   const [actionId, setActionId] = useState(null);
   const [formOpen, setFormOpen] = useState(false);
+  const [editingItem, setEditingItem] = useState(null);
   const [youtubeLiveUrl, setYoutubeLiveUrl] = useState("");
   const [requireInstitutionModalOpen, setRequireInstitutionModalOpen] = useState(false);
 
@@ -37,7 +38,14 @@ export default function EducatorLiveClassPanel() {
 
   const resetForm = () => {
     setFormOpen(false);
+    setEditingItem(null);
     setYoutubeLiveUrl("");
+  };
+
+  const startEdit = (item) => {
+    setEditingItem(item);
+    setYoutubeLiveUrl(item.youtubeLiveUrl || "");
+    setFormOpen(true);
   };
 
   const submitForm = async (event) => {
@@ -45,8 +53,13 @@ export default function EducatorLiveClassPanel() {
     if (!youtubeLiveUrl.trim()) return;
     setSaving(true);
     try {
-      await api.post("/api/institution/live", { youtubeLiveUrl: youtubeLiveUrl.trim() });
-      toast.success("Link saved. Show it to students when your broadcast starts.");
+      if (editingItem?._id) {
+        await api.put(`/api/institution/live/${editingItem._id}`, { youtubeLiveUrl: youtubeLiveUrl.trim() });
+        toast.success("Live link updated successfully.");
+      } else {
+        await api.post("/api/institution/live", { youtubeLiveUrl: youtubeLiveUrl.trim() });
+        toast.success("Link saved. Show it to students when your broadcast starts.");
+      }
       resetForm();
       await loadLiveClasses();
     } catch (error) {
@@ -92,6 +105,7 @@ export default function EducatorLiveClassPanel() {
                 setRequireInstitutionModalOpen(true);
                 return;
               }
+              resetForm();
               setFormOpen(true);
             }}
             className="inline-flex min-h-10 items-center gap-1.5 rounded-lg bg-[#5b3cc4] px-3 text-xs font-bold text-white transition hover:bg-[#4b2fa8] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#5b3cc4]"
@@ -102,20 +116,54 @@ export default function EducatorLiveClassPanel() {
       </div>
 
       {formOpen && (
-        <form onSubmit={submitForm} className="mt-4 rounded-xl border border-[#eeeae3] bg-[#faf9f6] p-3.5 sm:p-4" aria-label="Add a YouTube live link">
-          <label htmlFor="live-youtube-url" className="mb-1.5 block text-xs font-semibold text-[#44403c]">YouTube Live URL</label>
+        <form onSubmit={submitForm} className="mt-4 rounded-xl border border-[#eeeae3] bg-[#faf9f6] p-3.5 sm:p-4" aria-label={editingItem ? "Edit YouTube Live link" : "Add a YouTube live link"}>
+          <div className="flex items-center justify-between mb-1.5">
+            <label htmlFor="live-youtube-url" className="block text-xs font-semibold text-[#44403c]">
+              {editingItem ? "Edit YouTube Live URL" : "YouTube Live URL"}
+            </label>
+            {editingItem && (
+              <span className="text-[11px] font-semibold text-[#5b3cc4]">
+                Editing link: {editingItem.title}
+              </span>
+            )}
+          </div>
           <div className="flex flex-col gap-2 sm:flex-row">
             <div className="relative min-w-0 flex-1">
               <Link2 size={15} aria-hidden="true" className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-[#78716c]" />
-              <input id="live-youtube-url" name="youtubeLiveUrl" type="url" inputMode="url" autoComplete="off" spellCheck={false} required value={youtubeLiveUrl} onChange={(event) => setYoutubeLiveUrl(event.target.value)} placeholder="https://youtube.com/live/…" className="min-h-11 w-full rounded-lg border border-[#d6d3c9] bg-white pl-9 pr-3 text-sm outline-none focus-visible:ring-2 focus-visible:ring-[#5b3cc4]" />
+              <input
+                id="live-youtube-url"
+                name="youtubeLiveUrl"
+                type="url"
+                inputMode="url"
+                autoComplete="off"
+                spellCheck={false}
+                required
+                value={youtubeLiveUrl}
+                onChange={(event) => setYoutubeLiveUrl(event.target.value)}
+                placeholder="https://youtube.com/live/…"
+                className="min-h-11 w-full rounded-lg border border-[#d6d3c9] bg-white pl-9 pr-3 text-sm outline-none focus-visible:ring-2 focus-visible:ring-[#5b3cc4]"
+              />
             </div>
-            <button type="submit" disabled={saving || !youtubeLiveUrl.trim()} className="inline-flex min-h-11 shrink-0 items-center justify-center gap-2 rounded-lg bg-[#5b3cc4] px-4 text-xs font-bold text-white hover:bg-[#4b2fa8] disabled:cursor-not-allowed disabled:opacity-50">
+            <button
+              type="submit"
+              disabled={saving || !youtubeLiveUrl.trim()}
+              className="inline-flex min-h-11 shrink-0 items-center justify-center gap-2 rounded-lg bg-[#5b3cc4] px-4 text-xs font-bold text-white hover:bg-[#4b2fa8] disabled:cursor-not-allowed disabled:opacity-50"
+            >
               {saving ? <LoaderCircle size={14} className="animate-spin" aria-hidden="true" /> : <Radio size={14} aria-hidden="true" />}
-              {saving ? "Saving…" : "Save live link"}
+              {saving ? "Saving…" : editingItem ? "Update live link" : "Save live link"}
             </button>
-            <button type="button" onClick={resetForm} aria-label="Cancel" className="grid min-h-11 w-11 shrink-0 place-items-center rounded-lg border border-[#d6d3c9] bg-white text-[#57534e] hover:bg-[#f2efe9]"><X size={16} aria-hidden="true" /></button>
+            <button
+              type="button"
+              onClick={resetForm}
+              aria-label="Cancel"
+              className="grid min-h-11 w-11 shrink-0 place-items-center rounded-lg border border-[#d6d3c9] bg-white text-[#57534e] hover:bg-[#f2efe9]"
+            >
+              <X size={16} aria-hidden="true" />
+            </button>
           </div>
-          <p className="mt-2 text-[11px] leading-relaxed text-[#78716c]">No title or schedule needed. Add the link, then make it visible when the broadcast begins.</p>
+          <p className="mt-2 text-[11px] leading-relaxed text-[#78716c]">
+            Supports YouTube Live links (https://youtube.com/live/..., https://youtu.be/..., or https://youtube.com/watch?v=...).
+          </p>
         </form>
       )}
 
@@ -124,16 +172,38 @@ export default function EducatorLiveClassPanel() {
           <p className="rounded-xl bg-[#faf9f6] px-3 py-3 text-xs text-[#78716c]">No live links added yet.</p>
         ) : liveClasses.map((item) => (
           <article key={item._id} className={`flex flex-col gap-3 rounded-xl border p-3 sm:flex-row sm:items-center sm:justify-between ${item.isActive ? "border-rose-200 bg-rose-50/60" : "border-[#eeeae3] bg-[#faf9f6]"}`}>
-            <div className="min-w-0">
+            <div className="min-w-0 flex-1">
               <div className="flex flex-wrap items-center gap-2">
                 <h3 className="max-w-full truncate text-sm font-semibold text-[#1c1917]">{item.title || "YouTube Live"}</h3>
                 <span className={`inline-flex min-h-6 items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-extrabold tracking-wide ${item.isActive ? "bg-rose-600 text-white" : "bg-white text-[#57534e]"}`}>
                   {item.isActive ? <><CircleDot size={10} aria-hidden="true" /> LIVE NOW</> : "WAITING TO GO LIVE"}
                 </span>
               </div>
+              {item.youtubeLiveUrl && (
+                <a
+                  href={item.youtubeLiveUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="mt-1 text-xs text-[#5b3cc4] hover:underline inline-flex items-center gap-1 font-mono break-all"
+                  title="Open YouTube video link"
+                >
+                  <ExternalLink size={12} aria-hidden="true" />
+                  <span>{item.youtubeLiveUrl}</span>
+                </a>
+              )}
               <p className="mt-1 text-xs text-[#78716c]">{item.isActive ? "The video is visible on your students' institution home." : "This link is hidden from students until you make it live."}</p>
             </div>
             <div className="flex shrink-0 flex-wrap items-center gap-2 self-start sm:self-center">
+              {!item.isActive && (
+                <button
+                  type="button"
+                  onClick={() => startEdit(item)}
+                  className="inline-flex min-h-9 items-center justify-center gap-1.5 rounded-lg border border-[#d6d3c9] bg-white px-3 text-xs font-semibold text-[#57534e] hover:bg-[#f2efe9] hover:text-[#1c1917]"
+                  title="Edit YouTube Live URL"
+                >
+                  <Edit3 size={13} aria-hidden="true" /> Edit URL
+                </button>
+              )}
               {!item.isActive && <button type="button" disabled={actionId === item._id} onClick={() => setLiveState(item, "activate")} className="inline-flex min-h-9 items-center justify-center gap-1.5 rounded-lg bg-rose-600 px-3 text-xs font-semibold text-white hover:bg-rose-700 disabled:opacity-60"><Radio size={13} aria-hidden="true" /> Show to students</button>}
               <button type="button" disabled={actionId === item._id} onClick={() => setLiveState(item, "remove")} aria-label={item.isActive ? "End live class and remove alert" : "Remove waiting live link"} className="inline-flex min-h-9 items-center justify-center gap-1.5 rounded-lg border border-[#d6d3c9] bg-white px-3 text-xs font-semibold text-[#57534e] hover:border-rose-200 hover:bg-rose-50 hover:text-rose-700 disabled:opacity-60"><Trash2 size={13} aria-hidden="true" />{item.isActive ? "End & remove alert" : "Remove link"}</button>
             </div>

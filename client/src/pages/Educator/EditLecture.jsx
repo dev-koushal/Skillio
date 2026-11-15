@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { ArrowLeft, Trash2, FileText } from "lucide-react";
+import { Trash2, FileText } from "lucide-react";
 import { useDispatch, useSelector } from "react-redux";
 import { useNavigate, useParams } from "react-router-dom";
 import api from "../../services/api";
@@ -9,6 +9,7 @@ import Button from "../../components/common/Button";
 import Navbar from "../../components/Navbar";
 import Footer from "../../components/Footer";
 import LectureVideoSourceFields from "../../components/video/LectureVideoSourceFields";
+import PageHeader from "../../components/common/PageHeader";
 
 function EditLecture() {
   const { courseId, lectureId } = useParams();
@@ -177,24 +178,12 @@ function EditLecture() {
       <Navbar />
 
       <main className="max-w-4xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-12 space-y-6 flex-1">
-        {/* Header */}
         <div className="flex items-center justify-between pb-4 border-b border-[#e8e5dc]">
-          <div className="flex items-center gap-3">
-            <button
-              onClick={() => navigate(`/createlecture/${courseId}`)}
-              className="p-1.5 rounded-lg text-[#78716c] hover:text-[#1c1917] hover:bg-[#f2efe9] transition cursor-pointer"
-            >
-              <ArrowLeft size={18} />
-            </button>
-            <div>
-              <h1 className="text-xl sm:text-2xl font-extrabold text-[#1c1917] tracking-tight">
-                Configure Lecture Media & Notes
-              </h1>
-              <p className="text-xs text-[#78716c]">
-                Update title, video file, free preview, and attached study resources
-              </p>
-            </div>
-          </div>
+          <PageHeader
+            title="Configure Lecture Media & Notes"
+            description="Update title, video file, free preview, and attached study resources"
+            onBack={() => navigate(`/createlecture/${courseId}`)}
+          />
 
           <button
             onClick={handleRemoveLecture}
