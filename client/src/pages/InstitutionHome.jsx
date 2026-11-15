@@ -1,14 +1,15 @@
-﻿import React, { useEffect, useMemo, useState } from "react";
-import { ArrowRight, BookOpen, CircleDot, Play, Search, GraduationCap } from "lucide-react";
+import React, { useEffect, useMemo, useState } from "react";
+import { ArrowRight, BookOpen, Play, Search, GraduationCap, Radio, CheckCircle2 } from "lucide-react";
 import { Link, useParams } from "react-router-dom";
 import { useSelector } from "react-redux";
 import Navbar from "../components/Navbar";
+import Footer from "../components/Footer";
 import api from "../services/api";
 import { useTenant } from "../context/TenantContext";
 import { optimizeImage } from "../utils/imageOptimizer";
 import { setStoredTenantSlug } from "../services/tenantStorage";
 import { getAccessibleTextColor, getInstitutionTheme } from "../utils/institutionTheme";
-import "./InstitutionHome.css";
+import NoteCover from "../components/notes/NoteCover";
 
 function getInitials(label = "") {
   return label
@@ -28,9 +29,9 @@ function CourseThumbnail({ course, className = "", size = "normal" }) {
   if (course?.thumbnail && !imgFailed) {
     return (
       <img
-        src={optimizeImage(course.thumbnail, size === "large" ? 360 : 200)}
+        src={optimizeImage(course.thumbnail, size === "large" ? 480 : 320)}
         alt=""
-        className={`ih-thumb-img ${className}`}
+        className={`w-full h-full object-cover transition-transform duration-300 group-hover:scale-105 ${className}`}
         loading="lazy"
         decoding="async"
         onError={() => setImgFailed(true)}
@@ -39,9 +40,8 @@ function CourseThumbnail({ course, className = "", size = "normal" }) {
   }
 
   return (
-    <div className={`ih-thumb-fallback ${size} ${className}`} aria-hidden="true">
-      <div className="ih-thumb-pattern" />
-      <span className="ih-thumb-initials">{initials}</span>
+    <div className={`w-full h-full flex items-center justify-center bg-gradient-to-br from-[#f5f3ff] to-[#ede9fe] text-[#5b3cc4] font-extrabold text-xl ${className}`}>
+      {initials}
     </div>
   );
 }
@@ -52,6 +52,7 @@ export default function InstitutionHome() {
   const { tenant: contextTenant } = useTenant();
   const [institution, setInstitution] = useState(null);
   const [institutionCourses, setInstitutionCourses] = useState([]);
+  const [institutionNotes, setInstitutionNotes] = useState([]);
   const [loading, setLoading] = useState(true);
   const [courseQuery, setCourseQuery] = useState("");
   const [currentLiveClass, setCurrentLiveClass] = useState(null);
@@ -68,7 +69,8 @@ export default function InstitutionHome() {
     Promise.allSettled([
       api.get(`/api/tenant/by-slug/${targetSlug}`),
       api.get(`/api/course/by-institution/${targetSlug}`),
-    ]).then(([tenantResult, coursesResult]) => {
+      api.get("/api/notes/student"),
+    ]).then(([tenantResult, coursesResult, notesResult]) => {
       if (!mounted) return;
 
       if (
@@ -87,6 +89,12 @@ export default function InstitutionHome() {
         setInstitutionCourses(coursesResult.value.data);
       } else {
         setInstitutionCourses([]);
+      }
+
+      if (notesResult.status === "fulfilled" && Array.isArray(notesResult.value.data?.notes)) {
+        setInstitutionNotes(notesResult.value.data.notes);
+      } else {
+        setInstitutionNotes([]);
       }
       setLoading(false);
     });
@@ -122,6 +130,7 @@ export default function InstitutionHome() {
   const activeTenant = institution || contextTenant;
   const institutionName = activeTenant?.name || "Your Academy";
   const theme = getInstitutionTheme(activeTenant);
+  const accentColor = theme.accent || theme.primary || "#5b3cc4";
 
   // Dynamic Theme Controls scoped to semantic CSS variables
   const tenantStyle = {
@@ -177,150 +186,215 @@ export default function InstitutionHome() {
   }, [courseQuery, institutionCourses]);
 
   return (
-    <div className="ih-app-shell" style={tenantStyle}>
-      {/* Compact Native App Bar */}
+    <div className="min-h-screen bg-[#fafaf9] text-[#1c1917] flex flex-col font-sans" style={tenantStyle}>
+      {/* Compact Navigation Bar */}
       <Navbar currentInstitution={activeTenant} studentHome={userData?.role === "student"} />
 
-      <main className="ih-content-container" id="ih-main">
+      <main className="max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8 space-y-8 flex-1" id="ih-main">
         {loading ? (
-          <div className="ih-loading-state" role="status" aria-live="polite">
-            <div className="ih-loading-spinner" />
-            <span>Loading {institutionName}…</span>
+          <div className="flex min-h-[50vh] items-center justify-center text-sm font-semibold text-[#78716c]" role="status" aria-live="polite">
+            <div className="flex items-center gap-3">
+              <span className="w-4 h-4 border-2 border-[#5b3cc4] border-t-transparent rounded-full animate-spin" />
+              <span>Loading {institutionName}…</span>
+            </div>
           </div>
         ) : (
-          <div className="ih-screen-flow">
-            {/* 1. Header Greeting & Identity */}
-            <header className="ih-welcome-header">
-              <div className="ih-greeting-group">
-                <span className="ih-institution-badge">
-                  {activeTenant?.institutionType || "Academy"}
-                </span>
-                <h1 className="ih-welcome-title">
+          <div className="space-y-8">
+            {/* 1. Welcoming Hero Banner */}
+            <section className="relative rounded-3xl bg-gradient-to-br from-white via-[#fcfbf9] to-[#f8f7f4] border border-[#e8e5dc] p-6 sm:p-8 lg:p-10 shadow-xs overflow-hidden">
+              <div className="relative z-10 space-y-3">
+                <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[#f5f3ff] border border-[#e0e7ff] text-[#5b3cc4] text-xs font-bold">
+                  <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+                  <span>{activeTenant?.institutionType || "Academy"} • {institutionName}</span>
+                </div>
+                <h1 className="text-2xl sm:text-4xl font-extrabold text-[#1c1917] tracking-tight">
                   {timeGreeting}, {studentFirstName}
                 </h1>
-                <p className="ih-institution-tagline">
-                  {activeTenant?.title || `Welcome to ${institutionName}`}
+                <p className="text-sm sm:text-base text-[#57534e] max-w-2xl leading-relaxed">
+                  {activeTenant?.title || `Welcome to ${institutionName}. Explore curriculum, study notes, and master new concepts.`}
                 </p>
               </div>
-            </header>
+            </section>
 
-            {/* 2. Optional Live Session Banner (Subtle & Compact) */}
+            {/* 2. Optional Live Broadcast Alert */}
             {currentLiveClass && (
-              <section className="ih-live-banner-section" aria-label="Live Broadcast">
-                <Link
-                  to={`/institution/${encodeURIComponent(resolvedSlug)}/live`}
-                  className="ih-live-banner"
-                >
-                  <div className="ih-live-badge">
-                    <CircleDot size={12} className="ih-live-pulse-dot" />
-                    <span>LIVE NOW</span>
-                  </div>
-                  <div className="ih-live-info">
-                    <strong className="ih-live-name">
-                      {currentLiveClass.title || "Live class session"}
-                    </strong>
-                    {currentLiveClass.createdBy?.name && (
-                      <span className="ih-live-host">with {currentLiveClass.createdBy.name}</span>
-                    )}
-                  </div>
-                  <span className="ih-live-join-action">
-                    Join <ArrowRight size={14} />
+              <div className="flex items-center justify-between gap-4 p-4 rounded-2xl bg-gradient-to-r from-rose-50 via-rose-50/60 to-white border border-rose-200 shadow-2xs">
+                <div className="flex items-center gap-3">
+                  <span className="relative flex h-3 w-3">
+                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-rose-400 opacity-75"></span>
+                    <span className="relative inline-flex rounded-full h-3 w-3 bg-rose-600"></span>
                   </span>
-                </Link>
-              </section>
+                  <div>
+                    <span className="text-[10px] font-bold uppercase tracking-wider text-rose-700">Live Broadcast</span>
+                    <h4 className="text-sm font-bold text-[#1c1917]">{currentLiveClass.title}</h4>
+                  </div>
+                </div>
+                <a
+                  href={currentLiveClass.youtubeUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-1.5 px-3.5 py-2 bg-rose-600 hover:bg-rose-700 text-white text-xs font-bold rounded-xl transition shadow-2xs"
+                >
+                  <Radio size={13} />
+                  <span>Watch Live</span>
+                  <ArrowRight size={13} />
+                </a>
+              </div>
             )}
 
-            {/* 3. Continue Learning (Priority Surface when student has enrolled courses) */}
-            {activeCourse ? (
-              <section className="ih-learning-section" aria-labelledby="ih-continue-heading">
-                <div className="ih-section-header">
-                  <h2 id="ih-continue-heading" className="ih-section-title">
-                    Continue learning
-                  </h2>
+            {/* 3. Continue Learning Section (if student has enrolled courses) */}
+            {activeCourse && (
+              <section className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <h2 className="text-lg sm:text-xl font-bold text-[#1c1917]">Continue Learning</h2>
                 </div>
-
-                <div className="ih-continue-card">
-                  <div className="ih-continue-thumb-wrap">
+                <div className="bg-white border border-[#e8e5dc] rounded-2xl p-4 sm:p-5 flex flex-col sm:flex-row items-center gap-5 shadow-xs hover:border-[#5b3cc4] transition">
+                  <div className="relative w-full sm:w-56 aspect-video rounded-xl overflow-hidden bg-slate-900 shrink-0 group">
                     <CourseThumbnail course={activeCourse} size="large" />
-                    <div className="ih-continue-play-overlay">
-                      <Play size={20} className="ih-play-icon" />
-                    </div>
-                  </div>
-
-                  <div className="ih-continue-details">
-                    <span className="ih-continue-category">
-                      {activeCourse.category || "In Progress"}
-                    </span>
-                    <h3 className="ih-continue-title">{activeCourse.title}</h3>
-
-                    <div className="ih-continue-meta">
-                      <span className="ih-progress-text">
-                        {Array.isArray(activeCourse.lectures) && activeCourse.lectures.length > 0
-                          ? `${activeCourse.lectures.length} lessons available`
-                          : "Curriculum ready"}
-                      </span>
-                      <div className="ih-progress-track">
-                        <div
-                          className="ih-progress-fill"
-                          style={{ width: "35%" }}
-                          role="progressbar"
-                          aria-valuenow={35}
-                          aria-valuemin={0}
-                          aria-valuemax={100}
-                        />
+                    <div className="absolute inset-0 bg-black/30 flex items-center justify-center opacity-80 group-hover:opacity-100 transition">
+                      <div className="w-10 h-10 rounded-full bg-white/90 text-[#1c1917] flex items-center justify-center shadow-md">
+                        <Play size={18} className="fill-current ml-0.5" />
                       </div>
                     </div>
-
-                    <div className="ih-continue-action-wrap">
+                  </div>
+                  <div className="flex-1 space-y-2 w-full">
+                    <span className="text-[10px] font-bold uppercase tracking-wider text-[#5b3cc4]">
+                      {activeCourse.category || "In Progress"}
+                    </span>
+                    <h3 className="text-base sm:text-lg font-bold text-[#1c1917]">
+                      {activeCourse.title}
+                    </h3>
+                    <p className="text-xs text-[#78716c]">
+                      {Array.isArray(activeCourse.lectures) && activeCourse.lectures.length > 0
+                        ? `${activeCourse.lectures.length} lessons available`
+                        : "Curriculum ready"}
+                    </p>
+                    <div className="pt-2">
                       <Link
                         to={`/viewlecture/${activeCourse._id}`}
-                        className="ih-continue-btn"
+                        className="inline-flex items-center gap-2 px-4 py-2 bg-[#5b3cc4] hover:bg-[#4a2eb0] text-white text-xs font-bold rounded-xl shadow-xs transition"
                       >
-                        <span>Continue</span>
+                        <span>Resume Course</span>
                         <ArrowRight size={14} />
                       </Link>
                     </div>
                   </div>
                 </div>
               </section>
-            ) : null}
+            )}
 
-            {/* 4. Institution Course Catalog */}
-            <section className="ih-courses-section" aria-labelledby="ih-courses-heading">
-              <div className="ih-section-header">
-                <div className="ih-section-title-wrap">
-                  <h2 id="ih-courses-heading" className="ih-section-title">
-                    Courses
-                  </h2>
-                  <span className="ih-courses-count-pill">
+            {/* 4. Study Notes Section (if notes exist) */}
+            {institutionNotes.length > 0 && (
+              <section className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <h2 className="text-lg sm:text-xl font-bold text-[#1c1917]">Study Notes</h2>
+                    <span className="px-2 py-0.5 bg-[#f5f3ff] text-[#5b3cc4] text-xs font-bold rounded-full border border-[#ede9fe]">
+                      {institutionNotes.length}
+                    </span>
+                  </div>
+                  <Link
+                    to={`/institution/${encodeURIComponent(resolvedSlug)}/notes`}
+                    className="inline-flex items-center gap-1 text-xs font-bold text-[#5b3cc4] hover:underline"
+                  >
+                    <span>View all</span>
+                    <ArrowRight size={13} />
+                  </Link>
+                </div>
+
+                <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4 sm:gap-5">
+                  {institutionNotes.slice(0, 4).map((note) => (
+                    <Link
+                      key={note._id}
+                      to={
+                        note.isPurchased
+                          ? `/institution/${encodeURIComponent(resolvedSlug)}/notes/${note._id}/read`
+                          : `/institution/${encodeURIComponent(resolvedSlug)}/notes/${note._id}`
+                      }
+                      className="group bg-white border border-[#e8e5dc] hover:border-[#5b3cc4] rounded-2xl p-3 flex flex-col justify-between shadow-2xs hover:shadow-sm hover:-translate-y-0.5 transition-all duration-200 h-full"
+                    >
+                      <div className="w-full aspect-[16/10] rounded-xl overflow-hidden mb-3 bg-[#f8f7f4] shrink-0">
+                        <NoteCover
+                          thumbnail={note.thumbnail}
+                          title={note.title}
+                          topic={note.topic}
+                          pageCount={note.pageCount}
+                          accentColor={accentColor}
+                          className="w-full h-full object-cover group-hover:scale-103 transition duration-200"
+                        />
+                      </div>
+                      <div className="space-y-1.5 flex-1 flex flex-col justify-between">
+                        <div>
+                          <span className="text-[10px] font-bold uppercase tracking-wider text-[#5b3cc4] block truncate">
+                            {note.topic || "General"}
+                          </span>
+                          <h4 className="text-xs sm:text-sm font-bold text-[#1c1917] line-clamp-2 group-hover:text-[#5b3cc4] transition leading-snug mt-0.5">
+                            {note.title}
+                          </h4>
+                        </div>
+                        <div className="flex items-center justify-between pt-2 border-t border-[#f2efe9]">
+                          <span className="text-xs font-extrabold text-[#1c1917]">
+                            {note.isPurchased ? (
+                              <span className="inline-flex items-center gap-1 text-emerald-700 font-bold text-xs">
+                                <CheckCircle2 size={13} className="text-emerald-600" />
+                                <span>Purchased</span>
+                              </span>
+                            ) : note.accessType === "free" ? (
+                              <span className="text-emerald-700 font-bold text-xs">Free</span>
+                            ) : (
+                              `₹${note.price}`
+                            )}
+                          </span>
+                          {note.pageCount ? (
+                            <span className="text-[10px] font-medium text-[#78716c]">
+                              {note.pageCount} {note.pageCount === 1 ? "page" : "pages"}
+                            </span>
+                          ) : null}
+                        </div>
+                      </div>
+                    </Link>
+                  ))}
+                </div>
+              </section>
+            )}
+
+            {/* 5. Course Catalog Section */}
+            <section className="space-y-4">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                <div className="flex items-center gap-2">
+                  <h2 className="text-lg sm:text-xl font-bold text-[#1c1917]">Courses</h2>
+                  <span className="px-2 py-0.5 bg-[#f5f3ff] text-[#5b3cc4] text-xs font-bold rounded-full border border-[#ede9fe]">
                     {institutionCourses.length}
                   </span>
                 </div>
-                {institutionCourses.length > 3 && !courseQuery && (
-                  <Link to={courseCatalogPath} className="ih-view-all-link">
-                    <span>View all</span>
-                    <ArrowRight size={14} />
-                  </Link>
-                )}
+
+                <div className="flex items-center gap-3">
+                  {institutionCourses.length > 2 && (
+                    <div className="relative w-full sm:w-64">
+                      <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-[#a8a29e]" />
+                      <input
+                        type="text"
+                        value={courseQuery}
+                        onChange={(e) => setCourseQuery(e.target.value)}
+                        placeholder="Search courses…"
+                        className="w-full pl-9 pr-3 py-1.5 text-xs bg-white border border-[#e8e5dc] rounded-xl focus:outline-none focus:border-[#5b3cc4] text-[#1c1917]"
+                      />
+                    </div>
+                  )}
+                  {institutionCourses.length > 6 && !courseQuery && (
+                    <Link
+                      to={courseCatalogPath}
+                      className="inline-flex items-center gap-1 text-xs font-bold text-[#5b3cc4] hover:underline shrink-0"
+                    >
+                      <span>View all</span>
+                      <ArrowRight size={13} />
+                    </Link>
+                  )}
+                </div>
               </div>
 
-              {/* Course Search Filter (if multiple courses exist) */}
-              {institutionCourses.length > 2 && (
-                <div className="ih-search-box">
-                  <Search size={15} className="ih-search-icon" aria-hidden="true" />
-                  <input
-                    type="text"
-                    value={courseQuery}
-                    onChange={(e) => setCourseQuery(e.target.value)}
-                    placeholder="Search courses…"
-                    aria-label="Search courses"
-                    className="ih-search-input"
-                  />
-                </div>
-              )}
-
               {visibleCourses.length > 0 ? (
-                <div className="ih-course-list">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
                   {visibleCourses.map((course) => {
                     const isEnrolled = enrolledCourseIds.has(String(course._id));
                     const lectureCount = Array.isArray(course.lectures) ? course.lectures.length : 0;
@@ -329,81 +403,64 @@ export default function InstitutionHome() {
                       <Link
                         key={course._id}
                         to={`/institution/${encodeURIComponent(resolvedSlug)}/course/${course._id}`}
-                        className="ih-course-row"
-                        aria-label={`View course: ${course.title}`}
+                        className="group bg-white border border-[#e8e5dc] hover:border-[#5b3cc4] rounded-2xl overflow-hidden flex flex-col justify-between shadow-2xs hover:shadow-md transition duration-200"
                       >
-                        <div className="ih-course-row-thumb">
+                        <div className="aspect-video w-full overflow-hidden bg-slate-900 relative">
                           <CourseThumbnail course={course} />
+                          {isEnrolled && (
+                            <span className="absolute top-2.5 right-2.5 px-2.5 py-1 bg-emerald-600 text-white text-[10px] font-bold rounded-lg shadow-sm">
+                              Enrolled
+                            </span>
+                          )}
                         </div>
 
-                        <div className="ih-course-row-info">
-                          <div className="ih-course-row-top">
-                            <span className="ih-course-row-cat">{course.category || "General"}</span>
-                            {isEnrolled && (
-                              <span className="ih-enrolled-tag">
-                                Enrolled
-                              </span>
+                        <div className="p-4 sm:p-5 flex-1 flex flex-col justify-between space-y-3">
+                          <div className="space-y-1.5">
+                            <div className="flex items-center justify-between text-[10px] font-bold uppercase tracking-wider text-[#5b3cc4]">
+                              <span>{course.category || "General"}</span>
+                              {course.level && <span className="text-[#78716c]">{course.level}</span>}
+                            </div>
+                            <h3 className="text-sm sm:text-base font-bold text-[#1c1917] line-clamp-2 group-hover:text-[#5b3cc4] transition">
+                              {course.title}
+                            </h3>
+                            {course.subTitle && (
+                              <p className="text-xs text-[#78716c] line-clamp-1">{course.subTitle}</p>
                             )}
                           </div>
-                          <h3 className="ih-course-row-title">{course.title}</h3>
-                          <div className="ih-course-row-meta">
-                            {lectureCount > 0 && (
-                              <span>{lectureCount} {lectureCount === 1 ? "lesson" : "lessons"}</span>
-                            )}
-                            {course.level && <span>• {course.level}</span>}
-                            {!isEnrolled && (
-                              <span className="ih-course-row-price">
-                                {course.price === 0 || !course.price
-                                  ? "Free"
-                                  : `₹${Number(course.price).toLocaleString("en-IN")}`}
-                              </span>
-                            )}
-                          </div>
-                        </div>
 
-                        <div className="ih-course-row-arrow" aria-hidden="true">
-                          <ArrowRight size={16} />
+                          <div className="pt-2 border-t border-[#f5f5f4] flex items-center justify-between text-xs">
+                            <span className="text-[#78716c]">
+                              {lectureCount} {lectureCount === 1 ? "lesson" : "lessons"}
+                            </span>
+                            <span className="font-extrabold text-[#1c1917]">
+                              {isEnrolled ? (
+                                <span className="text-emerald-700">Enrolled</span>
+                              ) : course.price === 0 || !course.price ? (
+                                <span className="text-emerald-700">Free</span>
+                              ) : (
+                                `₹${Number(course.price).toLocaleString("en-IN")}`
+                              )}
+                            </span>
+                          </div>
                         </div>
                       </Link>
                     );
                   })}
                 </div>
               ) : (
-                /* 5. Elegant Empty State (No Giant Graphics, Restrained & Branded) */
-                <div className="ih-empty-state">
-                  <div className="ih-empty-icon-wrap" aria-hidden="true">
-                    <BookOpen size={22} className="ih-empty-icon" />
-                  </div>
-                  <div className="ih-empty-copy">
-                    <h3 className="ih-empty-title">
-                      {courseQuery ? "No matching courses" : "Start learning"}
-                    </h3>
-                    <p className="ih-empty-desc">
-                      {courseQuery
-                        ? `No courses matching "${courseQuery}". Try another keyword.`
-                        : "No courses have been published yet. Your educator will add courses here when they're ready."}
-                    </p>
-                  </div>
-                  {courseQuery ? (
-                    <button
-                      type="button"
-                      onClick={() => setCourseQuery("")}
-                      className="ih-empty-btn"
-                    >
-                      Clear search
-                    </button>
-                  ) : (
-                    <Link to="/courses" className="ih-empty-btn">
-                      <span>Browse courses</span>
-                      <ArrowRight size={14} />
-                    </Link>
-                  )}
+                <div className="bg-white border border-dashed border-[#d6d3c9] rounded-2xl p-8 text-center space-y-2">
+                  <GraduationCap size={32} className="mx-auto text-[#a8a29e]" />
+                  <h4 className="text-sm font-bold text-[#1c1917]">No courses found</h4>
+                  <p className="text-xs text-[#78716c]">Check back soon for new curriculum from this institution.</p>
                 </div>
               )}
+
             </section>
           </div>
         )}
       </main>
+
+      <Footer />
     </div>
   );
 }

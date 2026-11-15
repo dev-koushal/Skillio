@@ -39,6 +39,30 @@ export const getCurrentUser = async (req, res) => {
       );
     }
 
+    // For educators, ensure all courses created by them are always included in enrolledCourses
+    if (safeUser.role === "educator") {
+      try {
+        const createdCourses = await Course.find({
+          creator: safeUser._id,
+          ...(tenantId ? { tenantId } : {}),
+        }).select("title thumbnail description subTitle category price creator lectures isPublished tenantId");
+
+        const existingIds = new Set(
+          (safeUser.enrolledCourses || []).map((c) => (c._id || c).toString())
+        );
+        const mergedEnrolled = [...(safeUser.enrolledCourses || [])];
+        for (const cc of createdCourses) {
+          if (!existingIds.has(cc._id.toString())) {
+            mergedEnrolled.push(cc);
+            existingIds.add(cc._id.toString());
+          }
+        }
+        safeUser.enrolledCourses = mergedEnrolled;
+      } catch (e) {
+        console.warn("[userController] Error merging creator courses:", e.message);
+      }
+    }
+
     // Attach student active memberships across institutions
     if (safeUser.role === "student") {
       try {

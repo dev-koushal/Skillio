@@ -12,6 +12,11 @@ import AiActionLog from "./aiActionLogModel.js";
 import LiveClass from "./liveClassModel.js";
 import ResourceEntitlement from "./resourceEntitlementModel.js";
 import PaymentWebhookEvent from "./paymentWebhookEventModel.js";
+import Note from "./noteModel.js";
+import Topic from "./topicModel.js";
+import NoteEntitlement from "./noteEntitlementModel.js";
+import NoteViewerSession from "./noteViewerSessionModel.js";
+import NoteAccessLog from "./noteAccessLogModel.js";
 
 // Ensure all Mongoose schemas are pre-registered on app startup
 export {
@@ -29,5 +34,9 @@ export {
   LiveClass,
   ResourceEntitlement,
   PaymentWebhookEvent,
+  Note,
+  Topic,
+  NoteEntitlement,
+  NoteViewerSession,
+  NoteAccessLog,
 };
-

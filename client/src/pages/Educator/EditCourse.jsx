@@ -1,6 +1,5 @@
 import React, { useEffect, useState } from "react";
 import {
-  ArrowLeft,
   Video,
   Trash2,
   Eye,
@@ -345,35 +344,27 @@ function EditCourse() {
       <Navbar />
 
       <main className="max-w-5xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-12 space-y-6 flex-1">
-        {/* Top Header & Sticky Action Bar */}
+        <PageHeader title="Course Studio" onBack={() => navigate("/courses")} />
+
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-[#e8e5dc]">
-          <div className="flex items-center gap-3">
-            <button
-              onClick={() => navigate("/courses")}
-              className="p-2 rounded-xl text-[#78716c] hover:text-[#1c1917] hover:bg-[#f1ede4] transition cursor-pointer"
-              aria-label="Back to courses"
-            >
-              <ArrowLeft size={18} />
-            </button>
-            <div>
-              <div className="flex items-center gap-2">
-                <h1 className="text-xl sm:text-2xl font-bold text-[#1c1917] tracking-tight truncate max-w-md">
-                  {title || "Course Studio"}
-                </h1>
-                <span
-                  className={`text-[11px] font-semibold px-2.5 py-0.5 rounded-full border ${isPublished
-                      ? "bg-emerald-50 text-emerald-700 border-emerald-200"
-                      : "bg-amber-50 text-amber-700 border-amber-200"
-                    }`}
-                >
-                  {isPublished ? "Published" : "Draft"}
-                </span>
-              </div>
-              <p className="text-xs text-[#78716c] mt-0.5">
-                {courseLectures.length} {courseLectures.length === 1 ? "lecture" : "lectures"} •{" "}
-                {resources.length} {resources.length === 1 ? "resource" : "resources"} attached
-              </p>
+          <div>
+            <div className="flex items-center gap-2">
+              <h1 className="text-xl sm:text-2xl font-bold text-[#1c1917] tracking-tight truncate max-w-md">
+                {title || "Course Studio"}
+              </h1>
+              <span
+                className={`text-[11px] font-semibold px-2.5 py-0.5 rounded-full border ${isPublished
+                    ? "bg-emerald-50 text-emerald-700 border-emerald-200"
+                    : "bg-amber-50 text-amber-700 border-amber-200"
+                  }`}
+              >
+                {isPublished ? "Published" : "Draft"}
+              </span>
             </div>
+            <p className="text-xs text-[#78716c] mt-0.5">
+              {courseLectures.length} {courseLectures.length === 1 ? "lecture" : "lectures"} •{" "}
+              {resources.length} {resources.length === 1 ? "resource" : "resources"} attached
+            </p>
           </div>
 
           <div className="flex items-center gap-2">
@@ -737,10 +728,10 @@ function EditCourse() {
                 type="button"
                 variant="primary"
                 size="md"
-                onClick={() => setActiveTab("resources")}
+                onClick={() => setActiveTab("pricing")}
                 className="!bg-[#1e3a8a] hover:!bg-[#172554] text-white font-semibold px-5 py-2.5 rounded-xl"
               >
-                Continue to Notes & Resources →
+                Continue to Pricing →
               </Button>
             </div>
           </div>
@@ -1028,10 +1019,10 @@ function EditCourse() {
             <div className="pt-4 border-t border-[#e8e5dc] flex items-center justify-between">
               <button
                 type="button"
-                onClick={() => setActiveTab("resources")}
+                onClick={() => setActiveTab("curriculum")}
                 className="text-xs text-[#78716c] hover:text-[#1c1917] font-semibold"
               >
-                ← Back to Resources
+                ← Back to Lectures
               </button>
               <Button
                 type="button"

@@ -9,6 +9,86 @@
   font-family: "Plus Jakarta Sans", "DM Sans", ui-sans-serif, system-ui, sans-serif;
 }
 
+.ih-feature-section {
+  padding: 24px 0;
+}
+
+.ih-feature-grid {
+  display: grid;
+  gap: 20px;
+}
+
+@media (min-width: 640px) {
+  .ih-feature-grid {
+    grid-template-columns: repeat(2, 1fr);
+    max-width: 720px;
+    margin: 0 auto;
+  }
+}
+
+@media (min-width: 900px) {
+  .ih-feature-grid {
+    grid-template-columns: repeat(3, 1fr);
+    max-width: 860px;
+  }
+}
+
+.ih-feature-card {
+  display: flex;
+  flex-direction: column;
+  text-decoration: none;
+  color: inherit;
+}
+
+.ih-feature-card:hover .ih-feature-info {
+  transform: translateY(-4px);
+  transition: transform .2s ease;
+}
+
+.ih-feature-thumb {
+  aspect-ratio: 16/9;
+  border-radius: 12px;
+  overflow: hidden;
+  margin-bottom: 12px;
+  background: color-mix(in srgb, var(--primary) 5%, var(--surface));
+}
+
+.ih-feature-info {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  transition: color .2s ease;
+}
+
+.ih-feature-category {
+  font-size: 10px;
+  font-weight: 720;
+  text-transform: uppercase;
+  letter-spacing: .1em;
+  color: var(--primary);
+}
+
+.ih-feature-title {
+  font-size: clamp(15px, 3.5vw, 18px);
+  font-weight: 720;
+  letter-spacing: -.03em;
+  overflow-wrap: anywhere;
+  text-wrap: balance;
+  margin-bottom: 4px;
+}
+
+.ih-feature-meta {
+  display: flex;
+  gap: 8px;
+  font-size: 11px;
+  color: var(--muted);
+}
+
+.ih-feature-price {
+  color: var(--primary);
+  font-weight: 720;
+}
+
 .institution-learning header .student-appbar-actions { gap: 5px; }
 
 .institution-learning nav[aria-label="Mobile Bottom Navigation"] { border-color: var(--border); background: var(--surface); box-shadow: none; }

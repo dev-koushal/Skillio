@@ -6,6 +6,9 @@ import ResourceEntitlement from "../models/resourceEntitlementModel.js";
 import InstitutionMembership from "../models/institutionMembershipModel.js";
 import User from "../models/userModel.js";
 import PaymentWebhookEvent from "../models/paymentWebhookEventModel.js";
+import Note from "../models/noteModel.js";
+import NoteEntitlement from "../models/noteEntitlementModel.js";
+import NoteViewerSession from "../models/noteViewerSessionModel.js";
 import { verifyRazorpayCoursePayment } from "../utils/razorpayPaymentVerification.js";
 
 const getRazorpay = () => {
@@ -116,11 +119,75 @@ export const handleResourcePaymentWebhook = async (req, res) => {
           if (!entitlement) await ResourceEntitlement.create({ userId: notes.userId, resourceId: resource._id, tenantId: notes.tenantId, courseId: resource.courseId, paymentId: payment.id, status: "active", grantedAt: new Date() });
           else if (entitlement.status !== "active") await ResourceEntitlement.updateOne({ _id: entitlement._id, status: { $ne: "active" } }, { $set: { paymentId: payment.id, status: "active", grantedAt: new Date(), expiresAt: null } });
         }
+      } else if (notes.purpose === "paid_note" && order.status === "paid" && order.currency === "INR" && Number(order.amount) === Number(payment.amount) && Number(order.amount_paid) === Number(order.amount) && notes.noteId && notes.userId && notes.tenantId) {
+        const [note, currentPayment, user] = await Promise.all([
+          Note.findOne({
+            _id: notes.noteId,
+            tenantId: notes.tenantId,
+            status: "published",
+            isPublished: true,
+            processingStatus: "ready",
+          }),
+          razorpay.payments.fetch(payment.id),
+          User.findById(notes.userId).select("role"),
+        ]);
+        const membership = user?.role === "student" && await InstitutionMembership.exists({
+          userId: notes.userId,
+          tenantId: notes.tenantId,
+          role: "student",
+          status: { $in: ["active", "enrolled", "ACTIVE", "ENROLLED"] },
+        });
+        if (
+          note &&
+          membership &&
+          currentPayment?.status === "captured" &&
+          currentPayment.order_id === order.id &&
+          Number(currentPayment.amount) === Number(order.amount) &&
+          currentPayment.currency === "INR"
+        ) {
+          let entitlement = await NoteEntitlement.findOne({
+            userId: notes.userId,
+            noteId: note._id,
+            tenantId: notes.tenantId,
+          });
+          let granted = false;
+          if (!entitlement) {
+            try {
+              await NoteEntitlement.create({
+                userId: notes.userId,
+                noteId: note._id,
+                tenantId: notes.tenantId,
+                paymentId: payment.id,
+                orderId: order.id,
+                status: "active",
+                source: "purchase",
+                purchasedAt: new Date(),
+              });
+              granted = true;
+            } catch (error) {
+              if (error.code !== 11000) throw error;
+            }
+          } else if (entitlement.status !== "active") {
+            const result = await NoteEntitlement.updateOne(
+              { _id: entitlement._id, status: { $ne: "active" } },
+              { $set: { paymentId: payment.id, orderId: order.id, status: "active", source: "purchase", purchasedAt: new Date() } }
+            );
+            granted = Boolean(result.modifiedCount);
+          }
+          if (granted) await Note.updateOne({ _id: note._id, tenantId: notes.tenantId }, { $inc: { purchaseCount: 1 } });
+        }
       }
     } else if (["payment.refunded", "refund.processed"].includes(event.event)) {
       const refund = event.payload?.refund?.entity;
       const paymentId = refund?.payment_id || payment?.id;
-      if (paymentId) await ResourceEntitlement.updateOne({ paymentId, status: "active" }, { $set: { status: "refunded" } });
+      if (paymentId) {
+        await ResourceEntitlement.updateOne({ paymentId, status: "active" }, { $set: { status: "refunded" } });
+        const noteEntitlements = await NoteEntitlement.find({ paymentId, status: "active" }).select("noteId").lean();
+        await NoteEntitlement.updateMany({ paymentId, status: "active" }, { $set: { status: "refunded" } });
+        if (noteEntitlements.length) {
+          await NoteViewerSession.deleteMany({ noteId: { $in: noteEntitlements.map((entitlement) => entitlement.noteId) } });
+        }
+      }
     }
     record.status = ["payment.captured", "order.paid", "payment.refunded", "refund.processed"].includes(event.event) ? "processed" : "ignored";
     record.processedAt = new Date();

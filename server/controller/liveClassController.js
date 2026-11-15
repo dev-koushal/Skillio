@@ -15,7 +15,8 @@ export const listLiveClasses = async (req, res) => {
 
 export const createLiveClass = async (req, res) => {
   try {
-    const { videoId, canonicalUrl } = parseYouTubeVideoUrl(req.body?.youtubeLiveUrl);
+    const rawUrl = req.body?.youtubeLiveUrl || req.body?.youtubeUrl || req.body?.url || req.body?.videoUrl;
+    const { videoId, canonicalUrl } = parseYouTubeVideoUrl(rawUrl);
     const title = typeof req.body?.title === "string" && req.body.title.trim()
       ? req.body.title.trim().slice(0, 140)
       : "Live class";
@@ -32,7 +33,7 @@ export const createLiveClass = async (req, res) => {
       institutionId: req.tenantId,
       createdBy: req.userId,
       title,
-      description: "",
+      description: typeof req.body?.description === "string" ? req.body.description.trim().slice(0, 2000) : "",
       youtubeVideoId: videoId,
       youtubeLiveUrl: canonicalUrl,
       scheduledAt,
@@ -52,7 +53,9 @@ export const updateLiveClass = async (req, res) => {
   try {
     const liveClass = await getScopedLiveClass(req.params.liveClassId, req.tenantId);
     if (!liveClass) return res.status(404).json({ success: false, message: "Live class not found in this institution." });
-    if (liveClass.isActive && req.body?.youtubeLiveUrl) return res.status(409).json({ success: false, message: "End the live class before changing its YouTube source." });
+    
+    const rawUrl = req.body?.youtubeLiveUrl || req.body?.youtubeUrl || req.body?.url || req.body?.videoUrl;
+    if (liveClass.isActive && rawUrl) return res.status(409).json({ success: false, message: "End the live class before changing its YouTube source." });
 
     if (typeof req.body?.title === "string") {
       const title = req.body.title.trim();
@@ -60,8 +63,8 @@ export const updateLiveClass = async (req, res) => {
       liveClass.title = title;
     }
     if (typeof req.body?.description === "string") liveClass.description = req.body.description.trim().slice(0, 2000);
-    if (typeof req.body?.youtubeLiveUrl === "string") {
-      const { videoId, canonicalUrl } = parseYouTubeVideoUrl(req.body.youtubeLiveUrl);
+    if (typeof rawUrl === "string" && rawUrl.trim()) {
+      const { videoId, canonicalUrl } = parseYouTubeVideoUrl(rawUrl);
       liveClass.youtubeVideoId = videoId;
       liveClass.youtubeLiveUrl = canonicalUrl;
     }

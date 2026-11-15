@@ -18,6 +18,7 @@ import {
   GraduationCap,
   Users,
   Settings,
+  FileText,
 } from "lucide-react";
 import { useDispatch, useSelector } from "react-redux";
 import { useNavigate, Link } from "react-router-dom";
@@ -153,6 +154,12 @@ function Navbar({ currentInstitution = null, studentHome = false }) {
                   Courses
                 </Link>
                 <Link
+                  to={activeInstitution ? `/institution/${activeInstitution.slug}/notes` : "/notes"}
+                  className="text-xs sm:text-sm font-semibold text-[#44403c] hover:text-[#5b3cc4] px-3 py-2 rounded-xl hover:bg-[#f8f7f4] transition"
+                >
+                  Notes
+                </Link>
+                <Link
                   to={activeInstitution ? `/institution/${activeInstitution.slug}/my-courses` : "/mycourses"}
                   className="text-xs sm:text-sm font-semibold text-[#44403c] hover:text-[#5b3cc4] px-3 py-2 rounded-xl hover:bg-[#f8f7f4] transition"
                 >
@@ -175,6 +182,12 @@ function Navbar({ currentInstitution = null, studentHome = false }) {
                   className="text-xs sm:text-sm font-semibold text-[#44403c] hover:text-[#5b3cc4] px-3 py-2 rounded-xl hover:bg-[#f8f7f4] transition"
                 >
                   Courses
+                </Link>
+                <Link
+                  to="/educator/notes"
+                  className="text-xs sm:text-sm font-semibold text-[#44403c] hover:text-[#5b3cc4] px-3 py-2 rounded-xl hover:bg-[#f8f7f4] transition"
+                >
+                  Notes
                 </Link>
                 <Link
                   to="/students"
@@ -330,6 +343,16 @@ function Navbar({ currentInstitution = null, studentHome = false }) {
                             >
                               <Users size={15} className="text-[#5b3cc4]" />
                               Manage Students
+                            </button>
+                            <button
+                              onClick={() => {
+                                navigate("/educator/notes");
+                                setDropdownOpen(false);
+                              }}
+                              className="w-full flex items-center gap-2.5 px-4 py-2.5 text-xs sm:text-sm text-[#44403c] hover:bg-[#f8f7f4] transition cursor-pointer text-left font-medium"
+                            >
+                              <FileText size={15} className="text-[#5b3cc4]" />
+                              Manage Notes
                             </button>
                             <button
                               onClick={() => {
@@ -562,6 +585,14 @@ function Navbar({ currentInstitution = null, studentHome = false }) {
                         Courses
                       </Link>
                       <Link
+                        to={activeInstitution ? `/institution/${activeInstitution.slug}/notes` : "/notes"}
+                        onClick={() => setMobileMenuOpen(false)}
+                        className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs sm:text-sm font-semibold text-[#44403c] hover:bg-[#f8f7f4] touch-target"
+                      >
+                        <FileText size={16} className="text-[#78716c]" />
+                        Notes
+                      </Link>
+                      <Link
                         to={activeInstitution ? `/institution/${activeInstitution.slug}/my-courses` : "/mycourses"}
                         onClick={() => setMobileMenuOpen(false)}
                         className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs sm:text-sm font-semibold text-[#44403c] hover:bg-[#f8f7f4] touch-target"
@@ -608,6 +639,14 @@ function Navbar({ currentInstitution = null, studentHome = false }) {
                       >
                         <BookOpen size={16} className="text-[#78716c]" />
                         Courses
+                      </Link>
+                      <Link
+                        to="/educator/notes"
+                        onClick={() => setMobileMenuOpen(false)}
+                        className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs sm:text-sm font-semibold text-[#44403c] hover:bg-[#f8f7f4] touch-target"
+                      >
+                        <FileText size={16} className="text-[#5b3cc4]" />
+                        Notes
                       </Link>
                       <Link
                         to="/students"

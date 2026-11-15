@@ -18,6 +18,10 @@ import {
   ShieldCheck,
   Award,
   SquarePen,
+  LockOpen,
+  Play,
+  X,
+  Maximize2,
 } from "lucide-react";
 import { useDispatch, useSelector } from "react-redux";
 import { setSelectedCourse } from "../redux/courseSlice";
@@ -82,6 +86,7 @@ function ViewCourses() {
   const [reviewLoading, setReviewLoading] = useState(false);
   const [enrollLoading, setEnrollLoading] = useState(false);
   const [fetching, setFetching] = useState(true);
+  const [isPreviewModalOpen, setIsPreviewModalOpen] = useState(false);
 
   // Tab State: "overview" | "curriculum" | "resources" | "reviews"
   const [activeTab, setActiveTab] = useState("overview");
@@ -420,102 +425,229 @@ function ViewCourses() {
         {/* Hero Course Header (Mobile First Order: Preview on top, then Details) */}
         <div className="bg-white border border-[#e8e5dc] rounded-3xl p-5 sm:p-8 shadow-xs grid grid-cols-1 lg:grid-cols-12 gap-6 lg:gap-8 items-start">
           {/* Video preview / Action Card (Right on desktop, First on mobile) */}
-          <div className="order-1 lg:order-2 lg:col-span-5 bg-[#faf9f6] border border-[#e8e5dc] rounded-2xl p-4 sm:p-6 space-y-4 sm:space-y-5 shadow-xs">
-            {/* Video preview / Thumbnail */}
-            <div className="aspect-video w-full rounded-xl overflow-hidden bg-black relative flex items-center justify-center border border-[#e8e5dc]">
-              {selectedLecture?._id ? (
-                <SecureVideoPlayer
-                  key={selectedLecture._id}
-                  lectureId={selectedLecture._id}
-                  lectureTitle={selectedLecture.lectureTitle}
-                />
-              ) : course?.thumbnail ? (
-                <img
-                  src={optimizeImage(course.thumbnail, 800)}
-                  alt={course.title}
-                  className="w-full h-full object-cover"
-                />
-              ) : (
-                <div className="text-center p-6 text-gray-400 text-xs space-y-1">
-                  <PlayCircle size={32} className="mx-auto text-gray-500" />
-                  <p>Course Preview</p>
-                </div>
-              )}
-            </div>
-
-            {/* Price section */}
-            <div className="flex items-baseline justify-between pt-1">
-              <div>
-                {isFree ? (
-                  <span className="text-2xl sm:text-3xl font-extrabold text-emerald-700">Free</span>
+          <div className="order-1 lg:order-2 lg:col-span-5 space-y-4">
+            <div className="bg-[#faf9f6] border border-[#e8e5dc] rounded-2xl p-4 sm:p-6 space-y-4 sm:space-y-5 shadow-xs">
+              {/* Small Video Preview Box (Click expands to theater video player taking whole screen) */}
+              <div
+                onClick={() => {
+                  if (selectedLecture?._id) {
+                    setIsPreviewModalOpen(true);
+                  } else if (course?.lectures?.[0]) {
+                    setSelectedLecture(course.lectures[0]);
+                    setIsPreviewModalOpen(true);
+                  }
+                }}
+                className="group aspect-video w-full rounded-2xl overflow-hidden bg-slate-950 relative flex items-center justify-center border border-[#e8e5dc] shadow-sm cursor-pointer select-none card-lift"
+                title="Click to preview course video"
+              >
+                {course?.thumbnail ? (
+                  <img
+                    src={optimizeImage(course.thumbnail, 800)}
+                    alt={course.title}
+                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300 opacity-80"
+                  />
                 ) : (
-                  <span className="text-2xl sm:text-3xl font-extrabold text-[#1c1917]">
-                    ₹{(course?.price || 0).toLocaleString("en-IN")}
-                  </span>
+                  <div className="w-full h-full bg-gradient-to-br from-[#0f172a] to-[#1e3a8a] opacity-80" />
                 )}
-              </div>
-            </div>
 
-            {/* Desktop / In-card Enrollment CTA */}
-            {hasManagementAccess ? (
-              <div className="flex flex-col gap-2.5">
-                <div className="p-3 bg-blue-50 border border-blue-200 rounded-xl text-blue-950 text-xs flex items-center gap-2">
-                  <CheckCircle className="w-4 h-4 text-blue-600 shrink-0" />
-                  <span className="font-semibold">Instructor Access: You own this course</span>
+                {/* Dark subtle vignette overlay */}
+                <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/30 to-black/40 group-hover:from-black/70 transition-colors" />
+
+                {/* Center Play Button Overlay */}
+                <div className="relative z-10 flex flex-col items-center gap-2">
+                  <div className="w-14 h-14 rounded-full bg-white text-[#1e3a8a] shadow-xl flex items-center justify-center group-hover:scale-110 group-hover:bg-[#1e3a8a] group-hover:text-white transition-all duration-200">
+                    <Play size={22} className="fill-current ml-0.5" />
+                  </div>
+                  <div className="text-center">
+                    <span className="text-xs font-bold text-white tracking-wide drop-shadow-md">
+                      Preview this course
+                    </span>
+                    {selectedLecture?.lectureTitle && (
+                      <p className="text-[10px] text-slate-300 truncate max-w-[220px] drop-shadow-sm">
+                        {selectedLecture.lectureTitle}
+                      </p>
+                    )}
+                  </div>
                 </div>
+
+                {/* Bottom Right Expand Tag */}
+                <div className="absolute bottom-2.5 right-2.5 z-10 flex items-center gap-1 text-[10px] font-bold text-white bg-black/60 backdrop-blur-md px-2 py-1 rounded-lg border border-white/20">
+                  <Maximize2 size={11} />
+                  <span>Expand</span>
+                </div>
+
+                {/* Top Left Free Preview Tag */}
+                <div className="absolute top-2.5 left-2.5 z-10">
+                  <span className="inline-flex items-center gap-1 text-[10px] font-bold text-emerald-300 bg-emerald-950/80 backdrop-blur-md px-2 py-0.5 rounded-full border border-emerald-500/30">
+                    <LockOpen size={10} />
+                    Free Preview
+                  </span>
+                </div>
+              </div>
+
+              {/* Price section */}
+              <div className="flex items-baseline justify-between pt-1">
+                <div>
+                  {isFree ? (
+                    <span className="text-2xl sm:text-3xl font-extrabold text-emerald-700">Free</span>
+                  ) : (
+                    <span className="text-2xl sm:text-3xl font-extrabold text-[#1c1917]">
+                      ₹{(course?.price || 0).toLocaleString("en-IN")}
+                    </span>
+                  )}
+                </div>
+              </div>
+
+              {/* Desktop / In-card Enrollment CTA */}
+              {hasManagementAccess ? (
+                <div className="flex flex-col gap-2.5">
+                  <div className="p-3 bg-blue-50 border border-blue-200 rounded-xl text-blue-950 text-xs flex items-center gap-2">
+                    <CheckCircle className="w-4 h-4 text-blue-600 shrink-0" />
+                    <span className="font-semibold">Instructor Access: You own this course</span>
+                  </div>
+                  <Button
+                    onClick={() => navigate(`/builder/${courseId}`)}
+                    variant="primary"
+                    size="lg"
+                    className="w-full bg-[#1e3a8a] hover:bg-[#172554] text-white font-bold py-3.5 rounded-xl shadow-md cursor-pointer flex items-center justify-center gap-2"
+                  >
+                    <SquarePen className="inline-block mr-2" size={17} />
+                    Edit in Course Builder
+                  </Button>
+                  <Button
+                    onClick={() => navigate(`/viewlecture/${courseId}`)}
+                    variant="secondary"
+                    size="sm"
+                    className="w-full justify-center text-xs text-[#57534e]"
+                  >
+                    Watch Course Lectures
+                  </Button>
+                </div>
+              ) : !isEnrolled ? (
                 <Button
-                  onClick={() => navigate(`/builder/${courseId}`)}
+                  onClick={handleEnroll}
+                  loading={enrollLoading}
                   variant="primary"
                   size="lg"
-                  className="w-full bg-[#1e3a8a] hover:bg-[#172554] text-white font-bold py-3.5 rounded-xl shadow-md cursor-pointer flex items-center justify-center gap-2"
+                  className="w-full bg-[#1e3a8a] hover:bg-[#172554] text-white font-bold py-3.5 rounded-xl shadow-md cursor-pointer"
                 >
-                  <SquarePen className="inline-block mr-2" size={17} />
-                  Edit in Course Builder
+                  {isFree ? "Enroll Now (Free)" : "Enroll Now"}
                 </Button>
+              ) : (
                 <Button
                   onClick={() => navigate(`/viewlecture/${courseId}`)}
-                  variant="secondary"
-                  size="sm"
-                  className="w-full justify-center text-xs text-[#57534e]"
+                  variant="primary"
+                  size="lg"
+                  className="w-full bg-emerald-700 hover:bg-emerald-800 text-white font-bold py-3.5 rounded-xl shadow-md cursor-pointer"
                 >
                   Watch Course Lectures
                 </Button>
-              </div>
-            ) : !isEnrolled ? (
-              <Button
-                onClick={handleEnroll}
-                loading={enrollLoading}
-                variant="primary"
-                size="lg"
-                className="w-full bg-[#1e3a8a] hover:bg-[#172554] text-white font-bold py-3.5 rounded-xl shadow-md cursor-pointer"
-              >
-                {isFree ? "Enroll Now (Free)" : "Enroll Now"}
-              </Button>
-            ) : (
-              <Button
-                onClick={() => navigate(`/viewlecture/${courseId}`)}
-                variant="primary"
-                size="lg"
-                className="w-full bg-emerald-700 hover:bg-emerald-800 text-white font-bold py-3.5 rounded-xl shadow-md cursor-pointer"
-              >
-                Watch Course Lectures
-              </Button>
-            )}
+              )}
 
-            <div className="space-y-2 pt-2 border-t border-[#e8e5dc] text-xs text-[#57534e]">
-              <div className="flex items-center gap-2">
-                <CheckCircle2 size={15} className="text-emerald-600 shrink-0" />
-                <span>Immediate access to all video lectures</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <CheckCircle2 size={15} className="text-emerald-600 shrink-0" />
-                <span>Verified study notes and cheat sheets</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <CheckCircle2 size={15} className="text-emerald-600 shrink-0" />
-                <span>Direct classroom AI study assistant</span>
+              <div className="space-y-2 pt-2 border-t border-[#e8e5dc] text-xs text-[#57534e]">
+                <div className="flex items-center gap-2">
+                  <CheckCircle2 size={15} className="text-emerald-600 shrink-0" />
+                  <span>Immediate access to all video lectures</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <CheckCircle2 size={15} className="text-emerald-600 shrink-0" />
+                  <span>Verified study notes and cheat sheets</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <CheckCircle2 size={15} className="text-emerald-600 shrink-0" />
+                  <span>Direct classroom AI study assistant</span>
+                </div>
               </div>
             </div>
+
+            {/* Right-Side Course Playlist (Udemy-style Preview & Locked Indicators) */}
+            {course?.lectures?.length > 0 && (
+              <div className="bg-white border border-[#e8e5dc] rounded-2xl p-4 sm:p-5 space-y-3 shadow-xs">
+                <div className="flex items-center justify-between pb-2 border-b border-[#f2efe9]">
+                  <div className="flex items-center gap-2">
+                    <h3 className="font-extrabold text-sm text-[#1c1917]">Course Playlist</h3>
+                    <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-[#f4f2ec] text-[#57534e]">
+                      {course.lectures.length} Lectures
+                    </span>
+                  </div>
+                  <span className="text-[11px] text-[#78716c]">
+                    {course.lectures.filter((l) => l.isPreviewFree).length} Previews
+                  </span>
+                </div>
+
+                <div className="space-y-2 max-h-[380px] overflow-y-auto pr-1">
+                  {course.lectures.map((lec, idx) => {
+                    const isPreview = Boolean(lec.isPreviewFree);
+                    const canPlay = hasFullAccess || isPreview;
+                    const isCurrent = selectedLecture?._id === lec._id;
+
+                    return (
+                      <div
+                        key={lec._id || idx}
+                        onClick={() => {
+                          if (canPlay) {
+                            setSelectedLecture(lec);
+                            setIsPreviewModalOpen(true);
+                          } else {
+                            toast.info("Please enroll in this course to watch locked lectures.");
+                          }
+                        }}
+                        className={`group flex items-center justify-between p-2.5 rounded-xl border transition-all cursor-pointer ${
+                          isCurrent
+                            ? "bg-blue-50/80 border-[#1e3a8a] text-[#1e3a8a]"
+                            : "bg-[#faf9f6] border-[#e8e5dc] hover:border-[#1e3a8a]/40 hover:bg-white"
+                        }`}
+                      >
+                        <div className="flex items-center gap-2.5 min-w-0">
+                          <div
+                            className={`w-6 h-6 rounded-lg flex items-center justify-center text-xs font-bold shrink-0 ${
+                              isCurrent
+                                ? "bg-[#1e3a8a] text-white"
+                                : canPlay
+                                ? "bg-blue-50 text-[#1e3a8a]"
+                                : "bg-gray-100 text-gray-400"
+                            }`}
+                          >
+                            {idx + 1}
+                          </div>
+                          <div className="min-w-0">
+                            <p className="text-xs font-semibold text-[#1c1917] truncate group-hover:text-[#1e3a8a] transition-colors">
+                              {lec.lectureTitle}
+                            </p>
+                            <span className="text-[10px] text-[#78716c]">
+                              {lec.videoProvider === "youtube"
+                                ? "YouTube"
+                                : lec.videoProvider === "bunny"
+                                ? "Native video"
+                                : "Video"}
+                            </span>
+                          </div>
+                        </div>
+
+                        <div className="shrink-0 flex items-center gap-1.5 ml-2">
+                          {hasFullAccess ? (
+                            <span className="inline-flex items-center gap-1 text-[10px] font-bold text-emerald-700 bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded-full">
+                              <CheckCircle size={10} />
+                              Unlocked
+                            </span>
+                          ) : isPreview ? (
+                            <span className="inline-flex items-center gap-1 text-[10px] font-bold text-emerald-700 bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded-full">
+                              <LockOpen size={10} />
+                              Free
+                            </span>
+                          ) : (
+                            <span className="inline-flex items-center gap-1 text-[10px] font-semibold text-[#78716c] bg-[#f4f2ec] px-2 py-0.5 rounded-full">
+                              <Lock size={10} />
+                              Locked
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
           </div>
 
           {/* Main Details (Left on desktop, Second on mobile) */}
@@ -672,21 +804,24 @@ function ViewCourses() {
                         onClick={() => {
                           if (canPlay) {
                             setSelectedLecture(lec);
+                            setIsPreviewModalOpen(true);
                           } else {
                             toast.info("Please enroll in this course to watch locked lectures.");
                           }
                         }}
-                        className={`flex items-center justify-between p-3.5 rounded-xl border transition cursor-pointer ${selectedLecture?._id === lec._id
-                          ? "bg-blue-50/70 border-[#1e3a8a]"
-                          : "bg-[#faf9f6] border-[#e8e5dc] hover:bg-white"
-                          }`}
+                        className={`flex items-center justify-between p-3.5 rounded-xl border transition cursor-pointer ${
+                          selectedLecture?._id === lec._id
+                            ? "bg-blue-50/70 border-[#1e3a8a]"
+                            : "bg-[#faf9f6] border-[#e8e5dc] hover:bg-white"
+                        }`}
                       >
                         <div className="flex items-center gap-3">
                           <div
-                            className={`w-7 h-7 rounded-lg flex items-center justify-center text-xs font-bold ${canPlay
-                              ? "bg-blue-100 text-[#1e3a8a]"
-                              : "bg-gray-100 text-gray-500"
-                              }`}
+                            className={`w-7 h-7 rounded-lg flex items-center justify-center text-xs font-bold ${
+                              canPlay
+                                ? "bg-blue-100 text-[#1e3a8a]"
+                                : "bg-gray-100 text-gray-500"
+                            }`}
                           >
                             {idx + 1}
                           </div>
@@ -694,18 +829,32 @@ function ViewCourses() {
                             <p className="text-xs sm:text-sm font-semibold text-[#1c1917]">
                               {lec.lectureTitle}
                             </p>
-                            {lec.videoProvider && <span className="text-[10px] font-medium text-[#78716c]">{lec.videoProvider === "youtube" ? "YouTube" : lec.videoProvider === "bunny" ? "Native video" : "Video"}</span>}
+                            {lec.videoProvider && (
+                              <span className="text-[10px] font-medium text-[#78716c]">
+                                {lec.videoProvider === "youtube"
+                                  ? "YouTube"
+                                  : lec.videoProvider === "bunny"
+                                  ? "Native video"
+                                  : "Video"}
+                              </span>
+                            )}
                           </div>
                         </div>
 
                         <div className="flex items-center gap-2">
-                          {isPreview ? (
-                            <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 border border-emerald-300">
+                          {hasFullAccess ? (
+                            <span className="text-[10px] font-bold uppercase tracking-wider px-2.5 py-0.5 rounded-full bg-blue-50 text-[#1e3a8a] border border-blue-200 flex items-center gap-1">
+                              <CheckCircle size={10} />
+                              Unlocked
+                            </span>
+                          ) : isPreview ? (
+                            <span className="text-[10px] font-bold uppercase tracking-wider px-2.5 py-0.5 rounded-full bg-emerald-50 text-emerald-800 border border-emerald-300 flex items-center gap-1">
+                              <LockOpen size={10} className="text-emerald-600" />
                               Free Preview
                             </span>
                           ) : (
-                            <span className="text-[10px] font-semibold flex items-center gap-1 text-[#78716c] bg-white px-2 py-0.5 rounded border border-[#e8e5dc]">
-                              <Lock size={11} />
+                            <span className="text-[10px] font-semibold flex items-center gap-1 text-[#78716c] bg-[#f4f2ec] px-2.5 py-0.5 rounded-full border border-[#e8e5dc]">
+                              <Lock size={10} />
                               Locked
                             </span>
                           )}
@@ -954,6 +1103,81 @@ function ViewCourses() {
             </Button>
           )}
         </div>
+        {/* Fullscreen / Theater Video Modal: opens when user clicks preview box or a preview lecture */}
+        {isPreviewModalOpen && selectedLecture && (
+          <div
+            className="fixed inset-0 z-50 bg-black/85 backdrop-blur-md flex items-center justify-center p-3 sm:p-6"
+            role="dialog"
+            aria-modal="true"
+            onClick={() => setIsPreviewModalOpen(false)}
+          >
+            <div
+              className="w-full max-w-5xl bg-[#0f172a] rounded-3xl overflow-hidden border border-slate-800 shadow-2xl flex flex-col max-h-[92vh]"
+              onClick={(e) => e.stopPropagation()}
+            >
+              {/* Modal Header */}
+              <div className="flex items-center justify-between px-5 py-4 border-b border-slate-800 bg-[#1e293b]/70">
+                <div className="flex items-center gap-3 min-w-0">
+                  <span className="text-xs font-bold text-emerald-400 bg-emerald-950/80 border border-emerald-500/30 px-2.5 py-0.5 rounded-full uppercase tracking-wider shrink-0 flex items-center gap-1">
+                    {selectedLecture.isPreviewFree ? <LockOpen size={11} /> : <CheckCircle size={11} />}
+                    {selectedLecture.isPreviewFree ? "Free Preview" : "Classroom Stream"}
+                  </span>
+                  <h3 className="font-extrabold text-sm sm:text-base text-white truncate">
+                    {selectedLecture.lectureTitle}
+                  </h3>
+                </div>
+                <button
+                  onClick={() => setIsPreviewModalOpen(false)}
+                  className="w-9 h-9 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white flex items-center justify-center transition cursor-pointer"
+                  aria-label="Close Preview"
+                >
+                  <X size={18} />
+                </button>
+              </div>
+
+              {/* Big Video Container (Whole screen width inside modal) */}
+              <div className="w-full bg-black aspect-video flex-1 min-h-[300px] flex items-center justify-center">
+                <SecureVideoPlayer
+                  key={selectedLecture._id}
+                  lectureId={selectedLecture._id}
+                  lectureTitle={selectedLecture.lectureTitle}
+                />
+              </div>
+
+              {/* Modal Footer with quick lecture playlist switcher */}
+              {course?.lectures?.length > 1 && (
+                <div className="px-5 py-3.5 bg-[#0f172a] border-t border-slate-800 flex items-center gap-2 overflow-x-auto">
+                  <span className="text-xs font-bold text-slate-400 shrink-0">Switch Lecture:</span>
+                  {course.lectures.map((lec, idx) => {
+                    const isCurrent = selectedLecture._id === lec._id;
+                    const canPlay = hasFullAccess || lec.isPreviewFree;
+                    return (
+                      <button
+                        key={lec._id || idx}
+                        disabled={!canPlay}
+                        onClick={() => setSelectedLecture(lec)}
+                        className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold transition shrink-0 cursor-pointer ${
+                          isCurrent
+                            ? "bg-[#1e3a8a] text-white border border-blue-400/40"
+                            : canPlay
+                            ? "bg-slate-800/80 text-slate-200 hover:bg-slate-700 border border-slate-700"
+                            : "bg-slate-900/60 text-slate-600 border border-slate-800/60 cursor-not-allowed"
+                        }`}
+                      >
+                        <span>{idx + 1}. {lec.lectureTitle}</span>
+                        {lec.isPreviewFree ? (
+                          <LockOpen size={11} className="text-emerald-400" />
+                        ) : (
+                          <Lock size={11} className="text-slate-500" />
+                        )}
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+          </div>
+        )}
       </main>
 
       <Footer />

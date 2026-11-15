@@ -9,6 +9,10 @@ import {
   AlertCircle,
   BookOpen,
   Sparkles,
+  LockOpen,
+  CheckCircle2,
+  Maximize2,
+  Minimize2,
 } from "lucide-react";
 import { useSelector } from "react-redux";
 import { useNavigate, useParams, Link } from "react-router-dom";
@@ -36,6 +40,7 @@ function ViewLectures() {
   const [loading, setLoading] = useState(true);
   const [accessDenied, setAccessDenied] = useState(false);
   const [accessMessage, setAccessMessage] = useState("");
+  const [isTheaterMode, setIsTheaterMode] = useState(false);
 
   // Lecture-specific resources
   const [lectureResources, setLectureResources] = useState([]);
@@ -219,10 +224,23 @@ function ViewLectures() {
         {/* Video Player + Playlist Layout */}
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
           {/* Main Video Player & Controls */}
-          <div className="lecture-player-content lg:col-span-8 space-y-5">
+          <div className={`lecture-player-content space-y-5 ${isTheaterMode ? "lg:col-span-12" : "lg:col-span-8"}`}>
             <div className="lecture-video-panel bg-white border border-[#e8e5dc] rounded-3xl p-4 sm:p-6 space-y-4 shadow-xs">
               {/* Dominant Video Container with Secure Authorized Player */}
               <div className="w-full">
+                <div className="flex items-center justify-between pb-2">
+                  <span className="text-xs font-bold text-[#78716c] uppercase tracking-wider">
+                    {selectedLecture?.isPreviewFree ? "Free Preview" : "Authorized Classroom Stream"}
+                  </span>
+                  <button
+                    onClick={() => setIsTheaterMode(!isTheaterMode)}
+                    className="inline-flex items-center gap-1.5 text-xs font-bold text-[#57534e] hover:text-[#1c1917] bg-[#f2efe9] hover:bg-[#e8e5dc] px-2.5 py-1 rounded-lg transition cursor-pointer"
+                    title={isTheaterMode ? "Standard View" : "Theater Mode (Expanded Screen)"}
+                  >
+                    {isTheaterMode ? <Minimize2 size={13} /> : <Maximize2 size={13} />}
+                    <span>{isTheaterMode ? "Standard" : "Theater"}</span>
+                  </button>
+                </div>
                 {selectedLecture?._id ? (
                   <SecureVideoPlayer
                     key={selectedLecture._id}
@@ -354,26 +372,35 @@ function ViewLectures() {
           </div>
 
           {/* Playlist Sidebar */}
-          <div className="lecture-playlist lg:col-span-4 bg-white border border-[#e8e5dc] rounded-3xl p-5 sm:p-6 space-y-4 shadow-xs sticky top-24">
+          <div className={`lecture-playlist ${isTheaterMode ? "lg:col-span-12" : "lg:col-span-4"} bg-white border border-[#e8e5dc] rounded-3xl p-5 sm:p-6 space-y-4 shadow-xs sticky top-24`}>
             <div className="flex items-center justify-between pb-3 border-b border-[#f2efe9]">
-              <h2 className="text-sm font-bold text-[#1c1917]">Course Playlist</h2>
-              <span className="text-xs font-semibold text-[#78716c]">{lectures.length} Lectures</span>
+              <div className="flex items-center gap-2">
+                <h2 className="text-sm font-bold text-[#1c1917]">Course Playlist</h2>
+                <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-[#f4f2ec] text-[#57534e]">
+                  {lectures.length} Lectures
+                </span>
+              </div>
+              <span className="text-xs font-semibold text-[#78716c]">
+                {lectures.filter((l) => l.isPreviewFree).length} Previews
+              </span>
             </div>
 
             <div className="space-y-2 max-h-[550px] overflow-y-auto pr-1">
               {lectures.map((lec, idx) => {
                 const isCurrent = selectedLecture?._id === lec._id;
+                const isPreview = Boolean(lec.isPreviewFree);
+
                 return (
                   <button
                     key={lec._id || idx}
                     onClick={() => setSelectedLecture(lec)}
                     className={`w-full text-left p-3 rounded-xl border transition flex items-center justify-between gap-3 cursor-pointer touch-target pressable ${
                       isCurrent
-                        ? "bg-blue-50/80 border-[#1e3a8a] text-[#1e3a8a] font-bold"
-                        : "bg-[#faf9f6] border-[#e8e5dc] text-[#44403c] hover:bg-white"
+                        ? "bg-blue-50/80 border-[#1e3a8a] text-[#1e3a8a] font-bold shadow-xs"
+                        : "bg-[#faf9f6] border-[#e8e5dc] text-[#44403c] hover:bg-white hover:border-[#1e3a8a]/30"
                     }`}
                   >
-                    <div className="flex items-center gap-3 overflow-hidden">
+                    <div className="flex items-center gap-3 overflow-hidden min-w-0">
                       <div
                         className={`w-7 h-7 rounded-lg flex items-center justify-center text-xs font-bold shrink-0 ${
                           isCurrent
@@ -383,17 +410,35 @@ function ViewLectures() {
                       >
                         {idx + 1}
                       </div>
-                      <span className="text-xs truncate">{lec.lectureTitle}</span>
-                      <span className="shrink-0 rounded-full border border-[#e8e5dc] bg-white px-1.5 py-0.5 text-[9px] font-semibold text-[#57534e]">
-                        {lec.videoProvider === "youtube" ? "YouTube" : lec.videoProvider === "bunny" ? "Native video" : "Video"}
-                      </span>
+                      <div className="min-w-0">
+                        <p className="text-xs font-semibold truncate">{lec.lectureTitle}</p>
+                        <span className="rounded-full border border-[#e8e5dc] bg-white px-1.5 py-0.5 text-[9px] font-semibold text-[#57534e]">
+                          {lec.videoProvider === "youtube"
+                            ? "YouTube"
+                            : lec.videoProvider === "bunny"
+                            ? "Native video"
+                            : "Video"}
+                        </span>
+                      </div>
                     </div>
 
-                    {isCurrent && (
-                      <span className="text-[10px] font-bold uppercase tracking-wider text-[#1e3a8a] shrink-0">
-                        Playing
-                      </span>
-                    )}
+                    <div className="shrink-0 flex items-center gap-1.5 ml-2">
+                      {isCurrent ? (
+                        <span className="text-[10px] font-bold uppercase tracking-wider text-[#1e3a8a] bg-blue-100/60 px-2 py-0.5 rounded-full shrink-0">
+                          Playing
+                        </span>
+                      ) : isPreview ? (
+                        <span className="inline-flex items-center gap-1 text-[10px] font-bold text-emerald-700 bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded-full shrink-0">
+                          <LockOpen size={10} />
+                          Free
+                        </span>
+                      ) : (
+                        <span className="inline-flex items-center gap-1 text-[10px] font-semibold text-[#78716c] bg-[#f0ede6] px-2 py-0.5 rounded-full shrink-0">
+                          <CheckCircle2 size={10} className="text-emerald-600" />
+                          Class
+                        </span>
+                      )}
+                    </div>
                   </button>
                 );
               })}

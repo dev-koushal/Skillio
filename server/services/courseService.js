@@ -43,6 +43,24 @@ export const courseService = {
       enrolledStudents: [],
     });
 
+    if (userId) {
+      await User.findByIdAndUpdate(userId, {
+        $addToSet: { enrolledCourses: course._id },
+      }).catch(() => {});
+
+      await CourseAccess.findOneAndUpdate(
+        { userId, courseId: course._id, tenantId },
+        {
+          userId,
+          courseId: course._id,
+          tenantId,
+          source: "INSTITUTION_GRANTED",
+          status: "active",
+        },
+        { upsert: true, new: true }
+      ).catch(() => {});
+    }
+
     return course;
   },
 

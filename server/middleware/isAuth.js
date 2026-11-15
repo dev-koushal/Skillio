@@ -1,5 +1,6 @@
 import jwt from "jsonwebtoken";
 import User from "../models/userModel.js";
+import Tenant from "../models/tenantModel.js";
 import InstitutionMembership from "../models/institutionMembershipModel.js";
 import sessionService from "../services/session/sessionService.js";
 import { apiError } from "../utils/apiErrors.js";
@@ -56,20 +57,48 @@ const isAuth = async (req, res, next) => {
 
     // Educators operate within their assigned institution context.
     if (req.userRole === ROLES.EDUCATOR) {
-      const explicitHeaderSlug = req.headers["x-tenant-slug"]?.toString().trim().toLowerCase();
-      const hasExplicitTargetTenant = explicitHeaderSlug && !["platform", "default"].includes(explicitHeaderSlug);
+      let educatorTenant = null;
+      try {
+        educatorTenant = await Tenant.findOne({ ownerId: req.userId, status: "active" });
+      } catch (err) {
+        console.warn("[isAuth] error finding owned tenant:", err.message);
+      }
 
-      // If educator didn't explicitly target an alien institution, scope req.tenantId to their owned/assigned institution
-      if (!hasExplicitTargetTenant && decoded.tenantId) {
-        req.tenantId = decoded.tenantId;
+      if (!educatorTenant) {
+        try {
+          const userDoc = await User.findById(req.userId).select("tenantId");
+          if (userDoc?.tenantId) {
+            const assigned = await Tenant.findById(userDoc.tenantId);
+            if (assigned && assigned.status === "active" && !["default", "platform"].includes(assigned.slug)) {
+              educatorTenant = assigned;
+            }
+          }
+        } catch (err) {
+          console.warn("[isAuth] error finding assigned tenant:", err.message);
+        }
+      }
+
+      if (!educatorTenant && decoded.tenantId) {
+        try {
+          const assigned = await Tenant.findById(decoded.tenantId);
+          if (assigned && assigned.status === "active" && !["default", "platform"].includes(assigned.slug)) {
+            educatorTenant = assigned;
+          }
+        } catch (err) {
+          console.warn("[isAuth] error finding decoded tenant:", err.message);
+        }
+      }
+
+      if (educatorTenant) {
+        req.tenantId = educatorTenant._id;
+        req.tenant = educatorTenant;
+        req.userTenantId = educatorTenant._id;
         return next();
       }
 
-      // If educator explicitly targeted another tenant that doesn't match their assigned institution
-      if (hasExplicitTargetTenant && decoded.tenantId && req.tenantId &&
-          decoded.tenantId.toString() !== req.tenantId.toString()) {
-        console.warn(`[Authorization] cross-tenant request denied user=${req.userId} tenant=${req.tenantId}`);
-        return apiError(res, 403, "INSTITUTION_ACCESS_DENIED");
+      if (decoded.tenantId) {
+        req.tenantId = decoded.tenantId;
+        req.userTenantId = decoded.tenantId;
       }
       return next();
     }

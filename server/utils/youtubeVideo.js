@@ -1,5 +1,5 @@
 const VIDEO_ID_PATTERN = /^[A-Za-z0-9_-]{11}$/;
-const YOUTUBE_HOSTS = new Set(["youtube.com", "www.youtube.com", "m.youtube.com", "music.youtube.com", "youtu.be"]);
+const YOUTUBE_HOSTS = new Set(["youtube.com", "www.youtube.com", "m.youtube.com", "music.youtube.com", "youtu.be", "studio.youtube.com"]);
 
 export class YouTubeUrlError extends Error {
   constructor(message = "Enter a valid YouTube video URL.") {
@@ -15,32 +15,39 @@ export function parseYouTubeVideoUrl(value) {
     throw new YouTubeUrlError();
   }
 
+  let cleanValue = value.trim();
+  if (!/^https?:\/\//i.test(cleanValue)) {
+    cleanValue = `https://${cleanValue}`;
+  }
+
   let url;
   try {
-    url = new URL(value.trim());
+    url = new URL(cleanValue);
   } catch {
     throw new YouTubeUrlError();
   }
 
   const host = url.hostname.toLowerCase();
   if (
-    url.protocol !== "https:" ||
     !YOUTUBE_HOSTS.has(host) ||
     url.username ||
     url.password ||
-    (url.port && url.port !== "443")
+    (url.port && url.port !== "443" && url.port !== "80")
   ) {
     throw new YouTubeUrlError("Use a secure YouTube video link from youtube.com or youtu.be.");
   }
 
   let videoId = "";
   if (host === "youtu.be") {
-    const shortLink = url.pathname.match(/^\/([^/]+)\/?$/);
+    const shortLink = url.pathname.match(/^\/([^/?#]+)/);
     videoId = shortLink?.[1] || "";
   } else if (url.pathname === "/watch") {
     videoId = url.searchParams.get("v") || "";
+  } else if (url.pathname.startsWith("/video/")) {
+    const studioMatch = url.pathname.match(/^\/video\/([^/?#]+)/);
+    videoId = studioMatch?.[1] || "";
   } else {
-    const match = url.pathname.match(/^\/(?:embed|live)\/([^/]+)\/?$/);
+    const match = url.pathname.match(/^\/(?:embed|live)\/([^/?#]+)/);
     videoId = match?.[1] || "";
   }
 

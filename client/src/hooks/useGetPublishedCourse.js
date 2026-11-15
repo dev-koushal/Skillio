@@ -24,6 +24,11 @@ const useGetPublishedCourse = () => {
       return () => { isMounted = false; };
     }
 
+    if (role !== "student") {
+      dispatch(setCourseData([]));
+      return () => { isMounted = false; };
+    }
+
     const memberships = membershipKey ? membershipKey.split(",") : [];
     if (role === "student" && !membershipKey) return () => { isMounted = false; };
     if (role === "student" && !memberships.includes(activeSlug)) {

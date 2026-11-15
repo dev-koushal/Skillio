@@ -42,6 +42,11 @@ const MyEnrolledCourses = lazy(() => import("./pages/MyEnrolledCourses"));
 const CreateInstitution = lazy(() => import("./pages/CreateInstitution"));
 const InstitutionStudents = lazy(() => import("./pages/Educator/Students"));
 const AcceptInvite = lazy(() => import("./pages/AcceptInvite"));
+const EducatorNotes = lazy(() => import("./pages/Educator/Notes"));
+const CreateNote = lazy(() => import("./pages/Educator/CreateNote"));
+const StudentNotes = lazy(() => import("./pages/StudentNotes"));
+const StudentNoteDetail = lazy(() => import("./pages/StudentNoteDetail"));
+const StudentNoteReader = lazy(() => import("./pages/StudentNoteReader"));
 
 // Lazy-loaded AI Assistant button to keep anonymous landing fast
 const AIAssistantButton = lazy(() => import("./components/AIAssistantButton"));
@@ -104,6 +109,20 @@ function MyCoursesDispatcher() {
     }
   }
   return <MyEnrolledCourses />;
+}
+
+function StudentNotesDispatcher() {
+  const { userData } = useSelector((store) => store.user);
+  if (userData?.role === "student") {
+    const storedSlug = getStoredTenantSlug();
+    const memberships = Array.isArray(userData?.memberships) ? userData.memberships : [];
+    const activeSlug = memberships.find((membership) => membership.slug === storedSlug)?.slug || memberships[0]?.slug;
+
+    if (activeSlug) {
+      return <Navigate to={`/institution/${encodeURIComponent(activeSlug)}/notes`} replace />;
+    }
+  }
+  return <StudentNotes />;
 }
 
 function ProfileDispatcher() {
@@ -204,6 +223,9 @@ function AppRoutes() {
           <Route path="/institution/:slug" element={<InstitutionRouteGuard><InstitutionHome /></InstitutionRouteGuard>} />
           <Route path="/institution/:slug/live" element={<InstitutionRouteGuard><InstitutionLiveClass /></InstitutionRouteGuard>} />
           <Route path="/institution/:slug/courses" element={<InstitutionRouteGuard><AllCourses /></InstitutionRouteGuard>} />
+          <Route path="/institution/:slug/notes" element={<InstitutionRouteGuard><StudentNotes /></InstitutionRouteGuard>} />
+          <Route path="/institution/:slug/notes/:id" element={<InstitutionRouteGuard><StudentNoteDetail /></InstitutionRouteGuard>} />
+          <Route path="/institution/:slug/notes/:id/read" element={<InstitutionRouteGuard><StudentNoteReader /></InstitutionRouteGuard>} />
           <Route path="/institution/:slug/my-courses" element={<InstitutionRouteGuard><MyEnrolledCourses /></InstitutionRouteGuard>} />
           <Route path="/institution/:slug/course/:courseId" element={<InstitutionRouteGuard><ViewCourses /></InstitutionRouteGuard>} />
           <Route path="/institution/:slug/profile" element={<InstitutionRouteGuard><Profile /></InstitutionRouteGuard>} />
@@ -283,6 +305,22 @@ function AppRoutes() {
             element={<StudentCoursesDispatcher />}
           />
           <Route
+            path="/notes"
+            element={<StudentNotesDispatcher />}
+          />
+          <Route
+            path="/educator/notes"
+            element={isEducator ? <EducatorNotes /> : <Navigate to="/login" replace />}
+          />
+          <Route
+            path="/educator/notes/create"
+            element={isEducator ? <CreateNote /> : <Navigate to="/login" replace />}
+          />
+          <Route
+            path="/educator/notes/:id/edit"
+            element={isEducator ? <CreateNote /> : <Navigate to="/login" replace />}
+          />
+          <Route
             path="/builder"
             element={isEducator ? <CourseBuilder /> : <Navigate to="/login" replace />}
           />
@@ -322,7 +360,9 @@ function AppRoutes() {
           <AIAssistantButton hideTrigger />
         </Suspense>
       )}
-      {isEducator && !/^\/(?:builder|createcourses|editcourse)(?:\/|$)/.test(location.pathname) && (
+      {isEducator &&
+        !/^\/(?:builder|createcourses|editcourse)(?:\/|$)/.test(location.pathname) &&
+        !/^\/educator\/notes\/(?:create|[^/]+\/edit)$/.test(location.pathname) && (
         <Suspense fallback={null}>
           <VoiceCommandButton />
         </Suspense>

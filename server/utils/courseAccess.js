@@ -14,18 +14,19 @@ import { isInstitutionOwner } from "./permissions.js";
  * Returns an object: { hasAccess: boolean, isCreator: boolean, isEnrolled: boolean, isFree: boolean, reason?: string }
  */
 export const verifyCourseAccess = async ({ courseId, userId, userRole, tenantId }) => {
-  if (!courseId || !tenantId) {
-    return { hasAccess: false, reason: "Missing course or tenant parameters" };
+  if (!courseId) {
+    return { hasAccess: false, reason: "Missing course parameter" };
   }
 
-  const course = await Course.findOne({ _id: courseId, tenantId });
+  // Find course directly by ID first to check creator/ownership rights
+  const course = await Course.findById(courseId);
   if (!course) {
-    return { hasAccess: false, reason: "Course not found in this organization" };
+    return { hasAccess: false, reason: "Course not found" };
   }
 
-  // Creator or Admin always has full access
-  const isCreator = userId && course.creator.toString() === userId.toString();
-  const isAdmin = await isInstitutionOwner({ tenantId, userId, userRole });
+  // Creator or Admin always has full access regardless of request context
+  const isCreator = userId && course.creator && course.creator.toString() === userId.toString();
+  const isAdmin = await isInstitutionOwner({ tenantId: course.tenantId || tenantId, userId, userRole });
 
   if (isCreator || isAdmin) {
     return {
@@ -35,6 +36,15 @@ export const verifyCourseAccess = async ({ courseId, userId, userRole, tenantId 
       isAdmin,
       isEnrolled: true,
     };
+  }
+
+  // For students and non-owners, enforce strict tenant isolation
+  if (!tenantId) {
+    return { hasAccess: false, reason: "Missing organization parameter" };
+  }
+
+  if (course.tenantId && tenantId.toString() !== course.tenantId.toString()) {
+    return { hasAccess: false, reason: "Course not found in this organization" };
   }
 
   // Check formal CourseAccess grant (supports PURCHASED, INSTITUTION_GRANTED, etc.)
