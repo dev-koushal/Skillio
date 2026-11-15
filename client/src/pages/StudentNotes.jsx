@@ -5,6 +5,7 @@ import { Search, FileText, CheckCircle, ArrowRight, BookOpen } from "lucide-reac
 import api from "../services/api";
 import { useTenant } from "../context/TenantContext";
 import NoteCover from "../components/notes/NoteCover";
+import Navbar from "../components/Navbar";
 
 export default function StudentNotes() {
   const { slug } = useParams();
@@ -50,7 +51,8 @@ export default function StudentNotes() {
   }, [search, selectedTopic]);
 
   return (
-    <div className="min-h-screen bg-[#faf8f5] text-[#1c1917] pb-24">
+    <div className="min-h-screen bg-[#faf8f5] text-[#1c1917] pb-28 md:pb-12">
+      <Navbar currentInstitution={tenant?.isPlatform ? null : tenant} />
       {/* Header Banner */}
       <div className="max-w-6xl mx-auto px-4 sm:px-6 pt-8 sm:pt-12">
         <div className="text-center max-w-xl mx-auto mb-8">

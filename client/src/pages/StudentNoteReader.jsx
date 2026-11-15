@@ -16,6 +16,7 @@ import { toast } from "react-toastify";
 import api from "../services/api";
 import { useTenant } from "../context/TenantContext";
 import PageHeader from "../components/common/PageHeader";
+import Navbar from "../components/Navbar";
 
 export default function StudentNoteReader() {
   const { slug, id } = useParams();
@@ -150,7 +151,8 @@ export default function StudentNoteReader() {
   const watermarkText = session?.watermark || `${userData?.name || "Student"} • Skillio`;
 
   return (
-    <div className="min-h-screen bg-[#1c1917] text-white flex flex-col select-none">
+    <div className="min-h-screen bg-[#1c1917] text-white flex flex-col select-none pb-20 md:pb-0">
+      <Navbar currentInstitution={tenant?.isPlatform ? null : tenant} />
       <header className="border-b border-[#292524] bg-[#1c1917] px-4 py-2 flex flex-wrap items-center justify-between gap-3 z-10">
         <PageHeader title="Secure Document Reader" onBack={() => navigate(`/institution/${activeSlug}/notes/${id}`)} />
 

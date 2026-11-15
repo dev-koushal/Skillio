@@ -8,6 +8,7 @@ import { useTenant } from "../../context/TenantContext";
 import { hasEducatorInstitution } from "../../auth/permissions";
 import RequireInstitutionModal from "../../components/common/RequireInstitutionModal";
 import NoteCover from "../../components/notes/NoteCover";
+import Navbar from "../../components/Navbar";
 
 export default function EducatorNotes() {
   const navigate = useNavigate();
@@ -96,7 +97,8 @@ export default function EducatorNotes() {
   };
 
   return (
-    <div className="min-h-screen bg-[#faf8f5] text-[#1c1917] pb-20">
+    <div className="min-h-screen bg-[#faf8f5] text-[#1c1917] pb-28 md:pb-12">
+      <Navbar currentInstitution={tenant?.isPlatform ? null : tenant} />
       {/* Header Container */}
       <div className="max-w-6xl mx-auto px-4 sm:px-6 pt-8 sm:pt-10">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-6 border-b border-[#e8e5dc]">

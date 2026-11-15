@@ -16,6 +16,7 @@ import { toast } from "react-toastify";
 import api from "../services/api";
 import { useTenant } from "../context/TenantContext";
 import NoteCover from "../components/notes/NoteCover";
+import Navbar from "../components/Navbar";
 
 export default function StudentNoteDetail() {
   const { slug, id } = useParams();
@@ -136,8 +137,9 @@ export default function StudentNoteDetail() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-[#faf8f5] flex items-center justify-center text-xs text-[#78716c]">
-        Loading note details...
+      <div className="min-h-screen bg-[#faf8f5] flex flex-col text-xs text-[#78716c]">
+        <Navbar currentInstitution={tenant?.isPlatform ? null : tenant} />
+        <div className="flex-1 flex items-center justify-center">Loading note details...</div>
       </div>
     );
   }
@@ -145,7 +147,8 @@ export default function StudentNoteDetail() {
   if (!note) return null;
 
   return (
-    <div className="min-h-screen bg-[#faf8f5] text-[#1c1917] pb-24">
+    <div className="min-h-screen bg-[#faf8f5] text-[#1c1917] pb-28 md:pb-12">
+      <Navbar currentInstitution={tenant?.isPlatform ? null : tenant} />
       <div className="max-w-4xl mx-auto px-4 sm:px-6 pt-6 sm:pt-8">
         {/* Back Link */}
         <Link

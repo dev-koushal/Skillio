@@ -16,6 +16,7 @@ import {
 } from "lucide-react";
 import { useSelector } from "react-redux";
 import { useNavigate, useParams, Link } from "react-router-dom";
+import { toast } from "react-toastify";
 import api from "../services/api";
 import Navbar from "../components/Navbar";
 import Footer from "../components/Footer";
@@ -388,15 +389,24 @@ function ViewLectures() {
             <div className="space-y-2 max-h-[550px] overflow-y-auto pr-1">
               {lectures.map((lec, idx) => {
                 const isCurrent = selectedLecture?._id === lec._id;
-                const isPreview = Boolean(lec.isPreviewFree);
+                const isPreview = Boolean(lec.isPreviewFree || lec.accessState === "preview");
+                const isLocked = Boolean(lec.isLocked || lec.canPlay === false);
 
                 return (
                   <button
                     key={lec._id || idx}
-                    onClick={() => setSelectedLecture(lec)}
+                    onClick={() => {
+                      if (isLocked) {
+                        toast.info("Please enroll in this course to watch locked lectures.");
+                        return;
+                      }
+                      setSelectedLecture(lec);
+                    }}
                     className={`w-full text-left p-3 rounded-xl border transition flex items-center justify-between gap-3 cursor-pointer touch-target pressable ${
                       isCurrent
                         ? "bg-blue-50/80 border-[#1e3a8a] text-[#1e3a8a] font-bold shadow-xs"
+                        : isLocked
+                        ? "bg-[#faf9f6] border-[#e8e5dc] text-[#78716c] opacity-75"
                         : "bg-[#faf9f6] border-[#e8e5dc] text-[#44403c] hover:bg-white hover:border-[#1e3a8a]/30"
                     }`}
                   >
@@ -405,13 +415,17 @@ function ViewLectures() {
                         className={`w-7 h-7 rounded-lg flex items-center justify-center text-xs font-bold shrink-0 ${
                           isCurrent
                             ? "bg-[#1e3a8a] text-white"
+                            : isLocked
+                            ? "bg-[#e8e5dc] text-[#78716c]"
                             : "bg-[#f2efe9] text-[#78716c]"
                         }`}
                       >
                         {idx + 1}
                       </div>
                       <div className="min-w-0">
-                        <p className="text-xs font-semibold truncate">{lec.lectureTitle}</p>
+                        <p className={`text-xs font-semibold truncate ${isLocked ? "text-[#78716c]" : ""}`}>
+                          {lec.lectureTitle}
+                        </p>
                         <span className="rounded-full border border-[#e8e5dc] bg-white px-1.5 py-0.5 text-[9px] font-semibold text-[#57534e]">
                           {lec.videoProvider === "youtube"
                             ? "YouTube"
@@ -426,6 +440,11 @@ function ViewLectures() {
                       {isCurrent ? (
                         <span className="text-[10px] font-bold uppercase tracking-wider text-[#1e3a8a] bg-blue-100/60 px-2 py-0.5 rounded-full shrink-0">
                           Playing
+                        </span>
+                      ) : isLocked ? (
+                        <span className="inline-flex items-center gap-1 text-[10px] font-semibold text-[#78716c] bg-[#f0ede6] px-2 py-0.5 rounded-full shrink-0 border border-[#e8e5dc]">
+                          <Lock size={10} />
+                          Locked
                         </span>
                       ) : isPreview ? (
                         <span className="inline-flex items-center gap-1 text-[10px] font-bold text-emerald-700 bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded-full shrink-0">

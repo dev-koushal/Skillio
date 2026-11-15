@@ -20,10 +20,6 @@ export default function MobileBottomNav({ currentInstitution = null }) {
   const { userData } = useSelector((state) => state.user);
   const { tenant } = useTenant();
 
-  // Keep the course builder's long, multi-step form clear of the persistent
-  // mobile navigation. The builder has its own step controls and back action.
-  if (location.pathname.startsWith("/builder")) return null;
-
   const isEducator = canUseEducatorWorkspace(userData);
 
   const activeInstitution =

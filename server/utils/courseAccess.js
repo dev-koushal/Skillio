@@ -110,20 +110,41 @@ export const sanitizeLecturesForViewer = (lectures, hasFullAccess) => {
   return lectures.map((lecture) => {
     const raw = typeof lecture.toObject === "function" ? lecture.toObject() : { ...lecture };
 
-    if (hasFullAccess || raw.isPreviewFree) {
+    if (hasFullAccess) {
       return {
         ...raw,
         isLocked: false,
+        accessState: "enrolled",
+        canPlay: true,
       };
     }
 
-    // Locked lecture: strip protected videoUrl
+    if (raw.isPreviewFree) {
+      return {
+        ...raw,
+        isLocked: false,
+        accessState: "preview",
+        canPlay: true,
+      };
+    }
+
+    // Locked lecture: strictly scrub all streaming URLs and IDs to prevent unauthorized playback
     return {
       _id: raw._id,
+      courseId: raw.courseId,
       lectureTitle: raw.lectureTitle,
       isPreviewFree: false,
       isLocked: true,
-      videoUrl: null, // Scrubbed to prevent unauthorized watching
+      accessState: "locked",
+      canPlay: false,
+      duration: raw.duration || 0,
+      videoProvider: raw.videoProvider || "cloudinary",
+      videoUrl: null,
+      bunnyVideoId: null,
+      bunnyLibraryId: null,
+      bunnyDirectUrl: null,
+      youtubeVideoId: null,
+      youtubeUrl: null,
       createdAt: raw.createdAt,
       updatedAt: raw.updatedAt,
     };

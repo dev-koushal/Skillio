@@ -1,22 +1,16 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useMemo } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import {
   ArrowLeft,
   Lock,
-  PlayCircle,
   Star,
   CheckCircle,
   Video,
   BookOpen,
   Clock,
   FileText,
-  Download,
-  ExternalLink,
   Search,
-  Sparkles,
   CheckCircle2,
-  ShieldCheck,
-  Award,
   SquarePen,
   LockOpen,
   Play,
@@ -114,7 +108,7 @@ function ViewCourses() {
         // Default to first preview-free lecture if any
         if (res.data.lectures && res.data.lectures.length > 0) {
           const previewLec =
-            res.data.lectures.find((l) => l.isPreviewFree) || res.data.lectures[0];
+            res.data.lectures.find((l) => l.isPreviewFree || l.accessState === "preview") || res.data.lectures[0];
           setSelectedLecture(previewLec);
         }
       }
@@ -131,7 +125,7 @@ function ViewCourses() {
     loadCourse();
   }, [courseId]);
 
-  // Check if the current educator created this course.
+  // Check if the current educator created this course
   const hasManagementAccess = canManageCourse(userData, course);
   const hasFullAccess = Boolean(isEnrolled || hasManagementAccess);
 
@@ -179,7 +173,6 @@ function ViewCourses() {
         setResources(res.data.resources || []);
       }
     } catch (err) {
-      // 403 when not enrolled is expected for private course resources
       if (err.response?.status !== 403) {
         console.warn("[ViewCourse] Resource load error:", err.message);
       }
@@ -196,8 +189,6 @@ function ViewCourses() {
 
   const applyVerifiedEnrollment = (updatedUser) => {
     if (updatedUser) {
-      // Payment verification returns enrollment fields, not a fresh auth
-      // session. Preserve institution context for route guards.
       dispatch(setUserData(mergeEnrollmentUser(userData, updatedUser)));
     }
     setIsEnrolled(true);
@@ -318,9 +309,13 @@ function ViewCourses() {
       const loaded = await loadRazorpayScript();
       if (!loaded || !window.Razorpay) throw new Error("Razorpay checkout could not be loaded.");
       const checkout = new window.Razorpay({
-        key: order.key, amount: order.amount, currency: order.currency || "INR",
-        name: tenant?.name || "Skillio Academy", description: `Unlock ${resource.title}`,
-        order_id: order.id, prefill: { name: userData?.name || "", email: userData?.email || "" },
+        key: order.key,
+        amount: order.amount,
+        currency: order.currency || "INR",
+        name: tenant?.name || "Skillio Academy",
+        description: `Unlock ${resource.title}`,
+        order_id: order.id,
+        prefill: { name: userData?.name || "", email: userData?.email || "" },
         theme: { color: tenant?.primaryColor || "#1e3a8a" },
         handler: async (payment) => {
           try {
@@ -329,7 +324,9 @@ function ViewCourses() {
             await loadResources();
           } catch (error) {
             toast.error(error.response?.data?.message || "Payment verification failed.");
-          } finally { setBuyingResourceId(null); }
+          } finally {
+            setBuyingResourceId(null);
+          }
         },
         modal: { ondismiss: () => setBuyingResourceId(null) },
       });
@@ -394,6 +391,10 @@ function ViewCourses() {
     return () => clearTimeout(timer);
   }, [resources, activeTab, courseId]);
 
+  const firstPreviewLecture = useMemo(() => {
+    return (course?.lectures || []).find((l) => l.isPreviewFree || l.accessState === "preview") || null;
+  }, [course]);
+
   if (fetching && !course) {
     return (
       <div className="institution-student-page min-h-screen text-[#1c1917]" style={tenantStyle}>
@@ -411,99 +412,603 @@ function ViewCourses() {
   return (
     <div className="institution-student-page min-h-screen text-[#1c1917] flex flex-col font-sans" style={tenantStyle}>
       <Navbar currentInstitution={tenant?.isPlatform ? null : tenant} />
-      {activeDocument && <SecureDocumentViewer resource={activeDocument} user={userData} tenantName={tenant?.name} onClose={() => setActiveDocument(null)} />}
+      {activeDocument && (
+        <SecureDocumentViewer
+          resource={activeDocument}
+          user={userData}
+          tenantName={tenant?.name}
+          onClose={() => setActiveDocument(null)}
+        />
+      )}
 
-      <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8 space-y-6 sm:space-y-8 pb-36 md:pb-12">
-        {/* Back Link */}
-        <button
-          onClick={() => navigate(targetSlug ? `/institution/${targetSlug}/courses` : "/courses")}
-          className="inline-flex items-center gap-1.5 text-xs text-[#78716c] hover:text-[#1c1917] transition cursor-pointer font-medium touch-target pressable"
-        >
-          <ArrowLeft size={16} /> Back to Course Catalog
-        </button>
+      <main className="flex-1 max-w-6xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-6 space-y-6 pb-28 md:pb-12">
+        {/* Compact Back Header */}
+        <div className="flex items-center justify-between gap-3">
+          <button
+            onClick={() => navigate(targetSlug ? `/institution/${targetSlug}/courses` : "/courses")}
+            className="inline-flex items-center gap-1.5 text-xs text-[#78716c] hover:text-[#1c1917] transition cursor-pointer font-medium p-1 rounded-lg hover:bg-[#f1ede4] pressable"
+          >
+            <ArrowLeft size={16} />
+            <span>Back to Courses</span>
+          </button>
+          <span className="text-[11px] font-bold text-[#1e3a8a] bg-blue-50 border border-blue-200/80 px-2.5 py-0.5 rounded-full">
+            {tenant?.name || "Skillio"}
+          </span>
+        </div>
 
-        {/* Hero Course Header (Mobile First Order: Preview on top, then Details) */}
-        <div className="bg-white border border-[#e8e5dc] rounded-3xl p-5 sm:p-8 shadow-xs grid grid-cols-1 lg:grid-cols-12 gap-6 lg:gap-8 items-start">
-          {/* Video preview / Action Card (Right on desktop, First on mobile) */}
-          <div className="order-1 lg:order-2 lg:col-span-5 space-y-4">
-            <div className="bg-[#faf9f6] border border-[#e8e5dc] rounded-2xl p-4 sm:p-6 space-y-4 sm:space-y-5 shadow-xs">
-              {/* Small Video Preview Box (Click expands to theater video player taking whole screen) */}
+        {/* Main Course Grid: 8 cols content, 4 cols sidebar */}
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+          
+          {/* Main Content Column (Mobile: 100%, Desktop: 8 cols) */}
+          <div className="lg:col-span-8 space-y-5">
+            
+            {/* Mobile-Only Hero Thumbnail (16:9 Aspect Ratio) */}
+            <div className="lg:hidden">
               <div
                 onClick={() => {
-                  if (selectedLecture?._id) {
+                  if (hasFullAccess) {
+                    navigate(`/viewlecture/${courseId}`);
+                  } else if (firstPreviewLecture) {
+                    setSelectedLecture(firstPreviewLecture);
                     setIsPreviewModalOpen(true);
-                  } else if (course?.lectures?.[0]) {
+                  } else if (course?.lectures?.[0]?.canPlay) {
                     setSelectedLecture(course.lectures[0]);
                     setIsPreviewModalOpen(true);
+                  } else {
+                    toast.info("Please enroll in this course to access the classroom lectures.");
                   }
                 }}
-                className="group aspect-video w-full rounded-2xl overflow-hidden bg-slate-950 relative flex items-center justify-center border border-[#e8e5dc] shadow-sm cursor-pointer select-none card-lift"
-                title="Click to preview course video"
+                className="group relative w-full aspect-video rounded-2xl overflow-hidden bg-slate-950 border border-[#e8e5dc] shadow-sm cursor-pointer select-none"
               >
                 {course?.thumbnail ? (
                   <img
                     src={optimizeImage(course.thumbnail, 800)}
                     alt={course.title}
-                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300 opacity-80"
+                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
                   />
                 ) : (
-                  <div className="w-full h-full bg-gradient-to-br from-[#0f172a] to-[#1e3a8a] opacity-80" />
+                  <div className="w-full h-full bg-gradient-to-br from-[#0f172a] via-[#1e3a8a] to-[#0f172a]" />
                 )}
+                
+                <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/30 to-black/20 group-hover:from-black/70 transition-colors" />
 
-                {/* Dark subtle vignette overlay */}
-                <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/30 to-black/40 group-hover:from-black/70 transition-colors" />
-
-                {/* Center Play Button Overlay */}
-                <div className="relative z-10 flex flex-col items-center gap-2">
-                  <div className="w-14 h-14 rounded-full bg-white text-[#1e3a8a] shadow-xl flex items-center justify-center group-hover:scale-110 group-hover:bg-[#1e3a8a] group-hover:text-white transition-all duration-200">
-                    <Play size={22} className="fill-current ml-0.5" />
+                <div className="absolute inset-0 flex flex-col items-center justify-center gap-1.5 z-10">
+                  <div className="w-12 h-12 rounded-full bg-white/95 text-[#1e3a8a] shadow-xl flex items-center justify-center group-hover:scale-110 group-hover:bg-[#1e3a8a] group-hover:text-white transition-all">
+                    <Play size={20} className="fill-current ml-0.5" />
                   </div>
-                  <div className="text-center">
-                    <span className="text-xs font-bold text-white tracking-wide drop-shadow-md">
-                      Preview this course
+                  <span className="text-[11px] font-bold text-white tracking-wide drop-shadow-md">
+                    {hasFullAccess ? "Resume Watching" : firstPreviewLecture ? "Watch Free Preview" : "Preview Course"}
+                  </span>
+                </div>
+
+                <div className="absolute top-2.5 left-2.5 z-10">
+                  {hasFullAccess ? (
+                    <span className="inline-flex items-center gap-1 text-[10px] font-bold text-emerald-300 bg-emerald-950/80 backdrop-blur-md px-2.5 py-0.5 rounded-full border border-emerald-500/30">
+                      <CheckCircle size={10} /> Enrolled
                     </span>
-                    {selectedLecture?.lectureTitle && (
-                      <p className="text-[10px] text-slate-300 truncate max-w-[220px] drop-shadow-sm">
-                        {selectedLecture.lectureTitle}
-                      </p>
+                  ) : firstPreviewLecture ? (
+                    <span className="inline-flex items-center gap-1 text-[10px] font-bold text-emerald-300 bg-emerald-950/80 backdrop-blur-md px-2.5 py-0.5 rounded-full border border-emerald-500/30">
+                      <LockOpen size={10} /> Free Preview Available
+                    </span>
+                  ) : null}
+                </div>
+              </div>
+            </div>
+
+            {/* Course Title and Metadata */}
+            <div className="space-y-3">
+              <div className="flex flex-wrap items-center gap-2">
+                <span className="text-[11px] font-semibold text-[#57534e] bg-[#f8f7f4] px-2.5 py-0.5 rounded-md border border-[#e8e5dc]">
+                  {course?.category || "Course"}
+                </span>
+                <span className="text-[11px] font-semibold text-[#57534e] bg-[#f8f7f4] px-2.5 py-0.5 rounded-md border border-[#e8e5dc]">
+                  {course?.level || "All Levels"}
+                </span>
+                {isFree && (
+                  <span className="text-[11px] font-extrabold text-emerald-700 bg-emerald-50 px-2.5 py-0.5 rounded-md border border-emerald-200">
+                    Free
+                  </span>
+                )}
+              </div>
+
+              <h1 className="text-xl sm:text-2xl lg:text-3xl font-extrabold text-[#1c1917] tracking-tight leading-snug">
+                {course?.title}
+              </h1>
+
+              <p className="text-xs sm:text-sm text-[#57534e] leading-relaxed">
+                {course?.subTitle || course?.description}
+              </p>
+
+              {/* Compact Meta Row */}
+              <div className="flex flex-wrap items-center gap-3 sm:gap-4 text-xs text-[#57534e] pt-1">
+                {reviewCount > 0 && (
+                  <div className="flex items-center gap-1 text-amber-500 font-bold">
+                    <Star size={14} className="fill-amber-400 text-amber-400" />
+                    <span className="text-[#1c1917]">{avgRating}</span>
+                    <span className="text-[#78716c] font-normal">({reviewCount})</span>
+                  </div>
+                )}
+                <div className="flex items-center gap-1.5">
+                  <Video size={14} className="text-[#1e3a8a]" />
+                  <span>{course?.lectures?.length || 0} Lectures</span>
+                </div>
+                <div className="flex items-center gap-1.5">
+                  <Clock size={14} className="text-[#1e3a8a]" />
+                  <span>Lifetime Access</span>
+                </div>
+                {creatorData?.name && (
+                  <div className="flex items-center gap-1.5">
+                    <span className="text-[#78716c]">By</span>
+                    <span className="font-semibold text-[#1c1917]">{creatorData.name}</span>
+                  </div>
+                )}
+              </div>
+
+              {/* Mobile-Only Prominent Action Bar */}
+              <div className="lg:hidden pt-2">
+                <div className="flex items-center justify-between gap-3 p-3.5 rounded-2xl bg-white border border-[#e8e5dc] shadow-2xs">
+                  <div>
+                    <p className="text-[10px] text-[#78716c] font-bold uppercase tracking-wider">Tuition</p>
+                    <p className="text-lg font-extrabold text-[#1c1917]">
+                      {isFree ? "Free" : `₹${(course?.price || 0).toLocaleString("en-IN")}`}
+                    </p>
+                  </div>
+                  {hasManagementAccess ? (
+                    <Button
+                      onClick={() => navigate(`/builder/${courseId}`)}
+                      variant="primary"
+                      size="sm"
+                      className="font-bold bg-[#1e3a8a] text-white px-4 py-2"
+                    >
+                      Edit Course
+                    </Button>
+                  ) : hasFullAccess ? (
+                    <Button
+                      onClick={() => navigate(`/viewlecture/${courseId}`)}
+                      variant="primary"
+                      size="sm"
+                      className="font-bold bg-emerald-700 hover:bg-emerald-800 text-white px-4 py-2"
+                    >
+                      Go to Classroom
+                    </Button>
+                  ) : (
+                    <Button
+                      onClick={handleEnroll}
+                      loading={enrollLoading}
+                      variant="primary"
+                      size="sm"
+                      className="font-bold bg-[#1e3a8a] hover:bg-[#172554] text-white px-5 py-2"
+                    >
+                      {isFree ? "Enroll for Free" : "Enroll Now"}
+                    </Button>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            {/* Tab Navigation (Overview | Curriculum | Resources | Reviews) */}
+            <div className="space-y-4 pt-2">
+              <div className="flex items-center gap-1 sm:gap-2 border-b border-[#e8e5dc] overflow-x-auto no-scrollbar">
+                {[
+                  { id: "overview", label: "Overview", icon: BookOpen },
+                  { id: "curriculum", label: `Curriculum (${course?.lectures?.length || 0})`, icon: Video },
+                  { id: "resources", label: `Resources (${resources.length})`, icon: FileText },
+                  { id: "reviews", label: `Reviews${reviewCount ? ` (${reviewCount})` : ""}`, icon: Star },
+                ].map((tab) => {
+                  const Icon = tab.icon;
+                  const isActive = activeTab === tab.id;
+                  return (
+                    <button
+                      key={tab.id}
+                      onClick={() => setActiveTab(tab.id)}
+                      className={`inline-flex items-center gap-1.5 px-3 sm:px-4 py-2.5 text-xs sm:text-sm font-bold border-b-2 transition cursor-pointer whitespace-nowrap ${
+                        isActive
+                          ? "border-[#1e3a8a] text-[#1e3a8a]"
+                          : "border-transparent text-[#78716c] hover:text-[#1c1917]"
+                      }`}
+                    >
+                      <Icon size={15} />
+                      <span>{tab.label}</span>
+                    </button>
+                  );
+                })}
+              </div>
+
+              {/* TAB 1: OVERVIEW */}
+              {activeTab === "overview" && (
+                <div className="space-y-5">
+                  <div className="bg-white border border-[#e8e5dc] rounded-2xl p-4 sm:p-6 space-y-3 shadow-xs">
+                    <h2 className="text-base font-bold text-[#1c1917]">About This Course</h2>
+                    <p className="text-xs sm:text-sm text-[#44403c] leading-relaxed whitespace-pre-line">
+                      {course?.description || "No description provided."}
+                    </p>
+                  </div>
+
+                  {/* Highlights / Features */}
+                  <div className="bg-white border border-[#e8e5dc] rounded-2xl p-4 sm:p-6 space-y-3 shadow-xs">
+                    <h3 className="text-sm font-bold text-[#1c1917] flex items-center gap-2">
+                      <CheckCircle size={16} className="text-[#1e3a8a]" />
+                      <span>What You Will Learn</span>
+                    </h3>
+                    <ul className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 text-xs text-[#57534e]">
+                      <li className="flex items-start gap-2">
+                        <CheckCircle2 size={14} className="text-emerald-700 shrink-0 mt-0.5" />
+                        <span>Comprehensive video lectures with real-world case studies</span>
+                      </li>
+                      <li className="flex items-start gap-2">
+                        <CheckCircle2 size={14} className="text-emerald-700 shrink-0 mt-0.5" />
+                        <span>Downloadable revision notes, summaries, and formula sheets</span>
+                      </li>
+                      <li className="flex items-start gap-2">
+                        <CheckCircle2 size={14} className="text-emerald-700 shrink-0 mt-0.5" />
+                        <span>Flexible self-paced learning across phone and laptop</span>
+                      </li>
+                      <li className="flex items-start gap-2">
+                        <CheckCircle2 size={14} className="text-emerald-700 shrink-0 mt-0.5" />
+                        <span>Direct classroom study resources and interactive Q&A</span>
+                      </li>
+                    </ul>
+                  </div>
+
+                  {/* Instructor Bio Card */}
+                  {creatorData && (
+                    <div className="bg-white border border-[#e8e5dc] rounded-2xl p-4 sm:p-6 space-y-3 shadow-xs">
+                      <h3 className="text-sm font-bold text-[#1c1917]">Instructor</h3>
+                      <div className="flex items-center gap-3">
+                        {creatorData.profilePicture ? (
+                          <img
+                            src={creatorData.profilePicture}
+                            alt={creatorData.name}
+                            className="w-12 h-12 rounded-full object-cover border border-[#d6d3c9]"
+                          />
+                        ) : (
+                          <div className="w-12 h-12 rounded-full bg-[#1e3a8a] text-white flex items-center justify-center font-bold text-base">
+                            {creatorData.name?.charAt(0) || "I"}
+                          </div>
+                        )}
+                        <div>
+                          <p className="text-sm font-bold text-[#1c1917]">
+                            {creatorData.name || "Course Instructor"}
+                          </p>
+                          <p className="text-xs text-[#78716c]">
+                            {creatorData.description || "Educator at " + (tenant?.name || "Skillio")}
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* TAB 2: CURRICULUM (Canonical Learning Interface) */}
+              {activeTab === "curriculum" && (
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between px-1">
+                    <span className="text-xs font-bold text-[#1c1917]">
+                      {course?.lectures?.length || 0} Lectures
+                    </span>
+                    <span className="text-xs text-[#78716c]">
+                      {(course?.lectures || []).filter((l) => l.isPreviewFree || l.accessState === "preview").length} Free Previews
+                    </span>
+                  </div>
+
+                  <div className="space-y-2">
+                    {course?.lectures?.length > 0 ? (
+                      course.lectures.map((lec, idx) => {
+                        const isPreview = Boolean(lec.isPreviewFree || lec.accessState === "preview");
+                        const isEnrolledAccess = Boolean(hasFullAccess || lec.accessState === "enrolled");
+                        const canPlay = Boolean(lec.canPlay ?? (isEnrolledAccess || isPreview));
+                        const isCurrent = selectedLecture?._id === lec._id;
+
+                        return (
+                          <div
+                            key={lec._id || idx}
+                            onClick={() => {
+                              if (canPlay) {
+                                setSelectedLecture(lec);
+                                setIsPreviewModalOpen(true);
+                              } else {
+                                toast.info("Please enroll in this course to watch locked lectures.");
+                              }
+                            }}
+                            className={`group flex items-center justify-between p-3 rounded-xl border transition-all cursor-pointer ${
+                              isCurrent
+                                ? "bg-blue-50/80 border-[#1e3a8a] text-[#1e3a8a] shadow-2xs"
+                                : canPlay
+                                ? "bg-white border-[#e8e5dc] hover:border-[#1e3a8a]/40 hover:bg-[#faf9f6]"
+                                : "bg-[#faf9f6] border-[#e8e5dc] opacity-80 hover:opacity-100"
+                            }`}
+                          >
+                            <div className="flex items-center gap-3 min-w-0">
+                              <div
+                                className={`w-7 h-7 rounded-lg flex items-center justify-center text-xs font-bold shrink-0 ${
+                                  isCurrent
+                                    ? "bg-[#1e3a8a] text-white"
+                                    : canPlay
+                                    ? "bg-blue-50 text-[#1e3a8a]"
+                                    : "bg-[#e8e5dc] text-[#78716c]"
+                                }`}
+                              >
+                                {idx + 1}
+                              </div>
+                              <div className="min-w-0">
+                                <p className={`text-xs sm:text-sm font-semibold truncate ${
+                                  canPlay ? "text-[#1c1917] group-hover:text-[#1e3a8a]" : "text-[#57534e]"
+                                }`}>
+                                  {lec.lectureTitle}
+                                </p>
+                                <span className="text-[10px] text-[#78716c]">
+                                  {lec.duration ? `${Math.round(lec.duration / 60)} min • ` : ""}
+                                  {lec.videoProvider === "youtube"
+                                    ? "YouTube"
+                                    : lec.videoProvider === "bunny"
+                                    ? "Native Video"
+                                    : "Classroom Video"}
+                                </span>
+                              </div>
+                            </div>
+
+                            <div className="shrink-0 flex items-center gap-1.5 ml-2">
+                              {isEnrolledAccess ? (
+                                <span className="inline-flex items-center gap-1 text-[10px] font-bold text-emerald-700 bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded-full">
+                                  <CheckCircle size={10} /> Unlocked
+                                </span>
+                              ) : isPreview ? (
+                                <span className="inline-flex items-center gap-1 text-[10px] font-bold text-emerald-700 bg-emerald-50 border border-emerald-200 px-2.5 py-0.5 rounded-full shadow-2xs">
+                                  <LockOpen size={10} /> Free Preview
+                                </span>
+                              ) : (
+                                <span className="inline-flex items-center gap-1 text-[10px] font-semibold text-[#78716c] bg-[#f4f2ec] px-2 py-0.5 rounded-full border border-[#e8e5dc]">
+                                  <Lock size={10} /> Locked
+                                </span>
+                              )}
+                            </div>
+                          </div>
+                        );
+                      })
+                    ) : (
+                      <div className="bg-white border border-[#e8e5dc] rounded-2xl p-6 text-center text-xs text-[#78716c]">
+                        No lectures published in this course yet.
+                      </div>
                     )}
                   </div>
                 </div>
+              )}
 
-                {/* Bottom Right Expand Tag */}
-                <div className="absolute bottom-2.5 right-2.5 z-10 flex items-center gap-1 text-[10px] font-bold text-white bg-black/60 backdrop-blur-md px-2 py-1 rounded-lg border border-white/20">
-                  <Maximize2 size={11} />
-                  <span>Expand</span>
+              {/* TAB 3: RESOURCES */}
+              {activeTab === "resources" && (
+                <div className="space-y-4">
+                  <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
+                    <div className="relative flex-1 max-w-sm">
+                      <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-[#78716c]" />
+                      <input
+                        type="text"
+                        placeholder="Search course resources..."
+                        value={resourceSearch}
+                        onChange={(e) => setResourceSearch(e.target.value)}
+                        className="w-full bg-white border border-[#d6d3c9] rounded-xl pl-9 pr-3 py-2 text-xs text-[#1c1917] placeholder-[#a8a29e] focus:outline-none focus:ring-2 focus:ring-[#1e3a8a]"
+                      />
+                    </div>
+                    <span className="text-xs text-[#78716c]">
+                      {filteredResources.length} {filteredResources.length === 1 ? "resource" : "resources"}
+                    </span>
+                  </div>
+
+                  {resourcesLoading ? (
+                    <div className="bg-white border border-[#e8e5dc] rounded-2xl p-8 text-center space-y-2">
+                      <div className="w-6 h-6 border-2 border-[#1e3a8a] border-t-transparent rounded-full animate-spin mx-auto" />
+                      <p className="text-xs text-[#78716c]">Loading study material...</p>
+                    </div>
+                  ) : filteredResources.length > 0 ? (
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                      {filteredResources.map((res) => {
+                        const isNoteEnrolled = hasFullAccess || res.isEnrolled || res.accessType === "free";
+                        return (
+                          <div
+                            key={res._id}
+                            className="bg-white border border-[#e8e5dc] rounded-2xl p-4 flex flex-col justify-between space-y-3 shadow-2xs"
+                          >
+                            <div className="space-y-1.5">
+                              <div className="flex items-center justify-between gap-2">
+                                <span className="text-[10px] font-bold uppercase tracking-wider text-[#1e3a8a] bg-blue-50 px-2 py-0.5 rounded-md">
+                                  {res.type || "Document"}
+                                </span>
+                                {res.accessType === "free" ? (
+                                  <span className="text-[10px] font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-md">
+                                    Free
+                                  </span>
+                                ) : (
+                                  <span className="text-[10px] font-bold text-[#1c1917]">
+                                    ₹{res.price || 0}
+                                  </span>
+                                )}
+                              </div>
+                              <h4 className="text-xs sm:text-sm font-bold text-[#1c1917] line-clamp-2">
+                                {res.title}
+                              </h4>
+                              {res.description && (
+                                <p className="text-[11px] text-[#57534e] line-clamp-2">
+                                  {res.description}
+                                </p>
+                              )}
+                            </div>
+
+                            <div className="pt-2 border-t border-[#f2efe9]">
+                              {isNoteEnrolled ? (
+                                <Button
+                                  variant="secondary"
+                                  size="sm"
+                                  onClick={() => setActiveDocument(res)}
+                                  className="w-full text-xs font-semibold"
+                                >
+                                  View Resource
+                                </Button>
+                              ) : (
+                                <Button
+                                  variant="primary"
+                                  size="sm"
+                                  loading={buyingResourceId === res._id}
+                                  onClick={() => handleBuyResource(res)}
+                                  className="w-full text-xs font-semibold bg-[#1e3a8a] hover:bg-[#172554] text-white"
+                                >
+                                  Unlock for ₹{res.price}
+                                </Button>
+                              )}
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  ) : (
+                    <div className="bg-white border border-[#e8e5dc] rounded-2xl p-6 text-center text-xs text-[#78716c]">
+                      No study resources found for this course.
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* TAB 4: REVIEWS */}
+              {activeTab === "reviews" && (
+                <div className="space-y-5">
+                  {/* Review Submission for Enrolled Users */}
+                  {hasFullAccess && (
+                    <form onSubmit={handleReview} className="bg-white border border-[#e8e5dc] rounded-2xl p-4 sm:p-5 space-y-3 shadow-xs">
+                      <h3 className="text-sm font-bold text-[#1c1917]">Leave a Review</h3>
+                      <div className="flex items-center gap-1">
+                        {[1, 2, 3, 4, 5].map((star) => (
+                          <button
+                            type="button"
+                            key={star}
+                            onClick={() => setRating(star)}
+                            className="p-1 hover:scale-110 transition cursor-pointer"
+                          >
+                            <Star
+                              size={20}
+                              className={star <= rating ? "fill-amber-400 text-amber-400" : "text-gray-300"}
+                            />
+                          </button>
+                        ))}
+                        <span className="text-xs text-[#78716c] ml-2">
+                          {rating > 0 ? `${rating} Stars` : "Select rating"}
+                        </span>
+                      </div>
+
+                      <textarea
+                        value={comment}
+                        onChange={(e) => setComment(e.target.value)}
+                        placeholder="Share your experience with this course curriculum..."
+                        rows={3}
+                        className="w-full bg-[#faf9f6] border border-[#d6d3c9] rounded-xl p-3 text-xs sm:text-sm text-[#1c1917] placeholder-[#a8a29e] focus:outline-none focus:ring-2 focus:ring-[#1e3a8a]"
+                      />
+
+                      <Button type="submit" variant="primary" size="sm" loading={reviewLoading}>
+                        Submit Review
+                      </Button>
+                    </form>
+                  )}
+
+                  {/* Reviews List */}
+                  <div className="space-y-3">
+                    {course?.reviews?.length > 0 ? (
+                      course.reviews.map((rev, index) => (
+                        <div
+                          key={rev._id || index}
+                          className="p-4 rounded-2xl bg-white border border-[#e8e5dc] space-y-1.5 shadow-2xs"
+                        >
+                          <div className="flex items-center justify-between">
+                            <span className="text-xs font-bold text-[#1c1917]">
+                              {rev.user?.name || "Verified Student"}
+                            </span>
+                            <div className="flex items-center gap-1 text-amber-500 text-xs font-bold">
+                              <Star size={13} className="fill-amber-400" />
+                              <span>{rev.rating}</span>
+                            </div>
+                          </div>
+                          {rev.comment && (
+                            <p className="text-xs sm:text-sm text-[#44403c] leading-relaxed">
+                              {rev.comment}
+                            </p>
+                          )}
+                        </div>
+                      ))
+                    ) : (
+                      <div className="bg-white border border-[#e8e5dc] rounded-2xl p-6 text-center text-xs text-[#78716c]">
+                        No reviews yet. Be the first to review this course!
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* DESKTOP SIDEBAR (4 cols, Sticky, Hidden on mobile) */}
+          <div className="hidden lg:block lg:col-span-4 sticky top-20 space-y-4">
+            <div className="bg-white border border-[#e8e5dc] rounded-3xl p-6 space-y-5 shadow-xs">
+              {/* Desktop 16:9 Thumbnail Preview Trigger */}
+              <div
+                onClick={() => {
+                  if (hasFullAccess) {
+                    navigate(`/viewlecture/${courseId}`);
+                  } else if (firstPreviewLecture) {
+                    setSelectedLecture(firstPreviewLecture);
+                    setIsPreviewModalOpen(true);
+                  } else if (course?.lectures?.[0]?.canPlay) {
+                    setSelectedLecture(course.lectures[0]);
+                    setIsPreviewModalOpen(true);
+                  } else {
+                    toast.info("Please enroll in this course to access the classroom lectures.");
+                  }
+                }}
+                className="group relative aspect-video w-full rounded-2xl overflow-hidden bg-slate-950 flex items-center justify-center border border-[#e8e5dc] shadow-sm cursor-pointer select-none card-lift"
+              >
+                {course?.thumbnail ? (
+                  <img
+                    src={optimizeImage(course.thumbnail, 800)}
+                    alt={course.title}
+                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                  />
+                ) : (
+                  <div className="w-full h-full bg-gradient-to-br from-[#0f172a] via-[#1e3a8a] to-[#0f172a]" />
+                )}
+
+                <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/30 to-black/20 group-hover:from-black/70 transition-colors" />
+
+                <div className="relative z-10 flex flex-col items-center gap-1.5">
+                  <div className="w-12 h-12 rounded-full bg-white text-[#1e3a8a] shadow-xl flex items-center justify-center group-hover:scale-110 group-hover:bg-[#1e3a8a] group-hover:text-white transition-all">
+                    <Play size={20} className="fill-current ml-0.5" />
+                  </div>
+                  <span className="text-[11px] font-bold text-white tracking-wide drop-shadow-md">
+                    {hasFullAccess ? "Resume Watching" : firstPreviewLecture ? "Watch Free Preview" : "Preview Course"}
+                  </span>
                 </div>
 
-                {/* Top Left Free Preview Tag */}
-                <div className="absolute top-2.5 left-2.5 z-10">
-                  <span className="inline-flex items-center gap-1 text-[10px] font-bold text-emerald-300 bg-emerald-950/80 backdrop-blur-md px-2 py-0.5 rounded-full border border-emerald-500/30">
-                    <LockOpen size={10} />
-                    Free Preview
-                  </span>
+                <div className="absolute bottom-2.5 right-2.5 z-10 flex items-center gap-1 text-[10px] font-bold text-white bg-black/60 backdrop-blur-md px-2 py-1 rounded-lg border border-white/20">
+                  <Maximize2 size={11} />
+                  <span>Preview</span>
                 </div>
               </div>
 
               {/* Price section */}
               <div className="flex items-baseline justify-between pt-1">
                 <div>
+                  <p className="text-[10px] text-[#78716c] font-bold uppercase tracking-wider">Tuition</p>
                   {isFree ? (
-                    <span className="text-2xl sm:text-3xl font-extrabold text-emerald-700">Free</span>
+                    <span className="text-3xl font-extrabold text-emerald-700">Free</span>
                   ) : (
-                    <span className="text-2xl sm:text-3xl font-extrabold text-[#1c1917]">
+                    <span className="text-3xl font-extrabold text-[#1c1917]">
                       ₹{(course?.price || 0).toLocaleString("en-IN")}
                     </span>
                   )}
                 </div>
               </div>
 
-              {/* Desktop / In-card Enrollment CTA */}
+              {/* Action Buttons */}
               {hasManagementAccess ? (
                 <div className="flex flex-col gap-2.5">
                   <div className="p-3 bg-blue-50 border border-blue-200 rounded-xl text-blue-950 text-xs flex items-center gap-2">
                     <CheckCircle className="w-4 h-4 text-blue-600 shrink-0" />
-                    <span className="font-semibold">Instructor Access: You own this course</span>
+                    <span className="font-semibold">Instructor Access</span>
                   </div>
                   <Button
                     onClick={() => navigate(`/builder/${courseId}`)}
@@ -511,8 +1016,8 @@ function ViewCourses() {
                     size="lg"
                     className="w-full bg-[#1e3a8a] hover:bg-[#172554] text-white font-bold py-3.5 rounded-xl shadow-md cursor-pointer flex items-center justify-center gap-2"
                   >
-                    <SquarePen className="inline-block mr-2" size={17} />
-                    Edit in Course Builder
+                    <SquarePen size={17} />
+                    Edit Course
                   </Button>
                   <Button
                     onClick={() => navigate(`/viewlecture/${courseId}`)}
@@ -520,7 +1025,7 @@ function ViewCourses() {
                     size="sm"
                     className="w-full justify-center text-xs text-[#57534e]"
                   >
-                    Watch Course Lectures
+                    Watch Classroom Lectures
                   </Button>
                 </div>
               ) : !isEnrolled ? (
@@ -531,7 +1036,7 @@ function ViewCourses() {
                   size="lg"
                   className="w-full bg-[#1e3a8a] hover:bg-[#172554] text-white font-bold py-3.5 rounded-xl shadow-md cursor-pointer"
                 >
-                  {isFree ? "Enroll Now (Free)" : "Enroll Now"}
+                  {isFree ? "Enroll for Free" : "Enroll Now"}
                 </Button>
               ) : (
                 <Button
@@ -544,6 +1049,7 @@ function ViewCourses() {
                 </Button>
               )}
 
+              {/* Course Includes List */}
               <div className="space-y-2 pt-2 border-t border-[#e8e5dc] text-xs text-[#57534e]">
                 <div className="flex items-center gap-2">
                   <CheckCircle2 size={15} className="text-emerald-600 shrink-0" />
@@ -555,555 +1061,18 @@ function ViewCourses() {
                 </div>
                 <div className="flex items-center gap-2">
                   <CheckCircle2 size={15} className="text-emerald-600 shrink-0" />
-                  <span>Direct classroom AI study assistant</span>
+                  <span>Classroom learning support & Q&A</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <CheckCircle2 size={15} className="text-emerald-600 shrink-0" />
+                  <span>Mobile & desktop responsive experience</span>
                 </div>
               </div>
             </div>
-
-            {/* Right-Side Course Playlist (Udemy-style Preview & Locked Indicators) */}
-            {course?.lectures?.length > 0 && (
-              <div className="bg-white border border-[#e8e5dc] rounded-2xl p-4 sm:p-5 space-y-3 shadow-xs">
-                <div className="flex items-center justify-between pb-2 border-b border-[#f2efe9]">
-                  <div className="flex items-center gap-2">
-                    <h3 className="font-extrabold text-sm text-[#1c1917]">Course Playlist</h3>
-                    <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-[#f4f2ec] text-[#57534e]">
-                      {course.lectures.length} Lectures
-                    </span>
-                  </div>
-                  <span className="text-[11px] text-[#78716c]">
-                    {course.lectures.filter((l) => l.isPreviewFree).length} Previews
-                  </span>
-                </div>
-
-                <div className="space-y-2 max-h-[380px] overflow-y-auto pr-1">
-                  {course.lectures.map((lec, idx) => {
-                    const isPreview = Boolean(lec.isPreviewFree);
-                    const canPlay = hasFullAccess || isPreview;
-                    const isCurrent = selectedLecture?._id === lec._id;
-
-                    return (
-                      <div
-                        key={lec._id || idx}
-                        onClick={() => {
-                          if (canPlay) {
-                            setSelectedLecture(lec);
-                            setIsPreviewModalOpen(true);
-                          } else {
-                            toast.info("Please enroll in this course to watch locked lectures.");
-                          }
-                        }}
-                        className={`group flex items-center justify-between p-2.5 rounded-xl border transition-all cursor-pointer ${
-                          isCurrent
-                            ? "bg-blue-50/80 border-[#1e3a8a] text-[#1e3a8a]"
-                            : "bg-[#faf9f6] border-[#e8e5dc] hover:border-[#1e3a8a]/40 hover:bg-white"
-                        }`}
-                      >
-                        <div className="flex items-center gap-2.5 min-w-0">
-                          <div
-                            className={`w-6 h-6 rounded-lg flex items-center justify-center text-xs font-bold shrink-0 ${
-                              isCurrent
-                                ? "bg-[#1e3a8a] text-white"
-                                : canPlay
-                                ? "bg-blue-50 text-[#1e3a8a]"
-                                : "bg-gray-100 text-gray-400"
-                            }`}
-                          >
-                            {idx + 1}
-                          </div>
-                          <div className="min-w-0">
-                            <p className="text-xs font-semibold text-[#1c1917] truncate group-hover:text-[#1e3a8a] transition-colors">
-                              {lec.lectureTitle}
-                            </p>
-                            <span className="text-[10px] text-[#78716c]">
-                              {lec.videoProvider === "youtube"
-                                ? "YouTube"
-                                : lec.videoProvider === "bunny"
-                                ? "Native video"
-                                : "Video"}
-                            </span>
-                          </div>
-                        </div>
-
-                        <div className="shrink-0 flex items-center gap-1.5 ml-2">
-                          {hasFullAccess ? (
-                            <span className="inline-flex items-center gap-1 text-[10px] font-bold text-emerald-700 bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded-full">
-                              <CheckCircle size={10} />
-                              Unlocked
-                            </span>
-                          ) : isPreview ? (
-                            <span className="inline-flex items-center gap-1 text-[10px] font-bold text-emerald-700 bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded-full">
-                              <LockOpen size={10} />
-                              Free
-                            </span>
-                          ) : (
-                            <span className="inline-flex items-center gap-1 text-[10px] font-semibold text-[#78716c] bg-[#f4f2ec] px-2 py-0.5 rounded-full">
-                              <Lock size={10} />
-                              Locked
-                            </span>
-                          )}
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              </div>
-            )}
-          </div>
-
-          {/* Main Details (Left on desktop, Second on mobile) */}
-          <div className="order-2 lg:order-1 lg:col-span-7 space-y-4">
-            <div className="flex flex-wrap items-center gap-2">
-              <span className="text-xs font-bold uppercase tracking-wider text-[#1e3a8a] bg-[#eff6ff] px-3 py-1 rounded-lg border border-[#bfdbfe]">
-                {tenant?.name || "Academy"} • {course?.category || "General"}
-              </span>
-              <span className="text-xs font-semibold text-[#57534e] bg-[#f8f7f4] px-3 py-1 rounded-lg border border-[#e8e5dc]">
-                Level: {course?.level || "All Levels"}
-              </span>
-              {isFree && (
-                <span className="text-xs font-extrabold text-emerald-800 bg-emerald-50 px-3 py-1 rounded-lg border border-emerald-300">
-                  Free Enrollment
-                </span>
-              )}
-            </div>
-
-            <h1 className="text-2xl sm:text-4xl font-extrabold text-[#1c1917] leading-tight tracking-tight">
-              {course?.title}
-            </h1>
-
-            <p className="text-xs sm:text-base text-[#57534e] leading-relaxed">
-              {course?.subTitle || course?.description}
-            </p>
-
-            {/* Stats Meta */}
-            <div className="flex flex-wrap items-center gap-4 text-xs sm:text-sm text-[#57534e] pt-2">
-              {reviewCount > 0 && <div className="flex items-center gap-1.5 text-amber-500 font-bold">
-                <Star size={16} className="fill-amber-400 text-amber-400" />
-                <span className="text-[#1c1917]">{avgRating}</span>
-                <span className="text-[#78716c] font-normal">({reviewCount} reviews)</span>
-              </div>}
-              <div className="flex items-center gap-1.5 text-[#57534e]">
-                <Video size={16} className="text-[#1e3a8a]" />
-                <span>{course?.lectures?.length || 0} Lectures</span>
-              </div>
-              <div className="flex items-center gap-1.5 text-[#57534e]">
-                <Clock size={16} className="text-[#1e3a8a]" />
-                <span>Lifetime Access</span>
-              </div>
-            </div>
-
-            {/* Instructor Summary */}
-            {creatorData && (
-              <div className="pt-4 border-t border-[#f2efe9] flex items-center gap-3">
-                {creatorData.profilePicture ? (
-                  <img
-                    src={creatorData.profilePicture}
-                    alt={creatorData.name}
-                    className="w-10 h-10 rounded-full object-cover border border-[#d6d3c9]"
-                  />
-                ) : (
-                  <div className="w-10 h-10 rounded-full bg-[#1e3a8a] text-white flex items-center justify-center font-bold text-sm">
-                    {creatorData.name?.charAt(0) || "I"}
-                  </div>
-                )}
-                <div>
-                  <p className="text-xs text-[#78716c]">Created by</p>
-                  <p className="text-xs sm:text-sm font-bold text-[#1c1917]">
-                    {creatorData.name || "Course Instructor"}
-                  </p>
-                </div>
-              </div>
-            )}
           </div>
         </div>
 
-        {/* Udemy-Style 4 Tab Section */}
-        <div className="bg-white border border-[#e8e5dc] rounded-3xl p-6 sm:p-8 shadow-xs space-y-6">
-          {/* Navigation Tabs */}
-          <div className="flex items-center gap-2 border-b border-[#e8e5dc] overflow-x-auto pb-px">
-            {[
-              { id: "overview", label: "Overview", icon: BookOpen },
-              { id: "curriculum", label: `Curriculum (${course?.lectures?.length || 0})`, icon: Video },
-              { id: "resources", label: `Notes & Resources (${resources.length})`, icon: FileText },
-              { id: "reviews", label: `Reviews${reviewCount ? ` (${reviewCount})` : ""}`, icon: Star },
-            ].map((tab) => {
-              const Icon = tab.icon;
-              const isActive = activeTab === tab.id;
-              return (
-                <button
-                  key={tab.id}
-                  onClick={() => setActiveTab(tab.id)}
-                  className={`inline-flex items-center gap-2 px-4 py-3 text-xs sm:text-sm font-bold border-b-2 transition cursor-pointer whitespace-nowrap ${isActive
-                    ? "border-[#1e3a8a] text-[#1e3a8a]"
-                    : "border-transparent text-[#78716c] hover:text-[#1c1917]"
-                    }`}
-                >
-                  <Icon size={16} />
-                  <span>{tab.label}</span>
-                </button>
-              );
-            })}
-          </div>
-
-          {/* TAB 1: OVERVIEW */}
-          {activeTab === "overview" && (
-            <div className="space-y-6 max-w-4xl">
-              <div className="space-y-2">
-                <h2 className="text-lg font-bold text-[#1c1917]">About This Course</h2>
-                <p className="text-xs sm:text-sm text-[#44403c] leading-relaxed whitespace-pre-line">
-                  {course?.description || "No description provided."}
-                </p>
-              </div>
-
-              {/* What you'll learn */}
-              <div className="p-5 rounded-2xl bg-[#faf9f6] border border-[#e8e5dc] space-y-3">
-                <h3 className="text-sm font-bold text-[#1c1917] flex items-center gap-2">
-                  <CheckCircle size={16} className="text-[#1e3a8a]" />
-                  What You Will Learn
-                </h3>
-                <ul className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs text-[#57534e]">
-                  <li className="flex items-center gap-2">
-                    <CheckCircle2 size={13} className="text-emerald-700 shrink-0" />
-                    <span>In-depth conceptual lectures with clear real-world examples</span>
-                  </li>
-                  <li className="flex items-center gap-2">
-                    <CheckCircle2 size={13} className="text-emerald-700 shrink-0" />
-                    <span>Downloadable topic notes and formulas for rapid revision</span>
-                  </li>
-                  <li className="flex items-center gap-2">
-                    <CheckCircle2 size={13} className="text-emerald-700 shrink-0" />
-                    <span>Self-paced access across desktop and mobile devices</span>
-                  </li>
-                  <li className="flex items-center gap-2">
-                    <CheckCircle2 size={13} className="text-emerald-700 shrink-0" />
-                    <span>Direct peer reviews and ratings from fellow students</span>
-                  </li>
-                </ul>
-              </div>
-            </div>
-          )}
-
-          {/* TAB 2: CURRICULUM */}
-          {activeTab === "curriculum" && (
-            <div className="space-y-4 max-w-4xl">
-              <div className="flex items-center justify-between pb-2">
-                <h2 className="text-base font-bold text-[#1c1917]">Course Lectures</h2>
-                <span className="text-xs text-[#78716c]">
-                  {course?.lectures?.length || 0} total lectures
-                </span>
-              </div>
-
-              <div className="space-y-2">
-                {course?.lectures?.length > 0 ? (
-                  course.lectures.map((lec, idx) => {
-                    const isPreview = Boolean(lec.isPreviewFree);
-                    const canPlay = hasFullAccess || isPreview;
-
-                    return (
-                      <div
-                        key={lec._id || idx}
-                        onClick={() => {
-                          if (canPlay) {
-                            setSelectedLecture(lec);
-                            setIsPreviewModalOpen(true);
-                          } else {
-                            toast.info("Please enroll in this course to watch locked lectures.");
-                          }
-                        }}
-                        className={`flex items-center justify-between p-3.5 rounded-xl border transition cursor-pointer ${
-                          selectedLecture?._id === lec._id
-                            ? "bg-blue-50/70 border-[#1e3a8a]"
-                            : "bg-[#faf9f6] border-[#e8e5dc] hover:bg-white"
-                        }`}
-                      >
-                        <div className="flex items-center gap-3">
-                          <div
-                            className={`w-7 h-7 rounded-lg flex items-center justify-center text-xs font-bold ${
-                              canPlay
-                                ? "bg-blue-100 text-[#1e3a8a]"
-                                : "bg-gray-100 text-gray-500"
-                            }`}
-                          >
-                            {idx + 1}
-                          </div>
-                          <div>
-                            <p className="text-xs sm:text-sm font-semibold text-[#1c1917]">
-                              {lec.lectureTitle}
-                            </p>
-                            {lec.videoProvider && (
-                              <span className="text-[10px] font-medium text-[#78716c]">
-                                {lec.videoProvider === "youtube"
-                                  ? "YouTube"
-                                  : lec.videoProvider === "bunny"
-                                  ? "Native video"
-                                  : "Video"}
-                              </span>
-                            )}
-                          </div>
-                        </div>
-
-                        <div className="flex items-center gap-2">
-                          {hasFullAccess ? (
-                            <span className="text-[10px] font-bold uppercase tracking-wider px-2.5 py-0.5 rounded-full bg-blue-50 text-[#1e3a8a] border border-blue-200 flex items-center gap-1">
-                              <CheckCircle size={10} />
-                              Unlocked
-                            </span>
-                          ) : isPreview ? (
-                            <span className="text-[10px] font-bold uppercase tracking-wider px-2.5 py-0.5 rounded-full bg-emerald-50 text-emerald-800 border border-emerald-300 flex items-center gap-1">
-                              <LockOpen size={10} className="text-emerald-600" />
-                              Free Preview
-                            </span>
-                          ) : (
-                            <span className="text-[10px] font-semibold flex items-center gap-1 text-[#78716c] bg-[#f4f2ec] px-2.5 py-0.5 rounded-full border border-[#e8e5dc]">
-                              <Lock size={10} />
-                              Locked
-                            </span>
-                          )}
-                        </div>
-                      </div>
-                    );
-                  })
-                ) : (
-                  <p className="text-xs text-[#78716c] py-6 text-center">
-                    Lectures will be published shortly by the instructor.
-                  </p>
-                )}
-              </div>
-            </div>
-          )}
-
-          {/* TAB 3: NOTES & RESOURCES */}
-          {activeTab === "resources" && (
-            <div className="space-y-6 max-w-4xl">
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-2 border-b border-[#f2efe9]">
-                <div>
-                  <h2 className="text-base font-bold text-[#1c1917]">
-                    Course Notes & Supplementary Materials
-                  </h2>
-                  <p className="text-xs text-[#78716c]">
-                    Open secure notes and study materials for this course.
-                  </p>
-                </div>
-
-                {/* Resource Search */}
-                <div className="relative w-full sm:w-64">
-                  <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-[#78716c]" />
-                  <input
-                    type="text"
-                    value={resourceSearch}
-                    onChange={(e) => setResourceSearch(e.target.value)}
-                    placeholder="Search resources..."
-                    className="w-full bg-[#faf9f6] border border-[#d6d3c9] rounded-xl pl-9 pr-3 py-1.5 text-xs text-[#1c1917] placeholder-[#a8a29e] focus:outline-none focus:ring-2 focus:ring-[#1e3a8a]"
-                  />
-                </div>
-              </div>
-
-              {!hasFullAccess && (
-                <div className="p-4 rounded-xl bg-amber-50 border border-amber-200 text-amber-900 text-xs flex items-center justify-between gap-3">
-                  <div className="flex items-center gap-2">
-                    <Lock size={16} className="text-amber-700 shrink-0" />
-                    <span>Enroll in this course to download and view the full resource library.</span>
-                  </div>
-                  <button
-                    onClick={handleEnroll}
-                    className="px-3 py-1 bg-amber-700 text-white rounded-lg font-bold text-xs shrink-0 cursor-pointer"
-                  >
-                    Enroll Now
-                  </button>
-                </div>
-              )}
-
-              {resourcesLoading ? (
-                <div className="py-8 text-center text-xs text-[#78716c]">Loading resources...</div>
-              ) : filteredResources.length > 0 ? (
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                  {filteredResources.map((res) => (
-                    <div
-                      key={res._id}
-                      className="p-4 rounded-2xl bg-[#faf9f6] border border-[#e8e5dc] flex items-start justify-between gap-3 hover:border-[#1e3a8a]/40 transition"
-                    >
-                      <div className="flex items-start gap-3">
-                        <div className="w-9 h-9 rounded-xl bg-blue-50 text-[#1e3a8a] flex items-center justify-center shrink-0 border border-blue-200">
-                          <FileText size={18} />
-                        </div>
-                        <div className="space-y-0.5">
-                          <h4 className="text-xs sm:text-sm font-bold text-[#1c1917] leading-tight">
-                            {res.title}
-                          </h4>
-                          <div className="flex flex-wrap items-center gap-2 text-[11px] text-[#78716c]">
-                            <span className="uppercase font-mono text-[10px] bg-white px-1.5 py-0.5 rounded border border-[#e8e5dc]">
-                              {res.type || "PDF"}
-                            </span>
-                            {res.topic && <span>• Topic: {res.topic}</span>}
-                            {res.fileSize && <span>• {res.fileSize}</span>}
-                          </div>
-                          {res.lectureId?.lectureTitle && (
-                            <p className="text-[11px] text-[#1e3a8a] font-medium">
-                              Linked to: {res.lectureId.lectureTitle}
-                            </p>
-                          )}
-                        </div>
-                      </div>
-
-                      {res.storageProvider === "cloudinary_authenticated" && res.processingStatus !== "ready" ? (
-                        <span className="shrink-0 text-xs font-semibold text-[#78716c]">{res.processingStatus === "processing" ? "Preparing notes…" : "Unavailable"}</span>
-                      ) : res.storageProvider === "cloudinary_authenticated" ? (
-                        res.isUnlocked ? (
-                          <button type="button" onClick={() => setActiveDocument(res)} className="min-h-10 shrink-0 rounded-xl bg-[#183c32] px-3 text-xs font-bold text-white hover:bg-[#102d25]">Read notes</button>
-                        ) : res.accessType === "paid" ? (
-                          <button type="button" disabled={buyingResourceId === res._id} onClick={() => handleBuyResource(res)} className="min-h-10 shrink-0 rounded-xl bg-[#183c32] px-3 text-xs font-bold text-white hover:bg-[#102d25] disabled:opacity-60">{buyingResourceId === res._id ? "Opening…" : `Unlock · ₹${(res.pricePaise / 100).toLocaleString("en-IN")}`}</button>
-                        ) : <span className="text-emerald-800 text-[11px] font-semibold">Free notes</span>
-                      ) : hasFullAccess && res.fileUrl ? (
-                        <a
-                          href={res.fileUrl}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          download
-                          className="p-2 rounded-lg bg-white border border-[#d6d3c9] text-[#1e3a8a] hover:bg-blue-50 transition shrink-0 cursor-pointer"
-                          title="Download Resource"
-                        >
-                          <Download size={15} />
-                        </a>
-                      ) : (
-                        <span className="text-gray-400 p-2">
-                          <Lock size={15} />
-                        </span>
-                      )}
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                <div className="text-center py-12 px-4 bg-[#faf9f6] rounded-2xl border border-[#e8e5dc] space-y-2">
-                  <FileText size={32} className="mx-auto text-[#a8a29e]" />
-                  <p className="text-xs sm:text-sm font-bold text-[#1c1917]">No resources found</p>
-                  <p className="text-xs text-[#78716c]">
-                    {resourceSearch ? "Try clearing your search keyword." : "Notes and study sheets will appear here once uploaded by the instructor."}
-                  </p>
-                </div>
-              )}
-            </div>
-          )}
-
-          {/* TAB 4: REVIEWS */}
-          {activeTab === "reviews" && (
-            <div className="space-y-6 max-w-4xl">
-              <div className="flex items-center justify-between pb-2 border-b border-[#f2efe9]">
-                <div>
-                  <h2 className="text-base font-bold text-[#1c1917]">Student Reviews</h2>
-                  <p className="text-xs text-[#78716c]">Feedback from enrolled students</p>
-                </div>
-                {reviewCount > 0 && <div className="flex items-center gap-1.5 text-amber-500 font-bold text-sm">
-                  <Star size={16} className="fill-amber-400" />
-                  <span>{avgRating} / 5</span>
-                </div>}
-              </div>
-
-              {/* Review Submission Form (if enrolled) */}
-              {isEnrolled && (
-                <form
-                  onSubmit={handleReview}
-                  className="p-5 rounded-2xl bg-[#faf9f6] border border-[#e8e5dc] space-y-3"
-                >
-                  <label className="block text-xs font-bold uppercase tracking-wider text-[#44403c]">
-                    Leave Your Review
-                  </label>
-
-                  <div className="flex items-center gap-1">
-                    {[1, 2, 3, 4, 5].map((star) => (
-                      <button
-                        key={star}
-                        type="button"
-                        onClick={() => setRating(star)}
-                        className="p-1 cursor-pointer text-gray-300 hover:text-amber-400"
-                      >
-                        <Star
-                          size={20}
-                          className={star <= rating ? "fill-amber-400 text-amber-400" : "text-gray-300"}
-                        />
-                      </button>
-                    ))}
-                    <span className="text-xs text-[#78716c] ml-2">
-                      {rating > 0 ? `${rating} Stars` : "Select rating"}
-                    </span>
-                  </div>
-
-                  <textarea
-                    value={comment}
-                    onChange={(e) => setComment(e.target.value)}
-                    placeholder="Share your experience with this course curriculum..."
-                    rows={3}
-                    className="w-full bg-white border border-[#d6d3c9] rounded-xl p-3 text-xs sm:text-sm text-[#1c1917] placeholder-[#a8a29e] focus:outline-none focus:ring-2 focus:ring-[#1e3a8a]"
-                  />
-
-                  <Button type="submit" variant="primary" size="sm" loading={reviewLoading}>
-                    Submit Review
-                  </Button>
-                </form>
-              )}
-
-              {/* Reviews List */}
-              <div className="space-y-3">
-                {course?.reviews?.length > 0 ? (
-                  course.reviews.map((rev, index) => (
-                    <div
-                      key={rev._id || index}
-                      className="p-4 rounded-2xl bg-[#faf9f6] border border-[#e8e5dc] space-y-2"
-                    >
-                      <div className="flex items-center justify-between">
-                        <span className="text-xs font-bold text-[#1c1917]">
-                          {rev.user?.name || "Verified Student"}
-                        </span>
-                        <div className="flex items-center gap-1 text-amber-500 text-xs font-bold">
-                          <Star size={13} className="fill-amber-400" />
-                          <span>{rev.rating}</span>
-                        </div>
-                      </div>
-                      {rev.comment && (
-                        <p className="text-xs sm:text-sm text-[#44403c] leading-relaxed">
-                          {rev.comment}
-                        </p>
-                      )}
-                    </div>
-                  ))
-                ) : (
-                  <p className="text-xs text-[#78716c] text-center py-6">
-                    No reviews yet. Be the first to review this course!
-                  </p>
-                )}
-              </div>
-            </div>
-          )}
-        </div>
-
-        {/* Sticky Mobile Enrollment Bar (Fixed Above Mobile Bottom Nav) */}
-        <div className="md:hidden fixed bottom-16 left-0 right-0 z-40 bg-white/95 backdrop-blur-md border-t border-[#e8e5dc] p-3 px-4 flex items-center justify-between shadow-lg">
-          <div>
-            <p className="text-[10px] text-[#78716c] font-bold uppercase tracking-wider">Tuition</p>
-            <p className="text-base font-extrabold text-[#1c1917]">
-              {isFree ? "Free" : `₹${(course?.price || 0).toLocaleString("en-IN")}`}
-            </p>
-          </div>
-          {hasFullAccess ? (
-            <Button
-              variant="primary"
-              size="md"
-              onClick={() => navigate(`/viewlecture/${courseId}`)}
-              className="shadow-md pressable font-bold"
-            >
-              Resume Watching
-            </Button>
-          ) : (
-            <Button
-              variant="primary"
-              size="md"
-              loading={enrollLoading}
-              onClick={handleEnroll}
-              className="shadow-md pressable font-bold"
-            >
-              {isFree ? "Enroll for Free" : "Enroll Now"}
-            </Button>
-          )}
-        </div>
-        {/* Fullscreen / Theater Video Modal: opens when user clicks preview box or a preview lecture */}
+        {/* Fullscreen Video Preview Modal */}
         {isPreviewModalOpen && selectedLecture && (
           <div
             className="fixed inset-0 z-50 bg-black/85 backdrop-blur-md flex items-center justify-center p-3 sm:p-6"
@@ -1112,31 +1081,31 @@ function ViewCourses() {
             onClick={() => setIsPreviewModalOpen(false)}
           >
             <div
-              className="w-full max-w-5xl bg-[#0f172a] rounded-3xl overflow-hidden border border-slate-800 shadow-2xl flex flex-col max-h-[92vh]"
+              className="w-full max-w-4xl bg-[#0f172a] rounded-3xl overflow-hidden border border-slate-800 shadow-2xl flex flex-col max-h-[92vh]"
               onClick={(e) => e.stopPropagation()}
             >
               {/* Modal Header */}
-              <div className="flex items-center justify-between px-5 py-4 border-b border-slate-800 bg-[#1e293b]/70">
-                <div className="flex items-center gap-3 min-w-0">
-                  <span className="text-xs font-bold text-emerald-400 bg-emerald-950/80 border border-emerald-500/30 px-2.5 py-0.5 rounded-full uppercase tracking-wider shrink-0 flex items-center gap-1">
-                    {selectedLecture.isPreviewFree ? <LockOpen size={11} /> : <CheckCircle size={11} />}
+              <div className="flex items-center justify-between px-5 py-3.5 border-b border-slate-800 bg-[#1e293b]/70">
+                <div className="flex items-center gap-2.5 min-w-0">
+                  <span className="text-[10px] font-bold text-emerald-400 bg-emerald-950/80 border border-emerald-500/30 px-2 py-0.5 rounded-full uppercase tracking-wider shrink-0 flex items-center gap-1">
+                    {selectedLecture.isPreviewFree ? <LockOpen size={10} /> : <CheckCircle size={10} />}
                     {selectedLecture.isPreviewFree ? "Free Preview" : "Classroom Stream"}
                   </span>
-                  <h3 className="font-extrabold text-sm sm:text-base text-white truncate">
+                  <h3 className="font-bold text-xs sm:text-sm text-white truncate">
                     {selectedLecture.lectureTitle}
                   </h3>
                 </div>
                 <button
                   onClick={() => setIsPreviewModalOpen(false)}
-                  className="w-9 h-9 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white flex items-center justify-center transition cursor-pointer"
+                  className="w-8 h-8 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white flex items-center justify-center transition cursor-pointer"
                   aria-label="Close Preview"
                 >
-                  <X size={18} />
+                  <X size={16} />
                 </button>
               </div>
 
-              {/* Big Video Container (Whole screen width inside modal) */}
-              <div className="w-full bg-black aspect-video flex-1 min-h-[300px] flex items-center justify-center">
+              {/* Secure Video Player */}
+              <div className="w-full bg-black aspect-video flex-1 min-h-[260px] flex items-center justify-center">
                 <SecureVideoPlayer
                   key={selectedLecture._id}
                   lectureId={selectedLecture._id}
@@ -1144,31 +1113,31 @@ function ViewCourses() {
                 />
               </div>
 
-              {/* Modal Footer with quick lecture playlist switcher */}
+              {/* Lecture switcher */}
               {course?.lectures?.length > 1 && (
-                <div className="px-5 py-3.5 bg-[#0f172a] border-t border-slate-800 flex items-center gap-2 overflow-x-auto">
-                  <span className="text-xs font-bold text-slate-400 shrink-0">Switch Lecture:</span>
+                <div className="px-4 py-3 bg-[#0f172a] border-t border-slate-800 flex items-center gap-2 overflow-x-auto no-scrollbar">
+                  <span className="text-[11px] font-bold text-slate-400 shrink-0">Switch:</span>
                   {course.lectures.map((lec, idx) => {
                     const isCurrent = selectedLecture._id === lec._id;
-                    const canPlay = hasFullAccess || lec.isPreviewFree;
+                    const canPlay = Boolean(lec.canPlay ?? (hasFullAccess || lec.isPreviewFree));
                     return (
                       <button
                         key={lec._id || idx}
                         disabled={!canPlay}
                         onClick={() => setSelectedLecture(lec)}
-                        className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold transition shrink-0 cursor-pointer ${
+                        className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-semibold transition shrink-0 cursor-pointer ${
                           isCurrent
-                            ? "bg-[#1e3a8a] text-white border border-blue-400/40"
+                            ? "bg-[#1e3a8a] text-white"
                             : canPlay
-                            ? "bg-slate-800/80 text-slate-200 hover:bg-slate-700 border border-slate-700"
-                            : "bg-slate-900/60 text-slate-600 border border-slate-800/60 cursor-not-allowed"
+                            ? "bg-slate-800 text-slate-200 hover:bg-slate-700"
+                            : "bg-slate-900/60 text-slate-600 cursor-not-allowed"
                         }`}
                       >
                         <span>{idx + 1}. {lec.lectureTitle}</span>
                         {lec.isPreviewFree ? (
-                          <LockOpen size={11} className="text-emerald-400" />
+                          <LockOpen size={10} className="text-emerald-400" />
                         ) : (
-                          <Lock size={11} className="text-slate-500" />
+                          <Lock size={10} className="text-slate-500" />
                         )}
                       </button>
                     );

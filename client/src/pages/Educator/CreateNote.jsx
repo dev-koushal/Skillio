@@ -21,6 +21,7 @@ import { hasEducatorInstitution } from "../../auth/permissions";
 import RequireInstitutionModal from "../../components/common/RequireInstitutionModal";
 import NoteCover from "../../components/notes/NoteCover";
 import PageHeader from "../../components/common/PageHeader";
+import Navbar from "../../components/Navbar";
 import { compressImage, directUploadImage } from "../../utils/imageCompressor";
 
 const MAX_PDF_SIZE = 25 * 1024 * 1024;
@@ -645,6 +646,7 @@ export default function CreateNote() {
 
   return (
     <div className="min-h-screen bg-[#faf9fd] pb-28 text-[#29233a] sm:pb-12">
+      <Navbar currentInstitution={tenant?.isPlatform ? null : tenant} />
       <main className="mx-auto w-full max-w-4xl px-4 pt-4 sm:px-6 sm:pt-8 lg:px-8">
         {/* Header */}
         <div className="mb-6 sm:mb-8">

@@ -367,12 +367,15 @@ export const getCourseLecture = async (req, res) => {
     if (Array.isArray(courseObj.lectures)) {
       courseObj.lectures = courseObj.lectures.map((l) => ({
         _id: l._id,
+        courseId: l.courseId || courseObj._id,
         lectureTitle: l.lectureTitle,
         duration: l.duration || 0,
         isPreviewFree: Boolean(l.isPreviewFree),
         videoProvider: l.videoProvider || "cloudinary",
         processingStatus: l.processingStatus || "ready",
         isLocked: false,
+        accessState: "enrolled",
+        canPlay: true,
         createdAt: l.createdAt,
         updatedAt: l.updatedAt,
       }));
