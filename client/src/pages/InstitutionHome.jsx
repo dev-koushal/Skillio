@@ -384,44 +384,58 @@ export default function InstitutionHome() {
               </div>
             )}
 
-            {/* 4. Continue Learning Section (strictly for students, never for educators) */}
+            {/* 4. Continue Learning Section (Compact Udemy-style mobile card) */}
             {!isEducator && activeCourse && (
-              <section className="space-y-3 sm:space-y-4">
+              <section className="space-y-2.5 sm:space-y-3">
                 <div className="flex items-center justify-between">
-                  <h2 className="text-base sm:text-xl font-bold text-[#1c1917]">Continue Learning</h2>
+                  <h2 className="text-xs sm:text-sm font-bold uppercase tracking-wider text-[#78716c]">
+                    Continue Learning
+                  </h2>
+                  <Link
+                    to={userData ? `/institution/${encodeURIComponent(resolvedSlug)}/my-courses` : "/login"}
+                    className="text-xs font-bold text-[#5b3cc4] hover:underline"
+                  >
+                    My Courses →
+                  </Link>
                 </div>
-                <div className="bg-white border border-[#e8e5dc] rounded-2xl p-3.5 sm:p-5 flex flex-col sm:flex-row items-start sm:items-center gap-3.5 sm:gap-5 shadow-2xs hover:border-[#5b3cc4] transition">
-                  <div className="relative w-full sm:w-60 aspect-video rounded-xl overflow-hidden bg-slate-900 shrink-0 group">
-                    <CourseThumbnail course={activeCourse} size="large" />
-                    <div className="absolute inset-0 bg-black/25 flex items-center justify-center opacity-90 group-hover:opacity-100 transition">
-                      <div className="w-10 h-10 rounded-full bg-white/95 text-[#1c1917] flex items-center justify-center shadow-md">
-                        <Play size={16} className="fill-current ml-0.5 text-[#5b3cc4]" />
+
+                <Link
+                  to={`/viewlecture/${activeCourse._id}`}
+                  className="group bg-white border border-[#e8e5dc] hover:border-[#5b3cc4] rounded-2xl p-2.5 sm:p-4 flex items-center gap-3 sm:gap-4 shadow-2xs hover:shadow-xs transition-all active:scale-[0.99] select-none"
+                >
+                  {/* Compact Thumbnail (Udemy style) */}
+                  <div className="relative w-24 sm:w-40 aspect-video rounded-xl overflow-hidden bg-slate-900 shrink-0 group">
+                    <CourseThumbnail course={activeCourse} />
+                    <div className="absolute inset-0 bg-black/20 flex items-center justify-center group-hover:bg-black/30 transition">
+                      <div className="w-7 h-7 sm:w-9 sm:h-9 rounded-full bg-white/95 text-[#5b3cc4] flex items-center justify-center shadow-xs group-hover:scale-105 transition-transform">
+                        <Play size={12} className="fill-current ml-0.5" />
                       </div>
                     </div>
                   </div>
-                  <div className="flex-1 space-y-1.5 sm:space-y-2 w-full">
-                    <span className="text-[10px] font-bold uppercase tracking-wider text-[#5b3cc4]">
+
+                  {/* Course Info */}
+                  <div className="flex-1 min-w-0 space-y-0.5 sm:space-y-1">
+                    <span className="text-[9px] sm:text-[10px] font-bold uppercase tracking-wider text-[#5b3cc4] block truncate">
                       {activeCourse.category || "In Progress"}
                     </span>
-                    <h3 className="text-sm sm:text-lg font-bold text-[#1c1917] line-clamp-2">
+                    <h3 className="text-xs sm:text-base font-bold text-[#1c1917] line-clamp-1 sm:line-clamp-2 group-hover:text-[#5b3cc4] transition">
                       {activeCourse.title}
                     </h3>
-                    <p className="text-xs text-[#78716c]">
+                    <p className="text-[11px] text-[#78716c] truncate">
                       {Array.isArray(activeCourse.lectures) && activeCourse.lectures.length > 0
                         ? `${activeCourse.lectures.length} lessons available`
                         : "Curriculum ready"}
                     </p>
-                    <div className="pt-1.5 sm:pt-2">
-                      <Link
-                        to={`/viewlecture/${activeCourse._id}`}
-                        className="inline-flex items-center justify-center gap-1.5 w-full sm:w-auto px-4 py-2 bg-[#5b3cc4] hover:bg-[#4a2eb0] text-white text-xs font-bold rounded-xl shadow-2xs transition"
-                      >
-                        <span>Resume Course</span>
-                        <ArrowRight size={14} />
-                      </Link>
-                    </div>
                   </div>
-                </div>
+
+                  {/* Compact Tactical CTA */}
+                  <div className="shrink-0 pl-1">
+                    <span className="inline-flex items-center gap-1 px-3 py-1.5 bg-[#5b3cc4] group-hover:bg-[#4a2eb0] text-white text-[11px] sm:text-xs font-bold rounded-xl shadow-2xs transition">
+                      <span className="hidden xs:inline sm:inline">Resume</span>
+                      <ArrowRight size={13} />
+                    </span>
+                  </div>
+                </Link>
               </section>
             )}
 
