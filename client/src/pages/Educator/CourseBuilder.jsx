@@ -1019,6 +1019,10 @@ export default function CourseBuilder() {
               </div>
             </div>
           </div>
+          <div className="flex flex-col gap-2 rounded-xl border border-[#d9e5db] bg-[#f3f7f2] p-4 sm:flex-row sm:items-center sm:justify-between">
+            <div><p className="text-sm font-semibold text-[#254a39]">Course notes and resources</p><p className="mt-1 text-xs text-[#68756a]">Create free or paid secure PDF notes for this course.</p></div>
+            <button type="button" onClick={async () => { const saved = await handleSaveCourse(null, true); const id = saved?._id || activeCourseId; if (id) navigate(`/course-resources/${id}`); }} className="min-h-10 shrink-0 rounded-xl bg-[#254a39] px-4 text-xs font-semibold text-white hover:bg-[#1c392c]">Manage notes</button>
+          </div>
         </section>
 
         {/* BOTTOM SAVE FOOTER */}

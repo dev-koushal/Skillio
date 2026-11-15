@@ -32,6 +32,7 @@ import AIAssistantButton from "../../components/AIAssistantButton";
 import { useTenant } from "../../context/TenantContext";
 import { optimizeImage } from "../../utils/imageOptimizer";
 import api from "../../services/api";
+
 import RequireInstitutionModal from "../../components/common/RequireInstitutionModal";
 import { hasEducatorInstitution } from "../../auth/permissions";
 import "./EducatorHome.css";

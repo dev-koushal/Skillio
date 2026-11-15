@@ -105,17 +105,6 @@ export const uploadResource = async (req, res) => {
         ...(req.referenceLecture ? { referenceVideo: { provider: req.referenceLecture.videoProvider || "lecture", videoId: req.referenceLecture.youtubeVideoId || req.referenceLecture.bunnyVideoId || req.referenceLecture._id.toString() } } : {}),
         uploadedBy: userId,
       });
-      resource = await Resource.create({
-        tenantId, courseId, lectureId: lectureId || null, title: title.trim(),
-        description: typeof description === "string" ? description.trim().slice(0, 1000) : "",
-        topic: typeof topic === "string" && topic.trim() ? topic.trim().slice(0, 120) : "General",
-        type: "pdf", fileUrl: "", fileName, fileSize, accessType, pricePaise,
-        storageProvider: "cloudinary_authenticated", assetId, pageCount,
-        assetVersion: 0,
-        processingStatus: "processing", processingStartedAt: new Date(),
-        ...(req.referenceLecture ? { referenceVideo: { provider: req.referenceLecture.videoProvider || "lecture", videoId: req.referenceLecture.youtubeVideoId || req.referenceLecture.bunnyVideoId || req.referenceLecture._id.toString() } } : {}),
-        uploadedBy: userId,
-      });
       try {
         const uploaded = await uploadProtectedPdf({
           filePath: req.file.path,

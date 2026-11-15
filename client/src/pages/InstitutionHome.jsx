@@ -454,6 +454,7 @@ export default function InstitutionHome() {
                   <p className="text-xs text-[#78716c]">Check back soon for new curriculum from this institution.</p>
                 </div>
               )}
+
             </section>
           </div>
         )}
