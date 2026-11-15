@@ -10,6 +10,7 @@ import { optimizeImage } from "../utils/imageOptimizer";
 import { setStoredTenantSlug } from "../services/tenantStorage";
 import { getAccessibleTextColor, getInstitutionTheme } from "../utils/institutionTheme";
 import NoteCover from "../components/notes/NoteCover";
+import { canUseEducatorWorkspace } from "../auth/permissions";
 
 function getInitials(label = "") {
   return label
@@ -161,17 +162,23 @@ export default function InstitutionHome() {
     );
   }, [userData?.enrolledCourses]);
 
+  const isEducator = canUseEducatorWorkspace(userData);
+
   const enrolledInThisInstitution = useMemo(() => {
     return institutionCourses.filter((course) => enrolledCourseIds.has(String(course._id)));
   }, [institutionCourses, enrolledCourseIds]);
 
-  // Active enrolled course for "Continue learning"
-  const activeCourse = enrolledInThisInstitution[0] || null;
+  // Active enrolled course for "Continue learning" - strictly for students, never for educators/owners
+  const activeCourse = !isEducator && enrolledInThisInstitution.length > 0 ? enrolledInThisInstitution[0] : null;
 
   // Time-aware personalized greeting
   const hour = new Date().getHours();
   const timeGreeting = hour < 12 ? "Good morning" : hour < 17 ? "Good afternoon" : "Good evening";
-  const studentFirstName = userData?.name ? userData.name.trim().split(/\s+/)[0] : "Student";
+  const studentFirstName = userData?.name
+    ? userData.name.trim().split(/\s+/)[0]
+    : isEducator
+    ? "Educator"
+    : "Student";
 
   // Filter courses for search
   const visibleCourses = useMemo(() => {
@@ -240,8 +247,8 @@ export default function InstitutionHome() {
               </div>
             )}
 
-            {/* 3. Continue Learning Section (if student has enrolled courses) */}
-            {activeCourse && (
+            {/* 3. Continue Learning Section (strictly for students, never for educators) */}
+            {!isEducator && activeCourse && (
               <section className="space-y-3 sm:space-y-4">
                 <div className="flex items-center justify-between">
                   <h2 className="text-base sm:text-xl font-bold text-[#1c1917]">Continue Learning</h2>
