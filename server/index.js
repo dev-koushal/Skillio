@@ -143,12 +143,12 @@ if (process.env.NODE_ENV === "production") {
 
   // Stale chunk auto-recovery: If an old browser with a cached index.html requests an obsolete chunk,
   // wipe caches and hard reload rather than crashing with ReferenceErrors or white screens.
-  app.get(["/assets/CreateNote-C0ZX-ut2.js", "/assets/CreateNote-COZX-ut2.js", "/assets/index-DOCvl7yC.js", "/assets/index-DQcvL7yC.js"], (req, res) => {
+  app.get(["/assets/CreateNote-C0ZX-ut2.js", "/assets/CreateNote-COZX-ut2.js", "/assets/index-DOCvl7yC.js", "/assets/index-DOcvL7yC.js", "/assets/index-DQcvL7yC.js", "/assets/index-DQCvl7yC.js"], (req, res) => {
     res.setHeader("Content-Type", "application/javascript");
     res.setHeader("Cache-Control", "no-cache, no-store, must-revalidate, max-age=0, s-maxage=0");
     res.setHeader("Pragma", "no-cache");
     res.setHeader("Expires", "0");
-    res.setHeader("Clear-Site-Data", '"cache"');
+    res.setHeader("Clear-Site-Data", '"cache", "storage"');
     res.send(`
       if (typeof window !== "undefined") {
         if ("caches" in window) {

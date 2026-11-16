@@ -187,6 +187,30 @@ export default function CourseBuilder() {
     }
   }, [courseId]);
 
+  // Auto-refresh lectures if any lecture is currently in "processing" or "uploading" status
+  useEffect(() => {
+    const targetId = activeCourseId || (courseId !== "new" ? courseId : null);
+    if (!targetId) return;
+
+    const hasProcessing = lectures.some(
+      (l) => l.processingStatus === "processing" || l.processingStatus === "uploading"
+    );
+    if (!hasProcessing) return;
+
+    const interval = setInterval(async () => {
+      try {
+        const res = await api.get(`/api/course/getcourse/${targetId}`);
+        if (Array.isArray(res.data?.lectures)) {
+          setLectures(res.data.lectures);
+        }
+      } catch (err) {
+        console.warn("[CourseBuilder Polling Error]", err.message);
+      }
+    }, 2500);
+
+    return () => clearInterval(interval);
+  }, [activeCourseId, courseId, lectures]);
+
   const [directThumbnailUrl, setDirectThumbnailUrl] = useState("");
   const [thumbnailUploading, setThumbnailUploading] = useState(false);
 
@@ -336,7 +360,7 @@ export default function CourseBuilder() {
 
       const formData = new FormData();
       formData.append("lectureTitle", newLectureTitle.trim());
-      formData.append("isPreviewFree", newLecturePreview);
+      formData.append("isPreviewFree", String(Boolean(newLecturePreview)));
 
       if (newLectureVideoProvider === "youtube") {
         formData.append("videoProvider", "youtube");
@@ -409,7 +433,7 @@ export default function CourseBuilder() {
     try {
       const formData = new FormData();
       formData.append("lectureTitle", editLectureTitle.trim());
-      formData.append("isPreviewFree", editLecturePreview);
+      formData.append("isPreviewFree", String(Boolean(editLecturePreview)));
 
       if (editLectureVideoProvider === "youtube") {
         formData.append("videoProvider", "youtube");
@@ -745,7 +769,17 @@ export default function CourseBuilder() {
 
             <button
               type="button"
-              onClick={() => setShowAddLecture(!showAddLecture)}
+              onClick={() => {
+                if (!showAddLecture) {
+                  setNewLecturePreview(false);
+                  setNewLectureTitle("");
+                  setNewLectureVideo(null);
+                  setNewLectureVideoProvider("upload");
+                  setNewLectureYoutubeUrl("");
+                  setNewLectureNote(null);
+                }
+                setShowAddLecture(!showAddLecture);
+              }}
               className="inline-flex items-center gap-1.5 bg-[#1e3a8a] hover:bg-[#172554] text-white text-xs font-semibold px-4 py-2 rounded-xl transition shadow-xs cursor-pointer"
             >
               <Plus size={15} />
@@ -895,7 +929,7 @@ export default function CourseBuilder() {
                           </span>
                         ) : (
                           <span className="inline-flex items-center gap-1 text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200 font-medium">
-                            <CheckCircle2 size={11} /> {lec.videoProvider === "bunny" ? "Bunny Stream" : lec.videoProvider === "youtube" ? "YouTube" : "Uploaded video"}
+                            <CheckCircle2 size={11} /> {lec.videoProvider === "bunny" ? "Video Uploaded" : lec.videoProvider === "youtube" ? "YouTube" : "Uploaded video"}
                           </span>
                         )
                       ) : (
@@ -1020,43 +1054,12 @@ export default function CourseBuilder() {
             </div>
 
             {/* Visibility Mode */}
-            <div className="space-y-3">
-              <label className="block text-xs font-semibold uppercase tracking-wider text-[#44403c]">
-                Student Visibility
-              </label>
-
-              <div className="p-4 rounded-xl bg-[#faf8f5] border border-[#e8e5dc] flex items-center justify-between">
-                <div>
-                  <p className="text-xs font-bold text-[#1c1917]">
-                    {isPublished ? "Published (Live to Students)" : "Draft (Hidden from Catalog)"}
-                  </p>
-                  <p className="text-[11px] text-[#78716c]">
-                    {isPublished
-                      ? "Students can discover this course and enroll."
-                      : "Only you can view and edit this draft course."}
-                  </p>
-                </div>
-
-                <button
-                  type="button"
-                  onClick={() => {
-                    setIsPublished(!isPublished);
-                    setSaveStatus("Unsaved changes");
-                  }}
-                  className={`text-xs font-semibold px-3 py-1.5 rounded-xl border transition cursor-pointer shrink-0 ${isPublished
-                    ? "bg-amber-50 border-amber-300 text-amber-900"
-                    : "bg-emerald-50 border-emerald-300 text-emerald-900"
-                    }`}
-                >
-                  {isPublished ? "Switch to Draft" : "Make Live"}
-                </button>
-              </div>
+            <div className="flex flex-col gap-2 rounded-xl border border-[#d9e5db] bg-[#f3f7f2] p-4 sm:flex-row sm:items-center sm:justify-between">
+              <div><p className="text-sm font-semibold text-[#254a39]">Course notes and resources</p><p className="mt-1 text-xs text-[#68756a]">Create free or paid secure PDF notes for this course.</p></div>
+              <button type="button" onClick={async () => { const saved = await handleSaveCourse(null, true); const id = saved?._id || activeCourseId; if (id) navigate(`/course-resources/${id}`); }} className="min-h-10 shrink-0 rounded-xl bg-[#254a39] px-4 text-xs font-semibold text-white hover:bg-[#1c392c]">Manage notes</button>
             </div>
           </div>
-          <div className="flex flex-col gap-2 rounded-xl border border-[#d9e5db] bg-[#f3f7f2] p-4 sm:flex-row sm:items-center sm:justify-between">
-            <div><p className="text-sm font-semibold text-[#254a39]">Course notes and resources</p><p className="mt-1 text-xs text-[#68756a]">Create free or paid secure PDF notes for this course.</p></div>
-            <button type="button" onClick={async () => { const saved = await handleSaveCourse(null, true); const id = saved?._id || activeCourseId; if (id) navigate(`/course-resources/${id}`); }} className="min-h-10 shrink-0 rounded-xl bg-[#254a39] px-4 text-xs font-semibold text-white hover:bg-[#1c392c]">Manage notes</button>
-          </div>
+
         </section>
 
         {/* BOTTOM SAVE FOOTER */}

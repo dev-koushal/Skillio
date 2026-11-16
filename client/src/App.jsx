@@ -7,6 +7,7 @@ import "react-toastify/dist/ReactToastify.css";
 import ScrollToTop from "./components/ScrollToTop";
 import WelcomeModal from "./components/common/WelcomeModal";
 import InstitutionRequiredDialog from "./components/common/InstitutionRequiredDialog";
+import ErrorBoundary from "./components/common/ErrorBoundary";
 import { TenantProvider } from "./context/TenantContext";
 import { serverURL, getActiveTenantSlug } from "./services/api";
 import { getStoredTenantSlug } from "./services/tenantStorage";
@@ -209,15 +210,16 @@ function AppRoutes() {
   return (
     <>
       <ScrollToTop />
-      <Suspense
-        fallback={
-          <div className="w-full h-screen bg-[#f8f7f4] flex flex-col items-center justify-center space-y-3">
-            <div className="w-10 h-10 border-4 border-[#1e3a8a] border-t-transparent rounded-full animate-spin" />
-            <p className="text-[#78716c] text-xs font-bold uppercase tracking-wider">Loading Platform...</p>
-          </div>
-        }
-      >
-        <Routes>
+      <ErrorBoundary>
+        <Suspense
+          fallback={
+            <div className="w-full h-screen bg-[#f8f7f4] flex flex-col items-center justify-center space-y-3">
+              <div className="w-10 h-10 border-4 border-[#1e3a8a] border-t-transparent rounded-full animate-spin" />
+              <p className="text-[#78716c] text-xs font-bold uppercase tracking-wider">Loading Platform...</p>
+            </div>
+          }
+        >
+          <Routes>
           {/* Public Platform & Institution Routes */}
           <Route path="/" element={<RootRouteDispatcher />} />
           <Route path="/institution/:slug" element={<InstitutionRouteGuard><InstitutionHome /></InstitutionRouteGuard>} />
@@ -353,6 +355,7 @@ function AppRoutes() {
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </Suspense>
+    </ErrorBoundary>
 
       {/* AI Assistant is available strictly to authorized educators */}
       {isEducator && (

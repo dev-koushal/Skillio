@@ -9,6 +9,7 @@ import { verifyCourseAccess, sanitizeLecturesForViewer } from "../utils/courseAc
 import { courseService } from "../services/courseService.js";
 import { lectureService } from "../services/lectureService.js";
 import videoPlaybackService from "../services/video/videoPlaybackService.js";
+import bunnyVideoService from "../services/video/bunnyVideoService.js";
 import { parseYouTubeVideoUrl } from "../utils/youtubeVideo.js";
 import { canManageCourse, isInstitutionOwner, normalizeRole } from "../utils/permissions.js";
 
@@ -229,6 +230,27 @@ export const getCourseById = async (req, res) => {
     }
 
     const courseObj = course.toObject();
+
+    // Check live status for any lectures still marked "processing"
+    if (Array.isArray(courseObj.lectures)) {
+      for (const lec of courseObj.lectures) {
+        if (lec.processingStatus === "processing") {
+          if (lec.videoProvider === "bunny" && lec.bunnyVideoId && bunnyVideoService.isConfigured()) {
+            try {
+              const liveStatus = await bunnyVideoService.getVideoStatus(lec.bunnyVideoId);
+              if (liveStatus === "ready" || liveStatus === "failed") {
+                lec.processingStatus = liveStatus;
+                await Lecture.findByIdAndUpdate(lec._id, { $set: { processingStatus: liveStatus } });
+              }
+            } catch (err) {}
+          } else if (lec.videoProvider === "cloudinary" && lec.videoUrl) {
+            lec.processingStatus = "ready";
+            await Lecture.findByIdAndUpdate(lec._id, { $set: { processingStatus: "ready" } });
+          }
+        }
+      }
+    }
+
     // Sanitize lectures if viewer doesn't have full access (scrub locked videoUrl)
     courseObj.lectures = sanitizeLecturesForViewer(courseObj.lectures, access.hasAccess);
     courseObj.hasAccess = access.hasAccess;

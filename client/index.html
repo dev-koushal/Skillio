@@ -9,68 +9,105 @@
     <title id="tenant-title">Skillio — Modern LMS Platform</title>
     <!-- Cache Buster, Stale-Chunk Recovery & Service Worker Cleaner -->
     <script>
-      (function() {
-        // Global safety fallbacks so stale/cached JS bundles never crash with ReferenceErrors
-        var dummyComponent = function() { return null; };
-        ['ArrowLeft', 'ArrowLeftCircle', 'ArrowRight', 'ChevronDown', 'ChevronRight',
-         'Check', 'CheckCircle2', 'X', 'FileText', 'AlertCircle', 'LoaderCircle',
-         'Plus', 'PlusCircle', 'Upload', 'Sparkles', 'Users', 'LayoutDashboard', 'Radio', 'Play'].forEach(function(icon) {
-          if (typeof window[icon] === 'undefined') {
-            window[icon] = dummyComponent;
+      // 1. Immediately declare global top-level variables for all icons so legacy/stale chunks NEVER throw ReferenceError
+      var ArrowLeft = function() { return null; };
+      var ArrowLeftCircle = function() { return null; };
+      var ArrowRight = function() { return null; };
+      var ChevronDown = function() { return null; };
+      var ChevronRight = function() { return null; };
+      var Check = function() { return null; };
+      var CheckCircle2 = function() { return null; };
+      var X = function() { return null; };
+      var FileText = function() { return null; };
+      var AlertCircle = function() { return null; };
+      var LoaderCircle = function() { return null; };
+      var Plus = function() { return null; };
+      var PlusCircle = function() { return null; };
+      var Upload = function() { return null; };
+      var Sparkles = function() { return null; };
+      var Users = function() { return null; };
+      var LayoutDashboard = function() { return null; };
+      var Radio = function() { return null; };
+      var Play = function() { return null; };
+
+      window.ArrowLeft = ArrowLeft;
+      window.ArrowLeftCircle = ArrowLeftCircle;
+      window.ArrowRight = ArrowRight;
+      window.ChevronDown = ChevronDown;
+      window.ChevronRight = ChevronRight;
+      window.Check = Check;
+      window.CheckCircle2 = CheckCircle2;
+      window.X = X;
+      window.FileText = FileText;
+      window.AlertCircle = AlertCircle;
+      window.LoaderCircle = LoaderCircle;
+      window.Plus = Plus;
+      window.PlusCircle = PlusCircle;
+      window.Upload = Upload;
+      window.Sparkles = Sparkles;
+      window.Users = Users;
+      window.LayoutDashboard = LayoutDashboard;
+      window.Radio = Radio;
+      window.Play = Play;
+
+      window.getStoredTenantSlug = window.getStoredTenantSlug || function() {
+        try { return localStorage.getItem("skillio_active_tenant") || null; } catch(e) { return null; }
+      };
+      window.setStoredTenantSlug = window.setStoredTenantSlug || function(s) {
+        try { if (s) localStorage.setItem("skillio_active_tenant", s); else localStorage.removeItem("skillio_active_tenant"); } catch(e) {}
+      };
+      window.clearStoredTenantSlug = window.clearStoredTenantSlug || function() {
+        try { localStorage.removeItem("skillio_active_tenant"); } catch(e) {}
+      };
+
+      // 2. Forcefully purge old service workers and CacheStorage
+      if ('serviceWorker' in navigator) {
+        navigator.serviceWorker.getRegistrations().then(function(regs) {
+          for (var i = 0; i < regs.length; i++) {
+            regs[i].unregister();
           }
         });
+      }
+      if ('caches' in window) {
+        caches.keys().then(function(keys) {
+          for (var i = 0; i < keys.length; i++) {
+            caches.delete(keys[i]);
+          }
+        });
+      }
 
-        window.getStoredTenantSlug = window.getStoredTenantSlug || function() {
-          try { return localStorage.getItem("skillio_active_tenant") || null; } catch(e) { return null; }
-        };
-        window.setStoredTenantSlug = window.setStoredTenantSlug || function(s) {
-          try { if (s) localStorage.setItem("skillio_active_tenant", s); else localStorage.removeItem("skillio_active_tenant"); } catch(e) {}
-        };
-        window.clearStoredTenantSlug = window.clearStoredTenantSlug || function() {
-          try { localStorage.removeItem("skillio_active_tenant"); } catch(e) {}
-        };
-
-        // Purge old service workers and CacheStorage
-        if ('serviceWorker' in navigator) {
-          navigator.serviceWorker.getRegistrations().then(function(regs) {
-            for (var i = 0; i < regs.length; i++) {
-              regs[i].unregister();
-            }
-          });
-        }
-        if ('caches' in window) {
-          caches.keys().then(function(keys) {
-            for (var i = 0; i < keys.length; i++) {
-              caches.delete(keys[i]);
-            }
-          });
-        }
-
-        // Global auto-reload recovery if an old cached chunk throws an import or reference error
-        window.addEventListener('error', function(e) {
-          var msg = (e && e.message) ? e.message : "";
-          if (msg.indexOf('Failed to fetch dynamically imported module') !== -1 ||
-              msg.indexOf('ArrowLef') !== -1 ||
-              msg.indexOf('ArrowLeft') !== -1 ||
-              msg.indexOf('is not defined') !== -1 ||
-              msg.indexOf('getStoredTenantSlug') !== -1) {
-            var now = Date.now();
-            var lastReload = parseInt(sessionStorage.getItem('sw_recovery_reloaded_ts') || '0', 10);
-            if (now - lastReload > 3000) {
-              sessionStorage.setItem('sw_recovery_reloaded_ts', String(now));
-              if ('caches' in window) {
-                caches.keys().then(function(k) {
-                  return Promise.all(k.map(function(n) { return caches.delete(n); }));
-                }).then(function() {
+      // 3. Global auto-reload recovery if an old cached chunk throws an import or reference error
+      window.addEventListener('error', function(e) {
+        var msg = (e && e.message) ? e.message : "";
+        if (msg.indexOf('Failed to fetch') !== -1 ||
+            msg.indexOf('dynamically imported') !== -1 ||
+            msg.indexOf('ArrowLef') !== -1 ||
+            msg.indexOf('ArrowLeft') !== -1 ||
+            msg.indexOf('is not defined') !== -1 ||
+            msg.indexOf('getStoredTenantSlug') !== -1) {
+          var now = Date.now();
+          var lastReload = parseInt(sessionStorage.getItem('sw_recovery_reloaded_ts') || '0', 10);
+          if (now - lastReload > 3000) {
+            sessionStorage.setItem('sw_recovery_reloaded_ts', String(now));
+            if ('caches' in window) {
+              caches.keys().then(function(k) {
+                return Promise.all(k.map(function(n) { return caches.delete(n); }));
+              }).then(function() {
+                if ('serviceWorker' in navigator) {
+                  navigator.serviceWorker.getRegistrations().then(function(regs) {
+                    for (var i = 0; i < regs.length; i++) regs[i].unregister();
+                    window.location.reload(true);
+                  });
+                } else {
                   window.location.reload(true);
-                });
-              } else {
-                window.location.reload(true);
-              }
+                }
+              });
+            } else {
+              window.location.reload(true);
             }
           }
-        });
-      })();
+        }
+      });
     </script>
     <!-- Razorpay Checkout SDK -->
     <script src="https://checkout.razorpay.com/v1/checkout.js"></script>
@@ -80,4 +117,3 @@
     <script type="module" src="/src/main.jsx"></script>
   </body>
 </html>
-

@@ -146,6 +146,12 @@ function EditCourse() {
     return () => clearTimeout(timer);
   }, [resources, courseId]);
 
+  useEffect(() => {
+    if (!courseData?.lectures?.some((l) => l.processingStatus === "processing")) return;
+    const timer = setTimeout(getCourseById, 2500);
+    return () => clearTimeout(timer);
+  }, [courseData?.lectures, courseId]);
+
   const handleThumbnail = async (e) => {
     const file = e.target.files[0];
     if (!file) return;
