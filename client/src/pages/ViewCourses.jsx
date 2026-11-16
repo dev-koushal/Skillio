@@ -438,10 +438,10 @@ function ViewCourses() {
 
         {/* Main Course Grid: 8 cols content, 4 cols sidebar */}
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
-          
+
           {/* Main Content Column (Mobile: 100%, Desktop: 8 cols) */}
           <div className="lg:col-span-8 space-y-5">
-            
+
             {/* Mobile-Only Hero Thumbnail (16:9 Aspect Ratio) */}
             <div className="lg:hidden">
               <div
@@ -469,7 +469,7 @@ function ViewCourses() {
                 ) : (
                   <div className="w-full h-full bg-gradient-to-br from-[#0f172a] via-[#1e3a8a] to-[#0f172a]" />
                 )}
-                
+
                 <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/30 to-black/20 group-hover:from-black/70 transition-colors" />
 
                 <div className="absolute inset-0 flex flex-col items-center justify-center gap-1.5 z-10">
@@ -601,11 +601,10 @@ function ViewCourses() {
                     <button
                       key={tab.id}
                       onClick={() => setActiveTab(tab.id)}
-                      className={`inline-flex items-center gap-1.5 px-3 sm:px-4 py-2.5 text-xs sm:text-sm font-bold border-b-2 transition cursor-pointer whitespace-nowrap ${
-                        isActive
-                          ? "border-[#1e3a8a] text-[#1e3a8a]"
-                          : "border-transparent text-[#78716c] hover:text-[#1c1917]"
-                      }`}
+                      className={`inline-flex items-center gap-1.5 px-3 sm:px-4 py-2.5 text-xs sm:text-sm font-bold border-b-2 transition cursor-pointer whitespace-nowrap ${isActive
+                        ? "border-[#1e3a8a] text-[#1e3a8a]"
+                        : "border-transparent text-[#78716c] hover:text-[#1c1917]"
+                        }`}
                     >
                       <Icon size={15} />
                       <span>{tab.label}</span>
@@ -711,30 +710,27 @@ function ViewCourses() {
                                 toast.info("Please enroll in this course to watch locked lectures.");
                               }
                             }}
-                            className={`group flex items-center justify-between p-3 rounded-xl border transition-all cursor-pointer ${
-                              isCurrent
-                                ? "bg-blue-50/80 border-[#1e3a8a] text-[#1e3a8a] shadow-2xs"
-                                : canPlay
+                            className={`group flex items-center justify-between p-3 rounded-xl border transition-all cursor-pointer ${isCurrent
+                              ? "bg-blue-50/80 border-[#1e3a8a] text-[#1e3a8a] shadow-2xs"
+                              : canPlay
                                 ? "bg-white border-[#e8e5dc] hover:border-[#1e3a8a]/40 hover:bg-[#faf9f6]"
                                 : "bg-[#faf9f6] border-[#e8e5dc] opacity-80 hover:opacity-100"
-                            }`}
+                              }`}
                           >
                             <div className="flex items-center gap-3 min-w-0">
                               <div
-                                className={`w-7 h-7 rounded-lg flex items-center justify-center text-xs font-bold shrink-0 ${
-                                  isCurrent
-                                    ? "bg-[#1e3a8a] text-white"
-                                    : canPlay
+                                className={`w-7 h-7 rounded-lg flex items-center justify-center text-xs font-bold shrink-0 ${isCurrent
+                                  ? "bg-[#1e3a8a] text-white"
+                                  : canPlay
                                     ? "bg-blue-50 text-[#1e3a8a]"
                                     : "bg-[#e8e5dc] text-[#78716c]"
-                                }`}
+                                  }`}
                               >
                                 {idx + 1}
                               </div>
                               <div className="min-w-0">
-                                <p className={`text-xs sm:text-sm font-semibold truncate ${
-                                  canPlay ? "text-[#1c1917] group-hover:text-[#1e3a8a]" : "text-[#57534e]"
-                                }`}>
+                                <p className={`text-xs sm:text-sm font-semibold truncate ${canPlay ? "text-[#1c1917] group-hover:text-[#1e3a8a]" : "text-[#57534e]"
+                                  }`}>
                                   {lec.lectureTitle}
                                 </p>
                                 <span className="text-[10px] text-[#78716c]">
@@ -742,8 +738,8 @@ function ViewCourses() {
                                   {lec.videoProvider === "youtube"
                                     ? "YouTube"
                                     : lec.videoProvider === "bunny"
-                                    ? "Native Video"
-                                    : "Classroom Video"}
+                                      ? "Native Video"
+                                      : "Classroom Video"}
                                 </span>
                               </div>
                             </div>
@@ -1016,7 +1012,7 @@ function ViewCourses() {
                     size="lg"
                     className="w-full bg-[#1e3a8a] hover:bg-[#172554] text-white font-bold py-3.5 rounded-xl shadow-md cursor-pointer flex items-center justify-center gap-2"
                   >
-                    <SquarePen size={17} />
+                    <SquarePen className="inline mr-2" size={17} />
                     Edit Course
                   </Button>
                   <Button
@@ -1125,13 +1121,12 @@ function ViewCourses() {
                         key={lec._id || idx}
                         disabled={!canPlay}
                         onClick={() => setSelectedLecture(lec)}
-                        className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-semibold transition shrink-0 cursor-pointer ${
-                          isCurrent
-                            ? "bg-[#1e3a8a] text-white"
-                            : canPlay
+                        className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-semibold transition shrink-0 cursor-pointer ${isCurrent
+                          ? "bg-[#1e3a8a] text-white"
+                          : canPlay
                             ? "bg-slate-800 text-slate-200 hover:bg-slate-700"
                             : "bg-slate-900/60 text-slate-600 cursor-not-allowed"
-                        }`}
+                          }`}
                       >
                         <span>{idx + 1}. {lec.lectureTitle}</span>
                         {lec.isPreviewFree ? (

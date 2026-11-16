@@ -93,7 +93,7 @@ export default function LectureVideoSourceFields({
         </div>
       ) : (
         <div className="space-y-2 rounded-xl border border-[#e8e5dc] bg-[#faf9f6] p-3">
-          {currentProvider && <p className="text-xs text-[#57534e]">Current source: <span className="font-semibold text-[#1c1917]">{currentProvider === "youtube" ? "YouTube" : currentProvider === "bunny" ? "uploaded" : "Uploaded video"}</span></p>}
+          {currentProvider && <p className="text-xs text-[#57534e]">Current source: <span className="font-semibold text-[#1c1917]">{currentProvider === "youtube" ? "YouTube" : currentProvider === "bunny" ? "Bunny Stream" : "Uploaded video"}</span></p>}
           <label htmlFor={`${idPrefix}-video-file`} className="block text-xs font-semibold text-[#44403c]">{currentProvider && currentProvider !== "youtube" ? "Replace video file" : "Video file"}</label>
           <input id={`${idPrefix}-video-file`} name={`${idPrefix}-video-file`} type="file" accept="video/mp4,video/webm,video/quicktime" onChange={(event) => onVideoFileChange(event.target.files?.[0] || null)} className="w-full text-xs text-[#57534e] file:mr-2 file:min-h-9 file:rounded-lg file:border-0 file:bg-white file:px-3 file:text-xs file:font-semibold file:text-[#4b2fa8] file:shadow-sm" />
           {videoFile && <p className="break-all text-xs text-[#57534e]">Selected: <span className="font-semibold">{videoFile.name}</span></p>}

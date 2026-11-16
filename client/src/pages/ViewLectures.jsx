@@ -59,7 +59,7 @@ function ViewLectures() {
           setAccessDenied(true);
           setAccessMessage(
             err.response.data?.message ||
-              "Payment required: You must be enrolled in this course to access the classroom lectures."
+            "Payment required: You must be enrolled in this course to access the classroom lectures."
           );
         } else {
           console.warn("[ViewLectures] Direct fetch error:", err.message);
@@ -194,7 +194,7 @@ function ViewLectures() {
 
       {/* Centered layout container - balanced desktop max-width (max-w-4xl) */}
       <main className="max-w-4xl w-full mx-auto px-3.5 sm:px-6 py-4 sm:py-6 space-y-4 flex-1 pb-28 md:pb-12">
-        
+
         {/* 1. Course Context & Progress Header */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 pb-3 border-b border-[#e8e5dc]">
           <div className="flex items-center gap-2 min-w-0">
@@ -274,7 +274,7 @@ function ViewLectures() {
             {selectedLecture?.lectureTitle || course?.title}
           </h1>
           <p className="text-xs text-[#78716c]">
-            Course: <span className="text-[#44403c] font-medium">{course?.title}</span> · Level: <span className="text-[#44403c] font-medium">{course?.level || "All Levels"}</span>
+            Course: <span className="text-[#44403c] font-medium">{course?.title}</span>
           </p>
 
           {creatorData?.name && (
@@ -404,24 +404,21 @@ function ViewLectures() {
                     }
                     setSelectedLecture(lec);
                   }}
-                  className={`w-full text-left p-3 sm:p-3.5 flex items-center justify-between gap-3 transition cursor-pointer select-none ${
-                    isCurrent
+                  className={`w-full text-left p-3 sm:p-3.5 flex items-center justify-between gap-3 transition cursor-pointer select-none ${isCurrent
                       ? "bg-blue-50/70 text-[#1e3a8a]"
                       : isLocked
-                      ? "hover:bg-[#faf9f6] opacity-75"
-                      : "hover:bg-[#faf9f6]"
-                  }`}
+                        ? "hover:bg-[#faf9f6] opacity-75"
+                        : "hover:bg-[#faf9f6]"
+                    }`}
                 >
                   <div className="flex items-center gap-3 min-w-0">
-                    <span className={`font-mono text-xs font-semibold shrink-0 ${
-                      isCurrent ? "text-[#1e3a8a] font-bold" : "text-[#78716c]"
-                    }`}>
+                    <span className={`font-mono text-xs font-semibold shrink-0 ${isCurrent ? "text-[#1e3a8a] font-bold" : "text-[#78716c]"
+                      }`}>
                       {numStr}
                     </span>
                     <div className="min-w-0 space-y-0.5">
-                      <p className={`text-xs sm:text-sm font-semibold truncate ${
-                        isCurrent ? "text-[#1e3a8a]" : isLocked ? "text-[#78716c]" : "text-[#1c1917]"
-                      }`}>
+                      <p className={`text-xs sm:text-sm font-semibold truncate ${isCurrent ? "text-[#1e3a8a]" : isLocked ? "text-[#78716c]" : "text-[#1c1917]"
+                        }`}>
                         {lec.lectureTitle}
                       </p>
                       <p className="text-[10px] text-[#78716c]">
@@ -429,8 +426,8 @@ function ViewLectures() {
                         {lec.videoProvider === "youtube"
                           ? "YouTube"
                           : lec.videoProvider === "bunny"
-                          ? "Native video"
-                          : "Classroom video"}
+                            ? "Native video"
+                            : "Classroom video"}
                       </p>
                     </div>
                   </div>
