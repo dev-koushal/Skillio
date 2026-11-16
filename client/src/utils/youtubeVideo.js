@@ -5,6 +5,7 @@ export function buildYouTubeEmbedUrl(videoId, origin = typeof window !== "undefi
     playsinline: "1",
     rel: "0",
     autoplay: "1",
+    fs: "1",
   });
   if (origin && /^https?:\/\//i.test(origin)) {
     params.set("enablejsapi", "1");

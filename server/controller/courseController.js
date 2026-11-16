@@ -373,15 +373,17 @@ export const getCourseLecture = async (req, res) => {
       ? await Course.findById(courseId)
           .populate("lectures")
           .populate("creator", "name email profilePicture description")
+          .lean()
       : await Course.findOne({ _id: courseId, tenantId })
           .populate("lectures")
-          .populate("creator", "name email profilePicture description");
+          .populate("creator", "name email profilePicture description")
+          .lean();
 
     if (!course) {
       return res.status(404).json({ success: false, message: "Course not found!" });
     }
 
-    const courseObj = course.toObject();
+    const courseObj = typeof course.toObject === "function" ? course.toObject() : { ...course };
     courseObj.hasAccess = true;
     courseObj.isEnrolled = true;
 
@@ -401,6 +403,25 @@ export const getCourseLecture = async (req, res) => {
         createdAt: l.createdAt,
         updatedAt: l.updatedAt,
       }));
+
+      // Performance optimization: Generate initial short-lived playback token for first lecture
+      // so the client player can initialize immediately without a blocking second round trip.
+      if (courseObj.lectures.length > 0) {
+        try {
+          const firstLectureId = courseObj.lectures[0]._id;
+          const initialPlayback = await videoPlaybackService.getLecturePlayback({
+            lectureId: firstLectureId,
+            userId,
+            userRole,
+            tenantId,
+          });
+          if (initialPlayback && initialPlayback.authorized) {
+            courseObj.initialPlayback = initialPlayback;
+          }
+        } catch (e) {
+          // Non-blocking: client fallback to /playback endpoint
+        }
+      }
     }
 
     return res.status(200).json(courseObj);

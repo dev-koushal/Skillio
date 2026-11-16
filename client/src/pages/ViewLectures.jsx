@@ -17,6 +17,10 @@ import Footer from "../components/Footer";
 import SecureVideoPlayer from "../components/video/SecureVideoPlayer";
 import SecureDocumentViewer from "../components/resources/SecureDocumentViewer";
 import { useTenant } from "../context/TenantContext";
+import {
+  handleFullscreenOrientationChange,
+  unlockScreenOrientation,
+} from "../utils/videoOrientation";
 import "./InstitutionStudentPages.css";
 
 function ViewLectures() {
@@ -41,17 +45,40 @@ function ViewLectures() {
   const [resourcesLoading, setResourcesLoading] = useState(false);
   const [activeDocument, setActiveDocument] = useState(null);
 
+  // Automatically lock mobile screen orientation to landscape when video is enlarged / fullscreen
+  useEffect(() => {
+    const onFsChange = () => {
+      handleFullscreenOrientationChange();
+    };
+
+    const fsEvents = [
+      "fullscreenchange",
+      "webkitfullscreenchange",
+      "mozfullscreenchange",
+      "MSFullscreenChange",
+    ];
+
+    fsEvents.forEach((evt) => document.addEventListener(evt, onFsChange));
+
+    return () => {
+      fsEvents.forEach((evt) => document.removeEventListener(evt, onFsChange));
+      unlockScreenOrientation();
+    };
+  }, []);
+
   // Fetch course lectures directly
   useEffect(() => {
     const fetchLectures = async () => {
       try {
-        setLoading(true);
         setAccessDenied(false);
         const res = await api.get(`/api/course/courselecture/${courseId}`);
         if (res.data) {
           setCourse(res.data);
           if (res.data.lectures && res.data.lectures.length > 0) {
             setSelectedLecture(res.data.lectures[0]);
+          }
+          if (res.data.creator && typeof res.data.creator === "object") {
+            setCreatorData(res.data.creator);
           }
         }
       } catch (err) {
@@ -92,9 +119,10 @@ function ViewLectures() {
     fetchLectureResources();
   }, [selectedLecture]);
 
-  // Fetch creator info
+  // Fetch creator info if not already populated
   useEffect(() => {
     const fetchCreator = async () => {
+      if (creatorData) return;
       const creatorId = course?.creator;
       if (creatorId && typeof creatorId === "string") {
         try {
@@ -108,22 +136,8 @@ function ViewLectures() {
       }
     };
 
-    if (course) fetchCreator();
-  }, [course]);
-
-  if (loading) {
-    return (
-      <div className="institution-student-page min-h-screen text-[#1c1917] flex flex-col" style={tenantStyle}>
-        <Navbar currentInstitution={tenant?.isPlatform ? null : tenant} />
-        <div className="max-w-4xl mx-auto px-4 py-20 text-center space-y-4 flex-1 flex flex-col items-center justify-center">
-          <div className="w-10 h-10 border-4 border-[#1e3a8a] border-t-transparent rounded-full animate-spin" />
-          <p className="text-xs font-bold uppercase tracking-wider text-[#78716c]">
-            Loading Course Classroom...
-          </p>
-        </div>
-      </div>
-    );
-  }
+    if (course && !creatorData) fetchCreator();
+  }, [course, creatorData]);
 
   // Access Denied State (Locked Course)
   if (accessDenied) {
@@ -231,12 +245,24 @@ function ViewLectures() {
               key={selectedLecture._id}
               lectureId={selectedLecture._id}
               lectureTitle={selectedLecture.lectureTitle}
+              initialPlayback={selectedLecture._id === course?.lectures?.[0]?._id ? course?.initialPlayback : null}
               onEnded={handleNextLecture}
             />
           ) : (
-            <div className="w-full h-full flex flex-col items-center justify-center text-center p-6 text-slate-400 space-y-2">
-              <Video size={32} className="text-slate-600" />
-              <p className="text-xs">Select a lecture from the playlist to begin learning.</p>
+            <div className="w-full h-full flex flex-col items-center justify-center text-center p-6 text-slate-400 space-y-2 bg-[#111018]">
+              {loading ? (
+                <>
+                  <div className="w-8 h-8 border-3 border-[#60a5fa] border-t-transparent rounded-full animate-spin" />
+                  <p className="text-xs font-semibold text-slate-300 uppercase tracking-wider">
+                    Preparing Classroom Stream...
+                  </p>
+                </>
+              ) : (
+                <>
+                  <Video size={32} className="text-slate-600" />
+                  <p className="text-xs">Select a lecture from the playlist to begin learning.</p>
+                </>
+              )}
             </div>
           )}
         </div>

@@ -30,14 +30,27 @@ class VideoPlaybackService {
       };
     }
 
-    // 1. Verify lecture exists
-    const lecture = await Lecture.findById(lectureId);
+    // 1. Verify lecture exists (lean projection for minimum latency)
+    const lectureQuery = Lecture.findById(lectureId);
+    const lecture = typeof lectureQuery?.select === "function"
+      ? await lectureQuery
+          .select(
+            "_id courseId tenantId creator isPreviewFree videoProvider bunnyVideoId bunnyLibraryId youtubeVideoId videoUrl duration lectureTitle processingStatus"
+          )
+          .lean()
+      : await lectureQuery;
+
     if (!lecture) {
       return {
         authorized: false,
         status: 404,
         message: "Lecture not found",
       };
+    }
+
+    // Fast-path: Free preview lectures are public and authorized immediately without course queries
+    if (lecture.isPreviewFree) {
+      return await this.generateAuthorizedPlayback(lecture);
     }
 
     // 2. Verify parent course exists
@@ -49,7 +62,12 @@ class VideoPlaybackService {
       };
     }
 
-    const course = await Course.findById(lecture.courseId);
+    // Lean course projection with minimal required authorization fields
+    const courseQuery = Course.findById(lecture.courseId);
+    const course = typeof courseQuery?.select === "function"
+      ? await courseQuery.select("_id tenantId creator price enrolledStudents").lean()
+      : await courseQuery;
+
     if (!course) {
       return {
         authorized: false,
@@ -72,17 +90,16 @@ class VideoPlaybackService {
       userId && courseTenantId && (await isInstitutionOwner({ tenantId: courseTenantId, userId, userRole: normalizedRole }))
     );
 
-    // 4. Authorization Check: Creator/Admin OR Free preview OR verified course access
+    // 4. Authorization Check: Creator/Admin OR verified course access
     let isAuthorized = false;
     let accessReason = "";
 
     if (isCreator || isAdmin) {
       isAuthorized = true;
-    } else if (lecture.isPreviewFree) {
-      isAuthorized = true;
     } else if (userId) {
       const access = await verifyCourseAccess({
         courseId: course._id,
+        course, // pass already-loaded lean course to prevent duplicate query
         userId,
         userRole: normalizedRole,
         tenantId: courseTenantId,
@@ -106,7 +123,13 @@ class VideoPlaybackService {
       };
     }
 
-    // 4. Generate Short-Lived Authorized Playback
+    return await this.generateAuthorizedPlayback(lecture);
+  }
+
+  /**
+   * Internal generator for tokenized streaming credentials once authorization is verified.
+   */
+  async generateAuthorizedPlayback(lecture) {
     const provider = lecture.videoProvider || "cloudinary";
 
     if (provider === "youtube") {

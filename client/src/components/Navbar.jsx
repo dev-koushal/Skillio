@@ -108,7 +108,7 @@ function Navbar({ currentInstitution = null, studentHome = false }) {
 
   return (
     <>
-      <header className="bg-white/95 text-[#1c1917] w-full sticky top-0 z-40 border-b border-[#e8e5dc] backdrop-blur-md transition-colors shadow-xs">
+      <header className="bg-white text-[#1c1917] w-full sticky top-0 z-40 border-b border-[#e8e5dc] max-md:backdrop-blur-none md:backdrop-blur-md transition-colors shadow-xs">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 sm:h-20 flex justify-between items-center gap-4">
           {/* Brand / Logo + Institution Switcher Link */}
           <div className="flex items-center gap-3 sm:gap-6">

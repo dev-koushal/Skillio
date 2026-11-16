@@ -2,6 +2,15 @@ import React, { useState, useEffect, useRef } from "react";
 import { Loader2, Lock, AlertCircle, RefreshCw, Play, ShieldAlert, ExternalLink } from "lucide-react";
 import api from "../../services/api";
 import YouTubePlayerFrame from "./YouTubePlayerFrame";
+import {
+  handleFullscreenOrientationChange,
+  lockLandscapeOrientation,
+  unlockScreenOrientation,
+} from "../../utils/videoOrientation";
+
+// In-memory session cache for short-lived token authorizations (cleared on page reload / session end)
+// Never stored in persistent storage (localStorage / Redux)
+const playbackAuthCache = new Map();
 
 /**
  * Production-grade Secure Video Player.
@@ -9,16 +18,94 @@ import YouTubePlayerFrame from "./YouTubePlayerFrame";
  * Supports Bunny Stream adaptive video embedding and secured legacy streams.
  * Never stores tokens in localStorage or Redux.
  */
-export default function SecureVideoPlayer({ lectureId, liveClassId = null, lectureTitle = "Lecture Video", onEnded = null }) {
-  const [playback, setPlayback] = useState(null);
-  const [loading, setLoading] = useState(true);
+export default function SecureVideoPlayer({
+  lectureId,
+  liveClassId = null,
+  lectureTitle = "Lecture Video",
+  initialPlayback = null,
+  onEnded = null,
+}) {
+  const targetId = liveClassId || lectureId;
+
+  // Use initialPlayback or active valid cache entry if available for immediate startup
+  const initialValidPlayback = (() => {
+    if (initialPlayback?.authorized) return initialPlayback;
+    const cached = playbackAuthCache.get(targetId);
+    if (cached && cached.expiresAtMs > Date.now() + 30000) return cached.data;
+    return null;
+  })();
+
+  const [playback, setPlayback] = useState(initialValidPlayback);
+  const [loading, setLoading] = useState(!initialValidPlayback);
   const [error, setError] = useState(null);
   const [isExpired, setIsExpired] = useState(false);
   const [youtubeError, setYoutubeError] = useState("");
 
   const expiryTimerRef = useRef(null);
+  const videoRef = useRef(null);
+
+  // Automatically lock mobile screen to landscape on video enlarge / fullscreen
+  useEffect(() => {
+    const onFsChange = () => {
+      handleFullscreenOrientationChange();
+    };
+
+    const fsEvents = [
+      "fullscreenchange",
+      "webkitfullscreenchange",
+      "mozfullscreenchange",
+      "MSFullscreenChange",
+    ];
+
+    fsEvents.forEach((evt) => document.addEventListener(evt, onFsChange));
+
+    return () => {
+      fsEvents.forEach((evt) => document.removeEventListener(evt, onFsChange));
+      unlockScreenOrientation();
+    };
+  }, []);
+
+  // WebKit iOS native player fullscreen events for direct video element
+  useEffect(() => {
+    const videoEl = videoRef.current;
+    if (!videoEl) return;
+
+    const onWebkitBegin = () => lockLandscapeOrientation();
+    const onWebkitEnd = () => unlockScreenOrientation();
+
+    videoEl.addEventListener("webkitbeginfullscreen", onWebkitBegin);
+    videoEl.addEventListener("webkitendfullscreen", onWebkitEnd);
+
+    return () => {
+      videoEl.removeEventListener("webkitbeginfullscreen", onWebkitBegin);
+      videoEl.removeEventListener("webkitendfullscreen", onWebkitEnd);
+    };
+  }, [playback?.streamUrl]);
+
+  const scheduleExpiry = (expiresAt) => {
+    if (!expiresAt) return;
+    const msUntilExpiry = new Date(expiresAt).getTime() - Date.now();
+    if (msUntilExpiry > 0) {
+      if (expiryTimerRef.current) clearTimeout(expiryTimerRef.current);
+      expiryTimerRef.current = setTimeout(() => {
+        playbackAuthCache.delete(targetId);
+        setIsExpired(true);
+      }, msUntilExpiry);
+    }
+  };
 
   const fetchPlaybackAuthorization = async (silent = false) => {
+    // 1. Check in-memory cache for valid short-lived authorization
+    const cached = playbackAuthCache.get(targetId);
+    if (cached && cached.expiresAtMs > Date.now() + 30000) {
+      setPlayback(cached.data);
+      setLoading(false);
+      setError(null);
+      setIsExpired(false);
+      scheduleExpiry(cached.data.expiresAt);
+      return;
+    }
+
     const playbackEndpoint = liveClassId
       ? `/api/institution/live/${liveClassId}/playback`
       : lectureId ? `/api/lectures/${lectureId}/playback` : null;
@@ -35,17 +122,13 @@ export default function SecureVideoPlayer({ lectureId, liveClassId = null, lectu
       if (res.data?.success && res.data?.playback?.authorized) {
         const pb = res.data.playback;
         setPlayback(pb);
+        playbackAuthCache.set(targetId, {
+          data: pb,
+          expiresAtMs: pb.expiresAt ? new Date(pb.expiresAt).getTime() : Date.now() + 300000,
+        });
 
         // Calculate token expiration timer to seamlessly prompt refresh
-        if (pb.expiresAt) {
-          const msUntilExpiry = new Date(pb.expiresAt).getTime() - Date.now();
-          if (msUntilExpiry > 0) {
-            if (expiryTimerRef.current) clearTimeout(expiryTimerRef.current);
-            expiryTimerRef.current = setTimeout(() => {
-              setIsExpired(true);
-            }, msUntilExpiry);
-          }
-        }
+        scheduleExpiry(pb.expiresAt);
       } else {
         setError(res.data?.message || "You are not authorized to view this lecture.");
       }
@@ -58,12 +141,21 @@ export default function SecureVideoPlayer({ lectureId, liveClassId = null, lectu
   };
 
   useEffect(() => {
+    // If initialPlayback was provided and authorized, cache and schedule expiry immediately
+    if (initialPlayback?.authorized) {
+      playbackAuthCache.set(targetId, {
+        data: initialPlayback,
+        expiresAtMs: initialPlayback.expiresAt ? new Date(initialPlayback.expiresAt).getTime() : Date.now() + 300000,
+      });
+      scheduleExpiry(initialPlayback.expiresAt);
+      setLoading(false);
+      return;
+    }
+
     fetchPlaybackAuthorization();
 
     return () => {
       if (expiryTimerRef.current) clearTimeout(expiryTimerRef.current);
-      // Clean up in-memory playback reference on unmount
-      setPlayback(null);
     };
   }, [lectureId, liveClassId]);
 
@@ -77,7 +169,7 @@ export default function SecureVideoPlayer({ lectureId, liveClassId = null, lectu
     }
   }, [playback?.processingStatus]);
 
-  const playerShell = "relative w-full aspect-video overflow-hidden rounded-2xl border border-[#e8e5dc] bg-[#111018] shadow-xs";
+  const playerShell = "relative w-full h-full overflow-hidden bg-[#111018]";
 
   // Loading State
   if (loading) {
@@ -156,7 +248,7 @@ export default function SecureVideoPlayer({ lectureId, liveClassId = null, lectu
           src={playback.embedUrl}
           loading="eager"
           className="border-0 w-full h-full"
-          allow="accelerometer; gyroscope; autoplay; encrypted-media; picture-in-picture;"
+          allow="accelerometer; gyroscope; autoplay; encrypted-media; picture-in-picture; fullscreen"
           allowFullScreen
           title={lectureTitle}
         />
@@ -202,9 +294,12 @@ export default function SecureVideoPlayer({ lectureId, liveClassId = null, lectu
     return (
       <div className={playerShell}>
         <video
+          ref={videoRef}
           src={playback.streamUrl}
           controls
           preload="auto"
+          playsInline
+          webkit-playsinline="true"
           controlsList="nodownload"
           onContextMenu={(e) => e.preventDefault()}
           onEnded={onEnded}

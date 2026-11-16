@@ -116,7 +116,7 @@ export default function MobileBottomNav({ currentInstitution = null }) {
 
   return (
     <nav
-      className="md:hidden fixed bottom-0 left-0 right-0 z-50 bg-white/95 backdrop-blur-lg border-t border-[#e8e5dc] pb-safe shadow-lg transition-transform"
+      className="md:hidden fixed bottom-0 left-0 right-0 z-50 bg-white border-t border-[#e8e5dc] pb-safe shadow-md transition-transform"
       aria-label="Mobile Bottom Navigation"
       style={{ "--mobile-nav-accent": currentInstitution ? undefined : tenant?.primaryColor || "#5b3cc4" }}
     >

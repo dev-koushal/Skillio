@@ -13,25 +13,25 @@ import { isInstitutionOwner } from "./permissions.js";
  * 
  * Returns an object: { hasAccess: boolean, isCreator: boolean, isEnrolled: boolean, isFree: boolean, reason?: string }
  */
-export const verifyCourseAccess = async ({ courseId, userId, userRole, tenantId }) => {
+export const verifyCourseAccess = async ({ courseId, course = null, userId, userRole, tenantId }) => {
   if (!courseId) {
     return { hasAccess: false, reason: "Missing course parameter" };
   }
 
-  // Find course directly by ID first to check creator/ownership rights
-  const course = await Course.findById(courseId);
-  if (!course) {
+  // Use provided course object or find directly
+  const targetCourse = course || (await Course.findById(courseId));
+  if (!targetCourse) {
     return { hasAccess: false, reason: "Course not found" };
   }
 
   // Creator or Admin always has full access regardless of request context
-  const isCreator = userId && course.creator && course.creator.toString() === userId.toString();
-  const isAdmin = await isInstitutionOwner({ tenantId: course.tenantId || tenantId, userId, userRole });
+  const isCreator = userId && targetCourse.creator && targetCourse.creator.toString() === userId.toString();
+  const isAdmin = await isInstitutionOwner({ tenantId: targetCourse.tenantId || tenantId, userId, userRole });
 
   if (isCreator || isAdmin) {
     return {
       hasAccess: true,
-      course,
+      course: targetCourse,
       isCreator,
       isAdmin,
       isEnrolled: true,
@@ -43,7 +43,7 @@ export const verifyCourseAccess = async ({ courseId, userId, userRole, tenantId 
     return { hasAccess: false, reason: "Missing organization parameter" };
   }
 
-  if (course.tenantId && tenantId.toString() !== course.tenantId.toString()) {
+  if (targetCourse.tenantId && tenantId.toString() !== targetCourse.tenantId.toString()) {
     return { hasAccess: false, reason: "Course not found in this organization" };
   }
 
@@ -54,16 +54,16 @@ export const verifyCourseAccess = async ({ courseId, userId, userRole, tenantId 
       if (grant.status === "active") {
         return {
           hasAccess: true,
-          course,
+          course: targetCourse,
           isEnrolled: true,
-          isFree: !course.price || Number(course.price) === 0,
+          isFree: !targetCourse.price || Number(targetCourse.price) === 0,
           accessSource: grant.source,
         };
       }
       if (grant.status === "revoked") {
         return {
           hasAccess: false,
-          course,
+          course: targetCourse,
           isEnrolled: false,
           isFree: false,
           reason: "Access to this course was revoked by the institution administrator.",
@@ -75,23 +75,23 @@ export const verifyCourseAccess = async ({ courseId, userId, userRole, tenantId 
   // Check enrollment array
   const isEnrolled =
     Boolean(userId) &&
-    Array.isArray(course.enrolledStudents) &&
-    course.enrolledStudents.some((id) => id.toString() === userId.toString());
+    Array.isArray(targetCourse.enrolledStudents) &&
+    targetCourse.enrolledStudents.some((id) => id.toString() === userId.toString());
 
   if (isEnrolled) {
     return {
       hasAccess: true,
-      course,
+      course: targetCourse,
       isEnrolled: true,
-      isFree: !course.price || Number(course.price) === 0,
+      isFree: !targetCourse.price || Number(targetCourse.price) === 0,
     };
   }
 
-  const isFree = !course.price || Number(course.price) === 0;
+  const isFree = !targetCourse.price || Number(targetCourse.price) === 0;
 
   return {
     hasAccess: false,
-    course,
+    course: targetCourse,
     isEnrolled: false,
     isFree,
     reason: isFree
